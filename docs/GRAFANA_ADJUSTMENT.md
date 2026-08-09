@@ -377,14 +377,19 @@ GET /api/v1/reports/drives-table?...
 ## 8. 面板 URL 速查（Infinity）
 
 ```text
-# 变量
+# 变量 / 字典
 GET /api/v1/cars
 GET /api/v1/geofences
 GET /api/v1/settings
+GET /api/v1/addresses?ids=1,2,3
 
-# 列表
+# 列表（默认 lean）
 GET /api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&minDistance=${min_dist}&size=200
-GET /api/v1/charging-processes?carId=${car_id}&from=...&to=...&chargeType=${charge_type}&size=200
+GET /api/v1/charging-processes?carId=${car_id}&from=...&to=...&size=200
+
+# 列表（Grafana 宽表，可选）
+GET /api/v1/drives?view=enriched&range=${range}&carId=...&from=...&to=...
+GET /api/v1/charging-processes?view=enriched&range=${range}&...
 
 # 详情
 GET /api/v1/drives/${drive_id}
