@@ -1,9 +1,11 @@
 package com.teslamate.query.config;
 
+import com.teslamate.query.dao.AddressDao;
 import com.teslamate.query.dao.CarDao;
 import com.teslamate.query.dao.GeofenceDao;
 import com.teslamate.query.dao.HealthDao;
 import com.teslamate.query.dao.SettingsDao;
+import com.teslamate.query.dto.AddressDto;
 import com.teslamate.query.dto.BatteryHealthDto;
 import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.ChargeEnergyCostDto;
@@ -51,6 +53,7 @@ public class JdbiConfig {
                 .setColumnNameMatchers(List.of(new SnakeCaseColumnNameMatcher()));
 
         register(jdbi, CarDto.class);
+        register(jdbi, AddressDto.class);
         register(jdbi, ChargeEnergyCostDto.class);
         register(jdbi, SettingsDto.class);
         register(jdbi, GeofenceDto.class);
@@ -100,5 +103,10 @@ public class JdbiConfig {
     @Bean
     public GeofenceDao geofenceDao(Jdbi jdbi) {
         return jdbi.onDemand(GeofenceDao.class);
+    }
+
+    @Bean
+    public AddressDao addressDao(Jdbi jdbi) {
+        return jdbi.onDemand(AddressDao.class);
     }
 }
