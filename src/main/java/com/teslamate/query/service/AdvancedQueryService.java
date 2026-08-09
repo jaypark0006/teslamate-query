@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class AdvancedQueryService {
@@ -53,7 +52,7 @@ public class AdvancedQueryService {
         String rangeMode = resolveRange(range);
         PageResponse<DriveDto> drives = driveService.list(carId, fromStr, toStr, null, null, null, null, null, range, 1, 200);
         PageResponse<ChargingProcessDto> charges = chargingProcessService.list(carId, fromStr, toStr, null, null, null, range, 1, 200);
-        Map<String, Double> chargeAgg = statsRepository.chargeEnergyAndCost(carId, r[0], r[1]);
+        var chargeAgg = statsRepository.chargeEnergyAndCost(carId, r[0], r[1]);
         double duration = drives.data().stream()
                 .map(DriveDto::durationMin)
                 .filter(v -> v != null)
@@ -66,8 +65,8 @@ public class AdvancedQueryService {
                 statsRepository.totalDistance(carId, r[0], r[1]),
                 statsRepository.driveCount(carId, r[0], r[1]),
                 statsRepository.chargeCount(carId, r[0], r[1]),
-                chargeAgg.get("energyAdded"),
-                chargeAgg.get("cost"),
+                chargeAgg.energyAdded(),
+                chargeAgg.cost(),
                 statsRepository.netConsumptionWhPerKm(carId, r[0], r[1], rangeMode),
                 duration,
                 drives.data(),

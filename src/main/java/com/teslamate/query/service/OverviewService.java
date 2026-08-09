@@ -9,7 +9,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Map;
 
 @Service
 public class OverviewService {
@@ -35,7 +34,7 @@ public class OverviewService {
         String rangeMode = resolveRange(range);
 
         LatestSnapshotDto latest = carRepository.findLatest(carId).orElse(null);
-        Map<String, Double> charge = statsRepository.chargeEnergyAndCost(carId, from, to);
+        var charge = statsRepository.chargeEnergyAndCost(carId, from, to);
 
         return new OverviewDto(
                 carId,
@@ -45,8 +44,8 @@ public class OverviewService {
                 statsRepository.totalDistance(carId, from, to),
                 statsRepository.netConsumptionWhPerKm(carId, from, to, rangeMode),
                 statsRepository.grossConsumptionWhPerKm(carId, from, to, rangeMode),
-                charge.get("energyAdded"),
-                charge.get("cost"),
+                charge.energyAdded(),
+                charge.cost(),
                 statsRepository.driveCount(carId, from, to),
                 statsRepository.chargeCount(carId, from, to),
                 statsRepository.latestFirmware(carId),
