@@ -50,10 +50,14 @@ public class AdvancedQueryService {
     public TripSummaryDto tripSummary(long carId, String fromStr, String toStr, String range) {
         Instant[] r = require(fromStr, toStr);
         String rangeMode = resolveRange(range);
-        PageResponse<DriveDto> drives = driveService.list(carId, fromStr, toStr, null, null, null, null, 1, 200);
-        PageResponse<ChargingProcessDto> charges = chargingProcessService.list(carId, fromStr, toStr, null, null, null, 1, 200);
+        PageResponse<?> drivesPage = driveService.list(carId, fromStr, toStr, null, null, null, null, null, null, 1, 200);
+        @SuppressWarnings("unchecked")
+        List<DriveDto> driveRows = (List<DriveDto>) (List<?>) drivesPage.data();
+        PageResponse<?> chargesPage = chargingProcessService.list(carId, fromStr, toStr, null, null, null, null, null, 1, 200);
+        @SuppressWarnings("unchecked")
+        List<ChargingProcessDto> chargeRows = (List<ChargingProcessDto>) (List<?>) chargesPage.data();
         var chargeAgg = statsRepository.chargeEnergyAndCost(carId, r[0], r[1]);
-        double duration = drives.data().stream()
+        double duration = driveRows.stream()
                 .map(DriveDto::durationMin)
                 .filter(v -> v != null)
                 .mapToInt(Integer::intValue)
@@ -69,8 +73,8 @@ public class AdvancedQueryService {
                 chargeAgg.cost(),
                 statsRepository.netConsumptionWhPerKm(carId, r[0], r[1], rangeMode),
                 duration,
-                drives.data(),
-                charges.data()
+                driveRows,
+                chargeRows
         );
     }
 

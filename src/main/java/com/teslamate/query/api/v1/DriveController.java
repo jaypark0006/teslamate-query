@@ -1,6 +1,5 @@
 package com.teslamate.query.api.v1;
 
-import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.service.DriveService;
@@ -23,8 +22,8 @@ public class DriveController {
     }
 
     @GetMapping
-    @Operation(summary = "List drives (lean resource: drives table + FK ids only)")
-    public PageResponse<DriveDto> list(
+    @Operation(summary = "List drives. Default lean; view=enriched for Grafana-wide rows.")
+    public PageResponse<?> list(
             @RequestParam(required = false) Long carId,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
@@ -32,24 +31,29 @@ public class DriveController {
             @RequestParam(required = false) Integer minDuration,
             @RequestParam(required = false) Long geofenceId,
             @RequestParam(required = false) Boolean incompleteOnly,
+            @Parameter(description = "lean (default) | enriched")
+            @RequestParam(required = false) String view,
+            @Parameter(description = "ideal|rated; only used when view=enriched")
+            @RequestParam(required = false) String range,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
         return driveService.list(carId, from, to, minDistance, minDuration, geofenceId,
-                incompleteOnly, page, size);
+                incompleteOnly, view, range, page, size);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Drive detail (lean)")
-    public DriveDto get(@PathVariable long id) {
-        return driveService.get(id);
+    @Operation(summary = "Drive detail (lean or enriched)")
+    public Object get(@PathVariable long id,
+                      @RequestParam(required = false) String view,
+                      @RequestParam(required = false) String range) {
+        return driveService.get(id, view, range);
     }
 
     @GetMapping("/{id}/positions")
     @Operation(summary = "Drive path / telemetry series")
     public List<DrivePositionDto> positions(
             @PathVariable long id,
-            @Parameter(description = "Optional downsample bucket in seconds")
             @RequestParam(required = false) Integer downsample
     ) {
         return driveService.positions(id, downsample);
