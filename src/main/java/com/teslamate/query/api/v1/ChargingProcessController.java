@@ -23,27 +23,25 @@ public class ChargingProcessController {
     }
 
     @GetMapping({"/charging-processes", "/charges"})
-    @Operation(summary = "List charging sessions (charging_processes). Alias: /charges")
+    @Operation(summary = "List charging sessions (lean). AC/DC join only when chargeType filter is set.")
     public PageResponse<ChargingProcessDto> list(
             @RequestParam(required = false) Long carId,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) Long geofenceId,
-            @Parameter(description = "AC or DC")
+            @Parameter(description = "Optional AC|DC filter (triggers charges aggregation)")
             @RequestParam(required = false) String chargeType,
             @RequestParam(required = false) Boolean incompleteOnly,
-            @RequestParam(required = false) String range,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
-        return service.list(carId, from, to, geofenceId, chargeType, incompleteOnly, range, page, size);
+        return service.list(carId, from, to, geofenceId, chargeType, incompleteOnly, page, size);
     }
 
     @GetMapping({"/charging-processes/{id}", "/charges/{id}"})
-    @Operation(summary = "Charging session detail")
-    public ChargingProcessDto get(@PathVariable long id,
-                                  @RequestParam(required = false) String range) {
-        return service.get(id, range);
+    @Operation(summary = "Charging session detail (lean)")
+    public ChargingProcessDto get(@PathVariable long id) {
+        return service.get(id);
     }
 
     @GetMapping({"/charging-processes/{id}/samples", "/charges/{id}/samples"})

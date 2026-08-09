@@ -51,7 +51,7 @@ public class AdvancedQueryService {
         Instant[] r = require(fromStr, toStr);
         String rangeMode = resolveRange(range);
         PageResponse<DriveDto> drives = driveService.list(carId, fromStr, toStr, null, null, null, null, 1, 200);
-        PageResponse<ChargingProcessDto> charges = chargingProcessService.list(carId, fromStr, toStr, null, null, null, range, 1, 200);
+        PageResponse<ChargingProcessDto> charges = chargingProcessService.list(carId, fromStr, toStr, null, null, null, 1, 200);
         var chargeAgg = statsRepository.chargeEnergyAndCost(carId, r[0], r[1]);
         double duration = drives.data().stream()
                 .map(DriveDto::durationMin)
