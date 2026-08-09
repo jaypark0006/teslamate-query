@@ -6,35 +6,55 @@ Auth: header `X-API-Key` (or query `api_key`)
 ## Conventions
 
 - Timestamps: ISO-8601 UTC (`2024-01-01T00:00:00Z`)
-- Units: metric in field names (`distanceKm`, `*C`, ranges in km)
-- `range=ideal|rated` overrides settings preferred range
+- **Units are metric** in field names (`distanceKm`, temps in °C, ranges in km)
 - List responses: `{ "data": [...], "page", "size", "total" }`
 - Errors: `{ "code", "message", "timestamp", "path" }`
+- **Domain resources are lean by default** (table columns + foreign keys)
+- Grafana-wide rows: `view=enriched` (optional; joins allowed only here)
 
-## Core resources
+## Core resources (lean)
 
 ### GET /cars
 ### GET /cars/{id}
 ### GET /cars/{id}/latest
-Latest position **or** charge sample (`ideal_battery_range_km IS NOT NULL` for positions).
 
 ### GET /settings
-Global units and preferred range.
+Global units / preferred range (read once per Grafana dashboard).
 
 ### GET /geofences
+### GET /addresses/{id}
+### GET /addresses?ids=1,2,3
+Batch resolve address FKs (max 200) for client/Grafana joins.
 
 ### GET /drives
-Query: `carId`, `from`, `to`, `minDistance`, `minDuration`, `geofenceId`, `location`, `incompleteOnly`, `range`, `page`, `size`
+Query: `carId`, `from`, `to`, `minDistance`, `minDuration`, `geofenceId`, `incompleteOnly`, `page`, `size`  
+Optional: `view=enriched`, `range=ideal|rated` (enriched only)
+
+Lean fields include both ideal/rated ranges and FK ids:
+`startAddressId`, `endAddressId`, `startGeofenceId`, `endGeofenceId`, `startPositionId`, `endPositionId`.
 
 ### GET /drives/{id}
-### GET /drives/{id}/positions
-Query: `downsample` (seconds)
+### GET /drives/{id}/positions?downsample=
 
 ### GET /charging-processes  (alias `/charges`)
-Query: `carId`, `from`, `to`, `geofenceId`, `chargeType`, `incompleteOnly`, `range`, `page`, `size`
+Query: `carId`, `from`, `to`, `geofenceId`, `incompleteOnly`, `page`, `size`  
+Optional: `chargeType=AC|DC` (**lean only**, joins `charges` only when set)  
+Optional: `view=enriched`, `range=`
+
+Lean fields: energy, SOC, cost, both range pairs, `positionId`, `addressId`, `geofenceId`.
 
 ### GET /charging-processes/{id}
 ### GET /charging-processes/{id}/samples
+
+## Enriched view (Grafana tables)
+
+```
+GET /drives?view=enriched&range=ideal&...
+GET /charging-processes?view=enriched&range=ideal&...
+```
+
+Adds display labels, optional consumption, AC/DC, lat/lon, etc.  
+Prefer lean + `/geofences` + `/addresses?ids=` composition when possible.
 
 ## Aggregates
 

@@ -1,35 +1,14 @@
 {
-  "title": "TeslaMate Query - Drives (Infinity example)",
-  "description": "Example panel config using Grafana Infinity datasource against teslamate-query",
-  "panels": [
-    {
-      "title": "Drives",
-      "type": "table",
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "teslamate-query" },
-      "targets": [
-        {
-          "type": "json",
-          "source": "url",
-          "url": "http://teslamate-query:8080/api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
-          "url_options": {
-            "method": "GET",
-            "headers": [
-              { "key": "X-API-Key", "value": "${TESLAMATE_QUERY_API_KEY}" }
-            ]
-          },
-          "root_selector": "data",
-          "format": "table",
-          "columns": [
-            { "selector": "id", "text": "ID", "type": "number" },
-            { "selector": "startDate", "text": "Start", "type": "timestamp" },
-            { "selector": "startAddress", "text": "From", "type": "string" },
-            { "selector": "endAddress", "text": "To", "type": "string" },
-            { "selector": "distanceKm", "text": "Distance km", "type": "number" },
-            { "selector": "durationMin", "text": "Duration min", "type": "number" },
-            { "selector": "consumptionKwh", "text": "kWh", "type": "number" }
-          ]
-        }
-      ]
+  "title": "TeslaMate Query - Drives",
+  "description": "Lean list + optional enriched. Prefer lean + geofence join transform.",
+  "examples": {
+    "lean": "GET /api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+    "enriched": "GET /api/v1/drives?view=enriched&range=${range}&carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+    "compose": {
+      "A": "GET /api/v1/drives?carId=...&from=...&to=...",
+      "B": "GET /api/v1/geofences",
+      "C": "GET /api/v1/addresses?ids=${startAddressIds}",
+      "transform": "Outer join A.startGeofenceId = B.id for display name"
     }
-  ]
+  }
 }

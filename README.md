@@ -49,8 +49,9 @@ curl -H "X-API-Key: dev-api-key" "http://localhost:8080/api/v1/cars"
 | GET | `/api/v1/cars`, `/cars/{id}`, `/cars/{id}/latest` |
 | GET | `/api/v1/settings` |
 | GET | `/api/v1/geofences` |
-| GET | `/api/v1/drives`, `/drives/{id}`, `/drives/{id}/positions` |
-| GET | `/api/v1/charging-processes` (alias `/charges`) + detail + `/samples` |
+| GET | `/api/v1/drives`, `/drives/{id}`, `/drives/{id}/positions` (lean; `view=enriched` optional) |
+| GET | `/api/v1/charging-processes` (alias `/charges`) + detail + `/samples` (lean; `view=enriched` optional) |
+| GET | `/api/v1/addresses/{id}`, `/addresses?ids=` |
 
 ### Phase 2 (stats)
 
@@ -103,6 +104,7 @@ See [docs/GRAFANA_ADJUSTMENT.md](docs/GRAFANA_ADJUSTMENT.md) for how to redesign
 - **Gross consumption**: centralized in `StatsRepository` (shared Overview / Efficiency / etc.)
 - **Positions**: time range required; optional `downsample` and `cleanOnly` (`ideal_battery_range_km IS NOT NULL`)
 - **Security**: no access path to `private.tokens`
+- **Lean resources**: drives/charges return table + FKs; use `/addresses` + `/geofences` or `view=enriched` for wide Grafana tables
 
 ## Build & test
 
