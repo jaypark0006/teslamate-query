@@ -3,22 +3,21 @@ package com.teslamate.query.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+/**
+ * Lean drive resource: columns from {@code drives} only (+ simple derived metrics).
+ * Related entities are referenced by id; compose names via /addresses, /geofences, /cars.
+ */
 public record DriveDto(
         Long id,
         Long carId,
         Instant startDate,
         Instant endDate,
-        String startAddress,
-        String endAddress,
         Integer durationMin,
         Double distanceKm,
-        Integer startBatteryLevel,
-        Integer endBatteryLevel,
-        BigDecimal startRangeKm,
-        BigDecimal endRangeKm,
-        BigDecimal rangeDiffKm,
-        Double consumptionKwh,
-        Double consumptionKwhPerKm,
+        BigDecimal startIdealRangeKm,
+        BigDecimal endIdealRangeKm,
+        BigDecimal startRatedRangeKm,
+        BigDecimal endRatedRangeKm,
         Double outsideTempAvgC,
         Double insideTempAvgC,
         Double avgSpeedKmh,
@@ -27,7 +26,10 @@ public record DriveDto(
         Integer powerMin,
         Integer ascent,
         Integer descent,
-        Double carEfficiency,
+        Long startPositionId,
+        Long endPositionId,
+        Long startAddressId,
+        Long endAddressId,
         Long startGeofenceId,
         Long endGeofenceId
 ) {
