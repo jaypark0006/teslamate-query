@@ -3,6 +3,7 @@ package com.teslamate.query.repository;
 import com.teslamate.query.db.JdbiRepository;
 import com.teslamate.query.db.SqlQueryBuilder;
 import com.teslamate.query.dto.DriveDto;
+import com.teslamate.query.dto.DriveEnrichedDto;
 import com.teslamate.query.dto.DrivePositionDto;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.stereotype.Repository;
@@ -43,6 +44,15 @@ public class DriveRepository extends JdbiRepository {
               d.start_geofence_id,
               d.end_geofence_id
             FROM drives d
+            """;
+
+    private static final String ADDRESS_START = """
+            COALESCE(sg.name, CONCAT_WS(', ',
+              COALESCE(sa.name, NULLIF(CONCAT_WS(' ', sa.road, sa.house_number), '')), sa.city))
+            """;
+    private static final String ADDRESS_END = """
+            COALESCE(eg.name, CONCAT_WS(', ',
+              COALESCE(ea.name, NULLIF(CONCAT_WS(' ', ea.road, ea.house_number), '')), ea.city))
             """;
 
     public DriveRepository(Jdbi jdbi) {
@@ -93,6 +103,68 @@ public class DriveRepository extends JdbiRepository {
                 WHERE drive_id = :driveId
                 ORDER BY date
                 """, DrivePositionDto.class, "driveId", driveId);
+    }
+
+    public List<DriveEnrichedDto> findEnriched(
+            Long carId, Instant from, Instant to, Double minDistance, Integer minDuration,
+            Long geofenceId, Boolean incompleteOnly, String rangeMode, int limit, int offset) {
+        SqlQueryBuilder q = SqlQueryBuilder.of(enrichedSelect(rangeMode) + " WHERE 1=1 ");
+        applyFilters(q, carId, from, to, minDistance, minDuration, geofenceId, incompleteOnly);
+        q.append(" ORDER BY d.start_date DESC LIMIT :limit OFFSET :offset")
+                .bind("limit", limit)
+                .bind("offset", offset);
+        return list(q, DriveEnrichedDto.class);
+    }
+
+    public Optional<DriveEnrichedDto> findEnrichedById(long id, String rangeMode) {
+        return one(SqlQueryBuilder.of(enrichedSelect(rangeMode) + " WHERE d.id = :id ").bind("id", id),
+                DriveEnrichedDto.class);
+    }
+
+    private static String enrichedSelect(String rangeMode) {
+        String startRange = "d.start_" + rangeMode + "_range_km";
+        String endRange = "d.end_" + rangeMode + "_range_km";
+        return """
+                SELECT
+                  d.id, d.car_id, d.start_date, d.end_date,
+                  %s AS start_address,
+                  %s AS end_address,
+                  d.duration_min,
+                  d.distance AS distance_km,
+                  sp.battery_level AS start_battery_level,
+                  ep.battery_level AS end_battery_level,
+                  %s AS start_range_km,
+                  %s AS end_range_km,
+                  (%s - %s) AS range_diff_km,
+                  ((%s - %s) * car.efficiency) AS consumption_kwh,
+                  CASE WHEN d.distance > 0
+                       THEN ((%s - %s) * car.efficiency) / d.distance
+                       ELSE NULL END AS consumption_kwh_per_km,
+                  d.outside_temp_avg AS outside_temp_avg_c,
+                  d.inside_temp_avg AS inside_temp_avg_c,
+                  CASE WHEN d.duration_min > 0
+                       THEN d.distance / (d.duration_min * 60.0) * 3600.0
+                       ELSE NULL END AS avg_speed_kmh,
+                  d.speed_max, d.power_max, d.power_min, d.ascent, d.descent,
+                  car.efficiency AS car_efficiency,
+                  d.start_geofence_id, d.end_geofence_id,
+                  d.start_address_id, d.end_address_id,
+                  d.start_position_id, d.end_position_id
+                FROM drives d
+                LEFT JOIN addresses sa ON d.start_address_id = sa.id
+                LEFT JOIN addresses ea ON d.end_address_id = ea.id
+                LEFT JOIN positions sp ON d.start_position_id = sp.id
+                LEFT JOIN positions ep ON d.end_position_id = ep.id
+                LEFT JOIN geofences sg ON d.start_geofence_id = sg.id
+                LEFT JOIN geofences eg ON d.end_geofence_id = eg.id
+                LEFT JOIN cars car ON car.id = d.car_id
+                """.formatted(
+                ADDRESS_START, ADDRESS_END,
+                startRange, endRange,
+                startRange, endRange,
+                startRange, endRange,
+                startRange, endRange
+        );
     }
 
     private static void applyFilters(SqlQueryBuilder q, Long carId, Instant from, Instant to,
