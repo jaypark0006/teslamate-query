@@ -93,7 +93,7 @@ Create a read-only role: [scripts/create-readonly-role.sql](scripts/create-reado
 
 ## Grafana
 
-See [grafana/examples/README.md](grafana/examples/README.md) for Infinity plugin migration notes.
+See [docs/GRAFANA_ADJUSTMENT.md](docs/GRAFANA_ADJUSTMENT.md) for how to redesign Grafana variables/filters/panels, and [grafana/examples/README.md](grafana/examples/README.md) for Infinity snippets.
 
 ## Design notes
 

@@ -1,13 +1,15 @@
-# Grafana migration examples
+# Grafana examples
 
-Use the [Infinity](https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/) plugin (or JSON API) as the Grafana datasource.
+完整调整策略见：**[docs/GRAFANA_ADJUSTMENT.md](../../docs/GRAFANA_ADJUSTMENT.md)**
 
-## Datasource setup
+## Quick setup
 
-1. Install Infinity plugin
-2. Create datasource pointing at `http://teslamate-query:8080` (or host port)
-3. Add header `X-API-Key: <your key>`
-4. Replace Postgres `rawSql` panels gradually:
+1. Install [Infinity](https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/)
+2. Datasource URL: `http://teslamate-query:8080`
+3. Header: `X-API-Key: <key>`
+4. Dashboard variables: `car_id` ← `GET /api/v1/cars`, time picker → `from`/`to`
+
+## Endpoint map
 
 | Old dashboard | New endpoint |
 |---------------|--------------|
@@ -23,13 +25,18 @@ Use the [Infinity](https://grafana.com/grafana/plugins/yesoreyeram-infinity-data
 | vampire-drain.json | `GET /api/v1/stats/vampire-drain` |
 | battery-health.json | `GET /api/v1/stats/battery-health` |
 | projected-range.json | `GET /api/v1/stats/projected-range` |
-| locations.json / visited.json | `GET /api/v1/stats/locations` |
+| locations / visited | `GET /api/v1/stats/locations` |
 | states.json | `GET /api/v1/states` |
 | updates.json | `GET /api/v1/updates` |
 
-## Migration stages
+## Sample panel snippets
 
-1. **Dual-run**: keep Postgres DS, add Infinity DS
-2. Replace Drives/Charges panels first
-3. Replace Overview/Stats
-4. Remove Postgres datasource from Grafana when parity is enough
+- `infinity-drives.json` — table over `/drives`
+- `infinity-overview.json` — notes for `/overview`
+
+## Filter philosophy (short)
+
+- **Keep:** car, time range, geofence id, min distance/duration, charge type, incomplete flag  
+- **Drop from every panel:** length_unit / temp_unit / preferred_range SQL queries  
+- **Units:** read `/settings` once; convert in Grafana field units  
+- **Names (address/geofence):** second query + transform join, not forced SQL JOIN in API
