@@ -1,0 +1,14 @@
+services:
+  teslamate-query:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: ${DB_HOST:-database}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-teslamate}
+      DB_USER: ${DB_USER:-teslamate}
+      DB_PASS: ${DB_PASS:-secret}
+      API_KEYS: ${API_KEYS:-dev-api-key}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+    restart: unless-stopped
