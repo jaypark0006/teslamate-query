@@ -1,0 +1,23 @@
+package com.teslamate.query.dto;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+
+public record ChargeSampleDto(
+        Long id,
+        Instant date,
+        Integer batteryLevel,
+        Integer usableBatteryLevel,
+        BigDecimal chargeEnergyAdded,
+        Integer chargerPower,
+        Integer chargerVoltage,
+        Integer chargerActualCurrent,
+        Integer chargerPhases,
+        Boolean fastChargerPresent,
+        String fastChargerType,
+        BigDecimal idealBatteryRangeKm,
+        BigDecimal ratedBatteryRangeKm,
+        BigDecimal outsideTemp,
+        Boolean batteryHeaterOn
+) {
+}
