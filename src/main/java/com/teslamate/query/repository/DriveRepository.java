@@ -14,13 +14,35 @@ import java.util.Optional;
 @Repository
 public class DriveRepository extends JdbiRepository {
 
-    private static final String ADDRESS_START = """
-            COALESCE(sg.name, CONCAT_WS(', ',
-              COALESCE(sa.name, NULLIF(CONCAT_WS(' ', sa.road, sa.house_number), '')), sa.city))
-            """;
-    private static final String ADDRESS_END = """
-            COALESCE(eg.name, CONCAT_WS(', ',
-              COALESCE(ea.name, NULLIF(CONCAT_WS(' ', ea.road, ea.house_number), '')), ea.city))
+    private static final String DRIVE_SELECT = """
+            SELECT
+              d.id,
+              d.car_id,
+              d.start_date,
+              d.end_date,
+              d.duration_min,
+              d.distance AS distance_km,
+              d.start_ideal_range_km,
+              d.end_ideal_range_km,
+              d.start_rated_range_km,
+              d.end_rated_range_km,
+              d.outside_temp_avg AS outside_temp_avg_c,
+              d.inside_temp_avg AS inside_temp_avg_c,
+              CASE WHEN d.duration_min > 0
+                   THEN d.distance / (d.duration_min * 60.0) * 3600.0
+                   ELSE NULL END AS avg_speed_kmh,
+              d.speed_max,
+              d.power_max,
+              d.power_min,
+              d.ascent,
+              d.descent,
+              d.start_position_id,
+              d.end_position_id,
+              d.start_address_id,
+              d.end_address_id,
+              d.start_geofence_id,
+              d.end_geofence_id
+            FROM drives d
             """;
 
     public DriveRepository(Jdbi jdbi) {
@@ -28,35 +50,24 @@ public class DriveRepository extends JdbiRepository {
     }
 
     public long count(Long carId, Instant from, Instant to, Double minDistance, Integer minDuration,
-                      Long geofenceId, String location, Boolean incompleteOnly) {
-        SqlQueryBuilder q = SqlQueryBuilder.of("""
-                SELECT COUNT(*)
-                FROM drives d
-                LEFT JOIN addresses sa ON d.start_address_id = sa.id
-                LEFT JOIN addresses ea ON d.end_address_id = ea.id
-                LEFT JOIN geofences sg ON d.start_geofence_id = sg.id
-                LEFT JOIN geofences eg ON d.end_geofence_id = eg.id
-                WHERE 1=1
-                """);
-        applyFilters(q, carId, from, to, minDistance, minDuration, geofenceId, location, incompleteOnly);
+                      Long geofenceId, Boolean incompleteOnly) {
+        SqlQueryBuilder q = SqlQueryBuilder.of("SELECT COUNT(*) FROM drives d WHERE 1=1 ");
+        applyFilters(q, carId, from, to, minDistance, minDuration, geofenceId, incompleteOnly);
         return longValue(q);
     }
 
     public List<DriveDto> find(Long carId, Instant from, Instant to, Double minDistance, Integer minDuration,
-                               Long geofenceId, String location, Boolean incompleteOnly,
-                               String rangeMode, int limit, int offset) {
-        SqlQueryBuilder q = SqlQueryBuilder.of(driveSelect(rangeMode) + " WHERE 1=1 ");
-        applyFilters(q, carId, from, to, minDistance, minDuration, geofenceId, location, incompleteOnly);
+                               Long geofenceId, Boolean incompleteOnly, int limit, int offset) {
+        SqlQueryBuilder q = SqlQueryBuilder.of(DRIVE_SELECT + " WHERE 1=1 ");
+        applyFilters(q, carId, from, to, minDistance, minDuration, geofenceId, incompleteOnly);
         q.append(" ORDER BY d.start_date DESC LIMIT :limit OFFSET :offset")
                 .bind("limit", limit)
                 .bind("offset", offset);
         return list(q, DriveDto.class);
     }
 
-    public Optional<DriveDto> findById(long id, String rangeMode) {
-        SqlQueryBuilder q = SqlQueryBuilder.of(driveSelect(rangeMode) + " WHERE d.id = :id ")
-                .bind("id", id);
-        return one(q, DriveDto.class);
+    public Optional<DriveDto> findById(long id) {
+        return one(SqlQueryBuilder.of(DRIVE_SELECT + " WHERE d.id = :id ").bind("id", id), DriveDto.class);
     }
 
     public List<DrivePositionDto> findPositions(long driveId, Integer downsampleSeconds) {
@@ -84,61 +95,9 @@ public class DriveRepository extends JdbiRepository {
                 """, DrivePositionDto.class, "driveId", driveId);
     }
 
-    private static String driveSelect(String rangeMode) {
-        String startRange = "d.start_" + rangeMode + "_range_km";
-        String endRange = "d.end_" + rangeMode + "_range_km";
-        return """
-                SELECT
-                  d.id,
-                  d.car_id,
-                  d.start_date,
-                  d.end_date,
-                  %s AS start_address,
-                  %s AS end_address,
-                  d.duration_min,
-                  d.distance AS distance_km,
-                  sp.battery_level AS start_battery_level,
-                  ep.battery_level AS end_battery_level,
-                  %s AS start_range_km,
-                  %s AS end_range_km,
-                  (%s - %s) AS range_diff_km,
-                  ((%s - %s) * car.efficiency) AS consumption_kwh,
-                  CASE WHEN d.distance > 0
-                       THEN ((%s - %s) * car.efficiency) / d.distance
-                       ELSE NULL END AS consumption_kwh_per_km,
-                  d.outside_temp_avg AS outside_temp_avg_c,
-                  d.inside_temp_avg AS inside_temp_avg_c,
-                  CASE WHEN d.duration_min > 0
-                       THEN d.distance / (d.duration_min * 60.0) * 3600.0
-                       ELSE NULL END AS avg_speed_kmh,
-                  d.speed_max,
-                  d.power_max,
-                  d.power_min,
-                  d.ascent,
-                  d.descent,
-                  car.efficiency AS car_efficiency,
-                  d.start_geofence_id,
-                  d.end_geofence_id
-                FROM drives d
-                LEFT JOIN addresses sa ON d.start_address_id = sa.id
-                LEFT JOIN addresses ea ON d.end_address_id = ea.id
-                LEFT JOIN positions sp ON d.start_position_id = sp.id
-                LEFT JOIN positions ep ON d.end_position_id = ep.id
-                LEFT JOIN geofences sg ON d.start_geofence_id = sg.id
-                LEFT JOIN geofences eg ON d.end_geofence_id = eg.id
-                LEFT JOIN cars car ON car.id = d.car_id
-                """.formatted(
-                ADDRESS_START, ADDRESS_END,
-                startRange, endRange,
-                startRange, endRange,
-                startRange, endRange,
-                startRange, endRange
-        );
-    }
-
     private static void applyFilters(SqlQueryBuilder q, Long carId, Instant from, Instant to,
                                      Double minDistance, Integer minDuration, Long geofenceId,
-                                     String location, Boolean incompleteOnly) {
+                                     Boolean incompleteOnly) {
         q.andIfPresent(" AND d.car_id = :carId", "carId", carId)
                 .andIfPresent(" AND d.start_date >= :from", "from", from)
                 .andIfPresent(" AND d.start_date <= :to", "to", to)
@@ -147,17 +106,5 @@ public class DriveRepository extends JdbiRepository {
                 .andIfPresent(" AND (d.start_geofence_id = :geofenceId OR d.end_geofence_id = :geofenceId)",
                         "geofenceId", geofenceId)
                 .andIfTrue(" AND d.end_date IS NULL", Boolean.TRUE.equals(incompleteOnly));
-
-        if (location != null && !location.isBlank()) {
-            q.append("""
-                     AND (
-                       COALESCE(sg.name, '') ILIKE :loc OR COALESCE(eg.name, '') ILIKE :loc
-                       OR COALESCE(sa.city, '') ILIKE :loc OR COALESCE(ea.city, '') ILIKE :loc
-                       OR COALESCE(sa.name, '') ILIKE :loc OR COALESCE(ea.name, '') ILIKE :loc
-                       OR COALESCE(sa.road, '') ILIKE :loc OR COALESCE(ea.road, '') ILIKE :loc
-                     )
-                    """)
-                    .bind("loc", "%" + location + "%");
-        }
     }
 }

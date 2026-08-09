@@ -23,7 +23,7 @@ public class DriveController {
     }
 
     @GetMapping
-    @Operation(summary = "List drives with filters (replaces Drives dashboard SQL)")
+    @Operation(summary = "List drives (lean resource: drives table + FK ids only)")
     public PageResponse<DriveDto> list(
             @RequestParam(required = false) Long carId,
             @RequestParam(required = false) String from,
@@ -31,22 +31,18 @@ public class DriveController {
             @RequestParam(required = false) Double minDistance,
             @RequestParam(required = false) Integer minDuration,
             @RequestParam(required = false) Long geofenceId,
-            @RequestParam(required = false) String location,
             @RequestParam(required = false) Boolean incompleteOnly,
-            @Parameter(description = "ideal or rated; default from settings")
-            @RequestParam(required = false) String range,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
-        return driveService.list(carId, from, to, minDistance, minDuration, geofenceId, location,
-                incompleteOnly, range, page, size);
+        return driveService.list(carId, from, to, minDistance, minDuration, geofenceId,
+                incompleteOnly, page, size);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Drive detail")
-    public DriveDto get(@PathVariable long id,
-                        @RequestParam(required = false) String range) {
-        return driveService.get(id, range);
+    @Operation(summary = "Drive detail (lean)")
+    public DriveDto get(@PathVariable long id) {
+        return driveService.get(id);
     }
 
     @GetMapping("/{id}/positions")
