@@ -16,7 +16,7 @@ teslamate-query
 ## Stack
 
 - Java 21, Spring Boot 3.4
-- Spring JDBC + Hikari (read-only pool)
+- JDBI 3 (SqlObject + ConstructorMapper) over Hikari read-only pool
 - Caffeine cache
 - springdoc OpenAPI (`/swagger-ui.html`)
 - Docker / Compose
@@ -118,3 +118,15 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 ## License
 
 Same usage model as your TeslaMate deployment; this service only reads the existing database.
+
+
+## Data access layout
+
+| Layer | Role |
+|-------|------|
+| `dao/*Dao` | JDBI SqlObject for stable queries (cars, settings, geofences, health) |
+| `repository/*` | Extends `JdbiRepository`; dynamic filters via `SqlQueryBuilder` |
+| `db/JdbiRepository` | `queryList` / `queryOne` / `mapTo(Dto.class)` — no manual ResultSet mapping |
+| `config/JdbiConfig` | Plugins + snake_case → camelCase constructor mappers |
+
+SQL column aliases are snake_case; DTOs stay camelCase. Computed fields (consumption, AC/DC, …) are projected in SQL, not in Java mappers.
