@@ -1,5 +1,7 @@
 package com.teslamate.query.service;
 
+import com.teslamate.query.dao.ChargeDao;
+import com.teslamate.query.dao.ChargingProcessDao;
 import com.teslamate.query.dto.ChargeSampleDto;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.ChargingProcessEnrichedDto;
@@ -16,12 +18,17 @@ import java.util.List;
 @Service
 public class ChargingProcessService {
 
-    private final ChargingProcessRepository repository;
+    private final ChargingProcessDao chargingProcessDao;
+    private final ChargeDao chargeDao;
+    private final ChargingProcessRepository repository; // enriched + chargeType filter only
     private final SettingsService settingsService;
     private final QuerySupport support;
 
-    public ChargingProcessService(ChargingProcessRepository repository, SettingsService settingsService,
+    public ChargingProcessService(ChargingProcessDao chargingProcessDao, ChargeDao chargeDao,
+                                  ChargingProcessRepository repository, SettingsService settingsService,
                                   QuerySupport support) {
+        this.chargingProcessDao = chargingProcessDao;
+        this.chargeDao = chargeDao;
         this.repository = repository;
         this.settingsService = settingsService;
         this.support = support;
@@ -30,14 +37,26 @@ public class ChargingProcessService {
     public PageResponse<ChargingProcessDto> listLean(Long carId, String fromStr, String toStr, Long geofenceId,
                                                      String chargeType, Boolean incompleteOnly,
                                                      Integer page, Integer size) {
+        // AC/DC filter still uses repository aggregation (needs charges samples)
+        if (chargeType != null && !chargeType.isBlank()) {
+            Instant from = support.parseInstant(fromStr, "from");
+            Instant to = support.parseInstant(toStr, "to");
+            int p = support.page(page);
+            int s = support.size(size);
+            long total = repository.count(carId, from, to, geofenceId, chargeType, incompleteOnly);
+            List<ChargingProcessDto> data = repository.find(carId, from, to, geofenceId, chargeType,
+                    incompleteOnly, s, support.offset(p, s));
+            return PageResponse.of(data, p, s, total);
+        }
+
         Instant from = support.parseInstant(fromStr, "from");
         Instant to = support.parseInstant(toStr, "to");
         int p = support.page(page);
         int s = support.size(size);
-        long total = repository.count(carId, from, to, geofenceId, chargeType, incompleteOnly);
-        List<ChargingProcessDto> data = repository.find(carId, from, to, geofenceId, chargeType,
-                incompleteOnly, s, support.offset(p, s));
-        return PageResponse.of(data, p, s, total);
+        long total = chargingProcessDao.count(carId, from, to, geofenceId, incompleteOnly);
+        List<Long> ids = chargingProcessDao.findIds(carId, from, to, geofenceId, incompleteOnly,
+                s, support.offset(p, s));
+        return PageResponse.of(chargingProcessDao.findByIdsOrdered(ids), p, s, total);
     }
 
     public PageResponse<ChargingProcessEnrichedDto> listEnriched(Long carId, String fromStr, String toStr,
@@ -48,7 +67,7 @@ public class ChargingProcessService {
         int p = support.page(page);
         int s = support.size(size);
         String rangeMode = support.rangeMode(range, settingsService.preferredRangeOrDefault());
-        long total = repository.count(carId, from, to, geofenceId, null, incompleteOnly);
+        long total = chargingProcessDao.count(carId, from, to, geofenceId, incompleteOnly);
         List<ChargingProcessEnrichedDto> data = repository.findEnriched(
                 carId, from, to, geofenceId, incompleteOnly, rangeMode, s, support.offset(p, s));
         return PageResponse.of(data, p, s, total);
@@ -56,7 +75,7 @@ public class ChargingProcessService {
 
     @Cacheable(value = "chargingProcess", key = "#id")
     public ChargingProcessDto getLean(long id) {
-        return repository.findById(id)
+        return chargingProcessDao.findById(id)
                 .orElseThrow(() -> new NotFoundException("Charging process not found: " + id));
     }
 
@@ -68,7 +87,7 @@ public class ChargingProcessService {
 
     public List<ChargeSampleDto> samples(long id) {
         getLean(id);
-        return repository.findSamples(id);
+        return chargeDao.findByProcessId(id);
     }
 
     public static boolean isEnriched(String view) {
