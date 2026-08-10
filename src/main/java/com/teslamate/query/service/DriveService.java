@@ -2,6 +2,7 @@ package com.teslamate.query.service;
 
 import com.teslamate.query.dao.DriveDao;
 import com.teslamate.query.dao.PositionDao;
+import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DriveEnrichedDto;
 import com.teslamate.query.dto.DrivePositionDto;
@@ -13,6 +14,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -20,7 +22,7 @@ public class DriveService {
 
     private final DriveDao driveDao;
     private final PositionDao positionDao;
-    private final DriveRepository driveRepository; // enriched only (legacy join)
+    private final DriveRepository driveRepository;
     private final SettingsService settingsService;
     private final QuerySupport support;
 
@@ -33,19 +35,16 @@ public class DriveService {
         this.support = support;
     }
 
-    /** Grafana Drives table: id filter then load rows. */
     public PageResponse<DriveDto> listLean(Long carId, String fromStr, String toStr, Double minDistance,
                                            Integer minDuration, Long geofenceId, Boolean incompleteOnly,
                                            Integer page, Integer size) {
-        Instant from = support.parseInstant(fromStr, "from");
-        Instant to = support.parseInstant(toStr, "to");
+        DriveSearchCondition condition = buildCondition(carId, fromStr, toStr, minDistance, minDuration,
+                geofenceId, incompleteOnly);
         int p = support.page(page);
         int s = support.size(size);
-        long total = driveDao.count(carId, from, to, minDistance, minDuration, geofenceId, incompleteOnly);
-        List<Long> ids = driveDao.findIds(carId, from, to, minDistance, minDuration, geofenceId,
-                incompleteOnly, s, support.offset(p, s));
-        List<DriveDto> data = driveDao.findByIdsOrdered(ids);
-        return PageResponse.of(data, p, s, total);
+        long total = driveDao.count(condition);
+        List<Long> ids = driveDao.findIds(condition, s, support.offset(p, s));
+        return PageResponse.of(driveDao.findByIdsOrdered(ids), p, s, total);
     }
 
     public PageResponse<DriveEnrichedDto> listEnriched(Long carId, String fromStr, String toStr, Double minDistance,
@@ -56,7 +55,8 @@ public class DriveService {
         int p = support.page(page);
         int s = support.size(size);
         String rangeMode = support.rangeMode(range, settingsService.preferredRangeOrDefault());
-        long total = driveDao.count(carId, from, to, minDistance, minDuration, geofenceId, incompleteOnly);
+        long total = driveDao.count(buildCondition(carId, fromStr, toStr, minDistance, minDuration,
+                geofenceId, incompleteOnly));
         List<DriveEnrichedDto> data = driveRepository.findEnriched(
                 carId, from, to, minDistance, minDuration, geofenceId, incompleteOnly,
                 rangeMode, s, support.offset(p, s));
@@ -74,16 +74,14 @@ public class DriveService {
                 .orElseThrow(() -> new NotFoundException("Drive not found: " + id));
     }
 
-    /** Drive Details path — PositionDao only. */
     public List<DrivePositionDto> positions(long id, Integer downsampleSeconds) {
         getLean(id);
         List<DrivePositionDto> all = positionDao.findByDriveId(id);
         if (downsampleSeconds == null || downsampleSeconds <= 0 || all.size() <= 2) {
             return all;
         }
-        // light client-side stride if caller asked downsample without SQL
         long bucketMs = downsampleSeconds * 1000L;
-        java.util.ArrayList<DrivePositionDto> out = new java.util.ArrayList<>();
+        ArrayList<DrivePositionDto> out = new ArrayList<>();
         Long lastBucket = null;
         for (DrivePositionDto pt : all) {
             if (pt.date() == null) {
@@ -99,6 +97,21 @@ public class DriveService {
             out.add(all.getLast());
         }
         return out;
+    }
+
+    private DriveSearchCondition buildCondition(Long carId, String fromStr, String toStr, Double minDistance,
+                                                Integer minDuration, Long geofenceId, Boolean incompleteOnly) {
+        Instant from = support.parseInstant(fromStr, "from");
+        Instant to = support.parseInstant(toStr, "to");
+        return DriveSearchCondition.builder()
+                .carId(carId)
+                .startDateFrom(from)
+                .startDateTo(to)
+                .minDistance(minDistance)
+                .minDuration(minDuration)
+                .geofenceId(geofenceId)
+                .incompleteOnly(incompleteOnly)
+                .build();
     }
 
     public static boolean isEnriched(String view) {

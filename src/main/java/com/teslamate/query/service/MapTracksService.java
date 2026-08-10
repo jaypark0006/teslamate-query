@@ -3,6 +3,8 @@ package com.teslamate.query.service;
 import com.teslamate.query.dao.ChargingProcessDao;
 import com.teslamate.query.dao.DriveDao;
 import com.teslamate.query.dao.PositionDao;
+import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
+import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.MapTracksDto;
@@ -47,18 +49,22 @@ public class MapTracksService {
         int driveLimit = maxDrives == null ? 80 : Math.min(Math.max(maxDrives, 1), 500);
         int chargeLimit = maxCharges == null ? 200 : Math.min(Math.max(maxCharges, 1), 1000);
 
-        // 1) drive ids in window
-        List<Long> driveIds = driveDao.findIds(carId, from, to, null, null, null, null, driveLimit, 0);
+        // 1) drive ids in window (condition builder → whereClause)
+        var driveCond = DriveSearchCondition.builder()
+                .carId(carId).startDateFrom(from).startDateTo(to).build();
+        List<Long> driveIds = driveDao.findIds(driveCond, driveLimit, 0);
         List<DriveDto> drives = driveDao.findByIdsOrdered(driveIds);
 
         // 2) positions for those drives
-        List<PositionDto> pathPoints = positionDao.findByDriveIds(driveIds);
+        List<PositionDto> pathPoints = driveIds.isEmpty() ? List.of() : positionDao.findByDriveIds(driveIds);
         Map<Long, List<PositionDto>> byDrive = pathPoints.stream()
                 .filter(p -> p.driveId() != null)
                 .collect(Collectors.groupingBy(PositionDto::driveId, LinkedHashMap::new, Collectors.toList()));
 
         // 3) charge session ids then rows
-        List<Long> chargeIds = chargingProcessDao.findIds(carId, from, to, null, null, chargeLimit, 0);
+        var chargeCond = ChargingProcessSearchCondition.builder()
+                .carId(carId).startDateFrom(from).startDateTo(to).build();
+        List<Long> chargeIds = chargingProcessDao.findIds(chargeCond, chargeLimit, 0);
         List<ChargingProcessDto> charges = chargingProcessDao.findByIdsOrdered(chargeIds);
 
         // 4) charge position ids → lat/lon
@@ -124,6 +130,6 @@ public class MapTracksService {
         if (lim > 20_000) {
             throw new BadRequestException("limit max 20000 for battery series; narrow time range");
         }
-        return positionDao.findForCarInRange(carId, range[0], range[1], true, lim);
+        return positionDao.findCleanForCarInRange(carId, range[0], range[1], lim);
     }
 }
