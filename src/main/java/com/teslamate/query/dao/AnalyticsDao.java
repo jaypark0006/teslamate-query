@@ -1,4 +1,4 @@
-package com.teslamate.query.repository;
+package com.teslamate.query.dao;
 
 import com.teslamate.query.db.JdbiRepository;
 import com.teslamate.query.dto.BatteryHealthDto;
@@ -16,9 +16,9 @@ import java.time.Instant;
 import java.util.List;
 
 @Repository
-public class AdvancedRepository extends JdbiRepository {
+public class AnalyticsDao extends JdbiRepository {
 
-    public AdvancedRepository(Jdbi jdbi) {
+    public AnalyticsDao(Jdbi jdbi) {
         super(jdbi);
     }
 
