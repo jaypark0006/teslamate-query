@@ -2,11 +2,11 @@ package com.teslamate.query.service;
 
 import com.teslamate.query.dao.ChargeDao;
 import com.teslamate.query.dao.ChargingProcessDao;
+import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.dto.ChargeSampleDto;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.ChargingProcessEnrichedDto;
 import com.teslamate.query.dto.PageResponse;
-import com.teslamate.query.exception.BadRequestException;
 import com.teslamate.query.exception.NotFoundException;
 import com.teslamate.query.repository.ChargingProcessRepository;
 import org.springframework.cache.annotation.Cacheable;
@@ -20,7 +20,7 @@ public class ChargingProcessService {
 
     private final ChargingProcessDao chargingProcessDao;
     private final ChargeDao chargeDao;
-    private final ChargingProcessRepository repository; // enriched + chargeType filter only
+    private final ChargingProcessRepository repository;
     private final SettingsService settingsService;
     private final QuerySupport support;
 
@@ -37,7 +37,6 @@ public class ChargingProcessService {
     public PageResponse<ChargingProcessDto> listLean(Long carId, String fromStr, String toStr, Long geofenceId,
                                                      String chargeType, Boolean incompleteOnly,
                                                      Integer page, Integer size) {
-        // AC/DC filter still uses repository aggregation (needs charges samples)
         if (chargeType != null && !chargeType.isBlank()) {
             Instant from = support.parseInstant(fromStr, "from");
             Instant to = support.parseInstant(toStr, "to");
@@ -49,13 +48,11 @@ public class ChargingProcessService {
             return PageResponse.of(data, p, s, total);
         }
 
-        Instant from = support.parseInstant(fromStr, "from");
-        Instant to = support.parseInstant(toStr, "to");
+        ChargingProcessSearchCondition condition = buildCondition(carId, fromStr, toStr, geofenceId, incompleteOnly);
         int p = support.page(page);
         int s = support.size(size);
-        long total = chargingProcessDao.count(carId, from, to, geofenceId, incompleteOnly);
-        List<Long> ids = chargingProcessDao.findIds(carId, from, to, geofenceId, incompleteOnly,
-                s, support.offset(p, s));
+        long total = chargingProcessDao.count(condition);
+        List<Long> ids = chargingProcessDao.findIds(condition, s, support.offset(p, s));
         return PageResponse.of(chargingProcessDao.findByIdsOrdered(ids), p, s, total);
     }
 
@@ -67,7 +64,7 @@ public class ChargingProcessService {
         int p = support.page(page);
         int s = support.size(size);
         String rangeMode = support.rangeMode(range, settingsService.preferredRangeOrDefault());
-        long total = chargingProcessDao.count(carId, from, to, geofenceId, incompleteOnly);
+        long total = chargingProcessDao.count(buildCondition(carId, fromStr, toStr, geofenceId, incompleteOnly));
         List<ChargingProcessEnrichedDto> data = repository.findEnriched(
                 carId, from, to, geofenceId, incompleteOnly, rangeMode, s, support.offset(p, s));
         return PageResponse.of(data, p, s, total);
@@ -88,6 +85,19 @@ public class ChargingProcessService {
     public List<ChargeSampleDto> samples(long id) {
         getLean(id);
         return chargeDao.findByProcessId(id);
+    }
+
+    private ChargingProcessSearchCondition buildCondition(Long carId, String fromStr, String toStr,
+                                                          Long geofenceId, Boolean incompleteOnly) {
+        Instant from = support.parseInstant(fromStr, "from");
+        Instant to = support.parseInstant(toStr, "to");
+        return ChargingProcessSearchCondition.builder()
+                .carId(carId)
+                .startDateFrom(from)
+                .startDateTo(to)
+                .geofenceId(geofenceId)
+                .incompleteOnly(incompleteOnly)
+                .build();
     }
 
     public static boolean isEnriched(String view) {

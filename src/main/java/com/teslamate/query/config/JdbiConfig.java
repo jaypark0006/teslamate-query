@@ -2,30 +2,24 @@ package com.teslamate.query.config;
 
 import com.teslamate.query.dao.AddressDao;
 import com.teslamate.query.dao.CarDao;
+import com.teslamate.query.dao.ChargeDao;
+import com.teslamate.query.dao.ChargingProcessDao;
+import com.teslamate.query.dao.DriveDao;
 import com.teslamate.query.dao.GeofenceDao;
 import com.teslamate.query.dao.HealthDao;
+import com.teslamate.query.dao.PositionDao;
 import com.teslamate.query.dao.SettingsDao;
-import com.teslamate.query.dto.AddressDto;
 import com.teslamate.query.dto.BatteryHealthDto;
-import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.ChargeEnergyCostDto;
-import com.teslamate.query.dto.ChargeSampleDto;
-import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.ChargingProcessEnrichedDto;
 import com.teslamate.query.dto.ChargingStatsDto;
-import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DriveEnrichedDto;
-import com.teslamate.query.dto.DrivePositionDto;
 import com.teslamate.query.dto.DriveStatsDto;
 import com.teslamate.query.dto.EfficiencyStatsDto;
-import com.teslamate.query.dto.GeofenceDto;
-import com.teslamate.query.dto.LatestSnapshotDto;
 import com.teslamate.query.dto.LocationStatsDto;
 import com.teslamate.query.dto.MileagePointDto;
 import com.teslamate.query.dto.PeriodStatsDto;
-import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.dto.ProjectedRangeDto;
-import com.teslamate.query.dto.SettingsDto;
 import com.teslamate.query.dto.StateDto;
 import com.teslamate.query.dto.TimelineEventDto;
 import com.teslamate.query.dto.UpdateDto;
@@ -36,12 +30,17 @@ import org.jdbi.v3.core.mapper.reflect.ReflectionMappers;
 import org.jdbi.v3.core.mapper.reflect.SnakeCaseColumnNameMatcher;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
+import org.jdbi.v3.stringtemplate4.StringTemplateEngine;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
 import java.util.List;
 
+/**
+ * Spring DI for JDBI (ASRS-style: SqlObject + optional whereClause via StringTemplate).
+ * Dao interfaces carry {@code @RegisterConstructorMapper}; only analytics DTOs need global register.
+ */
 @Configuration
 public class JdbiConfig {
 
@@ -50,22 +49,14 @@ public class JdbiConfig {
         Jdbi jdbi = Jdbi.create(dataSource);
         jdbi.installPlugin(new SqlObjectPlugin());
         jdbi.installPlugin(new PostgresPlugin());
-        // camelCase Java fields <-> snake_case SQL aliases
+        jdbi.setTemplateEngine(new StringTemplateEngine());
         jdbi.getConfig(ReflectionMappers.class)
                 .setColumnNameMatchers(List.of(new SnakeCaseColumnNameMatcher()));
 
-        register(jdbi, CarDto.class);
-        register(jdbi, AddressDto.class);
+        // Fluent/analytics queries (not on SqlObject interfaces)
         register(jdbi, ChargeEnergyCostDto.class);
-        register(jdbi, SettingsDto.class);
-        register(jdbi, GeofenceDto.class);
-        register(jdbi, LatestSnapshotDto.class);
-        register(jdbi, DriveDto.class);
         register(jdbi, DriveEnrichedDto.class);
-        register(jdbi, DrivePositionDto.class);
-        register(jdbi, ChargingProcessDto.class);
         register(jdbi, ChargingProcessEnrichedDto.class);
-        register(jdbi, ChargeSampleDto.class);
         register(jdbi, DriveStatsDto.Summary.class);
         register(jdbi, DriveStatsDto.Bucket.class);
         register(jdbi, ChargingStatsDto.Summary.class);
@@ -81,7 +72,6 @@ public class JdbiConfig {
         register(jdbi, ProjectedRangeDto.Point.class);
         register(jdbi, BatteryHealthDto.CapacityPoint.class);
         register(jdbi, LocationStatsDto.Place.class);
-        register(jdbi, PositionDto.class);
         return jdbi;
     }
 
@@ -112,5 +102,25 @@ public class JdbiConfig {
     @Bean
     public AddressDao addressDao(Jdbi jdbi) {
         return jdbi.onDemand(AddressDao.class);
+    }
+
+    @Bean
+    public DriveDao driveDao(Jdbi jdbi) {
+        return jdbi.onDemand(DriveDao.class);
+    }
+
+    @Bean
+    public ChargingProcessDao chargingProcessDao(Jdbi jdbi) {
+        return jdbi.onDemand(ChargingProcessDao.class);
+    }
+
+    @Bean
+    public ChargeDao chargeDao(Jdbi jdbi) {
+        return jdbi.onDemand(ChargeDao.class);
+    }
+
+    @Bean
+    public PositionDao positionDao(Jdbi jdbi) {
+        return jdbi.onDemand(PositionDao.class);
     }
 }
