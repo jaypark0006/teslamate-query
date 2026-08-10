@@ -52,6 +52,8 @@ curl -H "X-API-Key: dev-api-key" "http://localhost:8080/api/v1/cars"
 | GET | `/api/v1/drives`, `/drives/{id}`, `/drives/{id}/positions` (lean; `view=enriched` optional) |
 | GET | `/api/v1/charging-processes` (alias `/charges`) + detail + `/samples` (lean; `view=enriched` optional) |
 | GET | `/api/v1/addresses/{id}`, `/addresses?ids=` |
+| GET | `/api/v1/map/tracks` | GeoJSON multi-drive + charge points |
+| GET | `/api/v1/series/battery` | Charge Level SOC series |
 
 ### Phase 2 (stats)
 
@@ -94,7 +96,7 @@ Create a read-only role: [scripts/create-readonly-role.sql](scripts/create-reado
 
 ## Grafana
 
-See [docs/GRAFANA_ADJUSTMENT.md](docs/GRAFANA_ADJUSTMENT.md) for how to redesign Grafana variables/filters/panels, and [grafana/examples/README.md](grafana/examples/README.md) for Infinity snippets.
+See [docs/GRAFANA_ENDPOINTS.md](docs/GRAFANA_ENDPOINTS.md) and [docs/GRAFANA_ADJUSTMENT.md](docs/GRAFANA_ADJUSTMENT.md) for how to redesign Grafana variables/filters/panels, and [grafana/examples/README.md](grafana/examples/README.md) for Infinity snippets.
 
 ## Design notes
 
