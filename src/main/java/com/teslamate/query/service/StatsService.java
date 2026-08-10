@@ -82,10 +82,7 @@ public class StatsService {
     }
 
     private Instant[] requireRange(String fromStr, String toStr) {
-        Instant from = support.parseInstant(fromStr, "from");
-        Instant to = support.parseInstant(toStr, "to");
-        support.requireTimeRange(from, to);
-        return new Instant[]{from, to};
+        return support.requireRange(fromStr, toStr);
     }
 
     private String normalizeGroup(String groupBy) {
@@ -97,12 +94,6 @@ public class StatsService {
     }
 
     private String resolveRange(String range) {
-        String preferred = "ideal";
-        try {
-            SettingsDto settings = settingsService.get();
-            preferred = settings.preferredRange();
-        } catch (Exception ignored) {
-        }
-        return support.rangeMode(range, preferred);
+        return support.rangeMode(range, settingsService.preferredRangeOrDefault());
     }
 }

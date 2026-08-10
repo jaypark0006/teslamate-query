@@ -1,9 +1,9 @@
 package com.teslamate.query.service;
 
+import com.teslamate.query.dao.AddressDao;
 import com.teslamate.query.dto.AddressDto;
 import com.teslamate.query.exception.BadRequestException;
 import com.teslamate.query.exception.NotFoundException;
-import com.teslamate.query.repository.AddressRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -16,16 +16,15 @@ import java.util.stream.Collectors;
 @Service
 public class AddressService {
 
-    private final AddressRepository addressRepository;
+    private final AddressDao addressDao;
 
-    public AddressService(AddressRepository addressRepository) {
-        this.addressRepository = addressRepository;
+    public AddressService(AddressDao addressDao) {
+        this.addressDao = addressDao;
     }
 
     @Cacheable(value = "addresses", key = "#id")
     public AddressDto get(long id) {
-        return addressRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Address not found: " + id));
+        return addressDao.findById(id).orElseThrow(() -> new NotFoundException("Address not found: " + id));
     }
 
     public List<AddressDto> listByIds(String idsParam) {
@@ -43,9 +42,12 @@ public class AddressService {
                     }
                 })
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (ids.isEmpty()) {
+            throw new BadRequestException("ids is required");
+        }
         if (ids.size() > 200) {
             throw new BadRequestException("at most 200 address ids per request");
         }
-        return addressRepository.findByIds(ids);
+        return addressDao.findByIds(ids);
     }
 }

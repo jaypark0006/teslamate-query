@@ -50,12 +50,8 @@ public class AdvancedQueryService {
     public TripSummaryDto tripSummary(long carId, String fromStr, String toStr, String range) {
         Instant[] r = require(fromStr, toStr);
         String rangeMode = resolveRange(range);
-        PageResponse<?> drivesPage = driveService.list(carId, fromStr, toStr, null, null, null, null, null, null, 1, 200);
-        @SuppressWarnings("unchecked")
-        List<DriveDto> driveRows = (List<DriveDto>) (List<?>) drivesPage.data();
-        PageResponse<?> chargesPage = chargingProcessService.list(carId, fromStr, toStr, null, null, null, null, null, 1, 200);
-        @SuppressWarnings("unchecked")
-        List<ChargingProcessDto> chargeRows = (List<ChargingProcessDto>) (List<?>) chargesPage.data();
+        List<DriveDto> driveRows = driveService.listLean(carId, fromStr, toStr, null, null, null, null, 1, 200).data();
+        List<ChargingProcessDto> chargeRows = chargingProcessService.listLean(carId, fromStr, toStr, null, null, null, 1, 200).data();
         var chargeAgg = statsRepository.chargeEnergyAndCost(carId, r[0], r[1]);
         double duration = driveRows.stream()
                 .map(DriveDto::durationMin)
@@ -153,18 +149,10 @@ public class AdvancedQueryService {
     }
 
     private Instant[] require(String fromStr, String toStr) {
-        Instant from = support.parseInstant(fromStr, "from");
-        Instant to = support.parseInstant(toStr, "to");
-        support.requireTimeRange(from, to);
-        return new Instant[]{from, to};
+        return support.requireRange(fromStr, toStr);
     }
 
     private String resolveRange(String range) {
-        String preferred = "ideal";
-        try {
-            preferred = settingsService.get().preferredRange();
-        } catch (Exception ignored) {
-        }
-        return support.rangeMode(range, preferred);
+        return support.rangeMode(range, settingsService.preferredRangeOrDefault());
     }
 }

@@ -22,7 +22,7 @@ public class DriveController {
     }
 
     @GetMapping
-    @Operation(summary = "List drives. Default lean; view=enriched for Grafana-wide rows.")
+    @Operation(summary = "List drives. Default lean; view=enriched for wide Grafana rows.")
     public PageResponse<?> list(
             @RequestParam(required = false) Long carId,
             @RequestParam(required = false) String from,
@@ -33,13 +33,16 @@ public class DriveController {
             @RequestParam(required = false) Boolean incompleteOnly,
             @Parameter(description = "lean (default) | enriched")
             @RequestParam(required = false) String view,
-            @Parameter(description = "ideal|rated; only used when view=enriched")
             @RequestParam(required = false) String range,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
-        return driveService.list(carId, from, to, minDistance, minDuration, geofenceId,
-                incompleteOnly, view, range, page, size);
+        if (DriveService.isEnriched(view)) {
+            return driveService.listEnriched(carId, from, to, minDistance, minDuration, geofenceId,
+                    incompleteOnly, range, page, size);
+        }
+        return driveService.listLean(carId, from, to, minDistance, minDuration, geofenceId,
+                incompleteOnly, page, size);
     }
 
     @GetMapping("/{id}")
@@ -47,11 +50,14 @@ public class DriveController {
     public Object get(@PathVariable long id,
                       @RequestParam(required = false) String view,
                       @RequestParam(required = false) String range) {
-        return driveService.get(id, view, range);
+        if (DriveService.isEnriched(view)) {
+            return driveService.getEnriched(id, range);
+        }
+        return driveService.getLean(id);
     }
 
     @GetMapping("/{id}/positions")
-    @Operation(summary = "Drive path / telemetry series")
+    @Operation(summary = "Drive path / telemetry (use downsample for maps)")
     public List<DrivePositionDto> positions(
             @PathVariable long id,
             @RequestParam(required = false) Integer downsample

@@ -11,7 +11,7 @@ public interface SettingsDao {
 
     @SqlQuery("""
             SELECT id, unit_of_length, unit_of_temperature, unit_of_pressure,
-                   preferred_range, base_url, grafana_url, language, theme_mode
+                   preferred_range, base_url, grafana_url, language
             FROM settings
             ORDER BY id
             LIMIT 1

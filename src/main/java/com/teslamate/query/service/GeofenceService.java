@@ -1,7 +1,7 @@
 package com.teslamate.query.service;
 
+import com.teslamate.query.dao.GeofenceDao;
 import com.teslamate.query.dto.GeofenceDto;
-import com.teslamate.query.repository.GeofenceRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -10,14 +10,14 @@ import java.util.List;
 @Service
 public class GeofenceService {
 
-    private final GeofenceRepository geofenceRepository;
+    private final GeofenceDao geofenceDao;
 
-    public GeofenceService(GeofenceRepository geofenceRepository) {
-        this.geofenceRepository = geofenceRepository;
+    public GeofenceService(GeofenceDao geofenceDao) {
+        this.geofenceDao = geofenceDao;
     }
 
     @Cacheable("geofences")
     public List<GeofenceDto> list() {
-        return geofenceRepository.findAll();
+        return geofenceDao.findAll();
     }
 }
