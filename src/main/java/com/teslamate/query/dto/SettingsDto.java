@@ -8,7 +8,6 @@ public record SettingsDto(
         String preferredRange,
         String baseUrl,
         String grafanaUrl,
-        String language,
-        String themeMode
+        String language
 ) {
 }

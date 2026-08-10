@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.Locale;
 
 @Component
@@ -19,10 +18,7 @@ public class QuerySupport {
     }
 
     public int page(Integer page) {
-        if (page == null || page < 1) {
-            return 1;
-        }
-        return page;
+        return page == null || page < 1 ? 1 : page;
     }
 
     public int size(Integer size) {
@@ -38,9 +34,9 @@ public class QuerySupport {
     }
 
     public String rangeMode(String range, String preferredFromSettings) {
-        String r = range != null ? range : preferredFromSettings;
+        String r = (range != null && !range.isBlank()) ? range : preferredFromSettings;
         if (r == null || r.isBlank()) {
-            r = "ideal";
+            r = "rated";
         }
         r = r.trim().toLowerCase(Locale.ROOT);
         if (!r.equals("ideal") && !r.equals("rated")) {
@@ -64,23 +60,15 @@ public class QuerySupport {
         }
     }
 
-    public void requireTimeRange(Instant from, Instant to) {
+    public Instant[] requireRange(String fromStr, String toStr) {
+        Instant from = parseInstant(fromStr, "from");
+        Instant to = parseInstant(toStr, "to");
         if (from == null || to == null) {
             throw new BadRequestException("from and to are required (ISO-8601)");
         }
         if (from.isAfter(to)) {
             throw new BadRequestException("from must be before to");
         }
+        return new Instant[]{from, to};
     }
-
-    public OffsetDateTime toOffset(Instant instant) {
-        return instant == null ? null : instant.atOffset(ZoneOffset.UTC);
-    }
-
-    /** Address display matching Grafana: COALESCE(geofence, name/road+house, city) */
-    public static final String ADDRESS_SQL = """
-            COALESCE(%1$s.name, CONCAT_WS(', ',
-              COALESCE(%2$s.name, NULLIF(CONCAT_WS(' ', %2$s.road, %2$s.house_number), '')),
-              %2$s.city))
-            """;
 }

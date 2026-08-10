@@ -1,9 +1,8 @@
 package com.teslamate.query.service;
 
+import com.teslamate.query.dao.CarDao;
 import com.teslamate.query.dto.LatestSnapshotDto;
 import com.teslamate.query.dto.OverviewDto;
-import com.teslamate.query.dto.SettingsDto;
-import com.teslamate.query.repository.CarRepository;
 import com.teslamate.query.repository.StatsRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -14,26 +13,26 @@ import java.time.Instant;
 public class OverviewService {
 
     private final StatsRepository statsRepository;
-    private final CarRepository carRepository;
+    private final CarDao carDao;
     private final SettingsService settingsService;
     private final QuerySupport support;
 
-    public OverviewService(StatsRepository statsRepository, CarRepository carRepository,
+    public OverviewService(StatsRepository statsRepository, CarDao carDao,
                            SettingsService settingsService, QuerySupport support) {
         this.statsRepository = statsRepository;
-        this.carRepository = carRepository;
+        this.carDao = carDao;
         this.settingsService = settingsService;
         this.support = support;
     }
 
     @Cacheable(value = "overview", key = "#carId + '-' + #fromStr + '-' + #toStr + '-' + #range")
     public OverviewDto get(long carId, String fromStr, String toStr, String range) {
-        Instant from = support.parseInstant(fromStr, "from");
-        Instant to = support.parseInstant(toStr, "to");
-        support.requireTimeRange(from, to);
-        String rangeMode = resolveRange(range);
+        Instant[] r = support.requireRange(fromStr, toStr);
+        Instant from = r[0];
+        Instant to = r[1];
+        String rangeMode = support.rangeMode(range, settingsService.preferredRangeOrDefault());
 
-        LatestSnapshotDto latest = carRepository.findLatest(carId).orElse(null);
+        LatestSnapshotDto latest = carDao.findLatest(carId).orElse(null);
         var charge = statsRepository.chargeEnergyAndCost(carId, from, to);
 
         return new OverviewDto(
@@ -51,15 +50,5 @@ public class OverviewService {
                 statsRepository.latestFirmware(carId),
                 statsRepository.lfpBattery(carId)
         );
-    }
-
-    private String resolveRange(String range) {
-        String preferred = "ideal";
-        try {
-            SettingsDto settings = settingsService.get();
-            preferred = settings.preferredRange();
-        } catch (Exception ignored) {
-        }
-        return support.rangeMode(range, preferred);
     }
 }
