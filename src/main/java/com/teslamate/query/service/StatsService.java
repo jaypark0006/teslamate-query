@@ -2,7 +2,7 @@ package com.teslamate.query.service;
 
 import com.teslamate.query.dto.*;
 import com.teslamate.query.exception.BadRequestException;
-import com.teslamate.query.repository.StatsRepository;
+import com.teslamate.query.dao.StatsDao;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -13,12 +13,12 @@ import java.util.Locale;
 @Service
 public class StatsService {
 
-    private final StatsRepository statsRepository;
+    private final StatsDao statsDao;
     private final SettingsService settingsService;
     private final QuerySupport support;
 
-    public StatsService(StatsRepository statsRepository, SettingsService settingsService, QuerySupport support) {
-        this.statsRepository = statsRepository;
+    public StatsService(StatsDao statsDao, SettingsService settingsService, QuerySupport support) {
+        this.statsDao = statsDao;
         this.settingsService = settingsService;
         this.support = support;
     }
@@ -32,8 +32,8 @@ public class StatsService {
         return new DriveStatsDto(
                 carId,
                 gb,
-                statsRepository.driveSummary(carId, from, to, rangeMode),
-                statsRepository.driveBuckets(carId, from, to, gb, rangeMode)
+                statsDao.driveSummary(carId, from, to, rangeMode),
+                statsDao.driveBuckets(carId, from, to, gb, rangeMode)
         );
     }
 
@@ -43,9 +43,9 @@ public class StatsService {
         Instant to = requireRange(fromStr, toStr)[1];
         return new ChargingStatsDto(
                 carId,
-                statsRepository.chargingSummary(carId, from, to),
-                statsRepository.chargingByType(carId, from, to),
-                statsRepository.topStations(carId, from, to, 20)
+                statsDao.chargingSummary(carId, from, to),
+                statsDao.chargingByType(carId, from, to),
+                statsDao.topStations(carId, from, to, 20)
         );
     }
 
@@ -57,11 +57,11 @@ public class StatsService {
         return new EfficiencyStatsDto(
                 carId,
                 rangeMode,
-                statsRepository.netConsumptionWhPerKm(carId, from, to, rangeMode),
-                statsRepository.grossConsumptionWhPerKm(carId, from, to, rangeMode),
-                statsRepository.carEfficiency(carId),
-                statsRepository.totalDistance(carId, from, to),
-                statsRepository.efficiencyByTemp(carId, from, to, rangeMode)
+                statsDao.netConsumptionWhPerKm(carId, from, to, rangeMode),
+                statsDao.grossConsumptionWhPerKm(carId, from, to, rangeMode),
+                statsDao.carEfficiency(carId),
+                statsDao.totalDistance(carId, from, to),
+                statsDao.efficiencyByTemp(carId, from, to, rangeMode)
         );
     }
 
@@ -71,14 +71,14 @@ public class StatsService {
         Instant to = requireRange(fromStr, toStr)[1];
         String p = normalizeGroup(period);
         String rangeMode = resolveRange(range);
-        return new PeriodStatsDto(carId, p, statsRepository.periodStats(carId, from, to, p, rangeMode));
+        return new PeriodStatsDto(carId, p, statsDao.periodStats(carId, from, to, p, rangeMode));
     }
 
     @Cacheable(value = "stats", key = "'mileage-' + #carId + '-' + #fromStr + '-' + #toStr")
     public List<MileagePointDto> mileage(long carId, String fromStr, String toStr) {
         Instant from = requireRange(fromStr, toStr)[0];
         Instant to = requireRange(fromStr, toStr)[1];
-        return statsRepository.mileage(carId, from, to);
+        return statsDao.mileage(carId, from, to);
     }
 
     private Instant[] requireRange(String fromStr, String toStr) {

@@ -5,10 +5,8 @@ import com.teslamate.query.dao.ChargingProcessDao;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.dto.ChargeSampleDto;
 import com.teslamate.query.dto.ChargingProcessDto;
-import com.teslamate.query.dto.ChargingProcessEnrichedDto;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.exception.NotFoundException;
-import com.teslamate.query.repository.ChargingProcessRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -20,35 +18,17 @@ public class ChargingProcessService {
 
     private final ChargingProcessDao chargingProcessDao;
     private final ChargeDao chargeDao;
-    private final ChargingProcessRepository repository;
-    private final SettingsService settingsService;
     private final QuerySupport support;
 
-    public ChargingProcessService(ChargingProcessDao chargingProcessDao, ChargeDao chargeDao,
-                                  ChargingProcessRepository repository, SettingsService settingsService,
-                                  QuerySupport support) {
+    public ChargingProcessService(ChargingProcessDao chargingProcessDao, ChargeDao chargeDao, QuerySupport support) {
         this.chargingProcessDao = chargingProcessDao;
         this.chargeDao = chargeDao;
-        this.repository = repository;
-        this.settingsService = settingsService;
         this.support = support;
     }
 
-    public PageResponse<ChargingProcessDto> listLean(Long carId, String fromStr, String toStr, Long geofenceId,
-                                                     String chargeType, Boolean incompleteOnly,
-                                                     Integer page, Integer size) {
-        if (chargeType != null && !chargeType.isBlank()) {
-            Instant from = support.parseInstant(fromStr, "from");
-            Instant to = support.parseInstant(toStr, "to");
-            int p = support.page(page);
-            int s = support.size(size);
-            long total = repository.count(carId, from, to, geofenceId, chargeType, incompleteOnly);
-            List<ChargingProcessDto> data = repository.find(carId, from, to, geofenceId, chargeType,
-                    incompleteOnly, s, support.offset(p, s));
-            return PageResponse.of(data, p, s, total);
-        }
-
-        ChargingProcessSearchCondition condition = buildCondition(carId, fromStr, toStr, geofenceId, incompleteOnly);
+    public PageResponse<ChargingProcessDto> list(Long carId, String fromStr, String toStr, Long geofenceId,
+                                                 Boolean incompleteOnly, Integer page, Integer size) {
+        ChargingProcessSearchCondition condition = condition(carId, fromStr, toStr, geofenceId, incompleteOnly);
         int p = support.page(page);
         int s = support.size(size);
         long total = chargingProcessDao.count(condition);
@@ -56,39 +36,19 @@ public class ChargingProcessService {
         return PageResponse.of(chargingProcessDao.findByIdsOrdered(ids), p, s, total);
     }
 
-    public PageResponse<ChargingProcessEnrichedDto> listEnriched(Long carId, String fromStr, String toStr,
-                                                                 Long geofenceId, Boolean incompleteOnly,
-                                                                 String range, Integer page, Integer size) {
-        Instant from = support.parseInstant(fromStr, "from");
-        Instant to = support.parseInstant(toStr, "to");
-        int p = support.page(page);
-        int s = support.size(size);
-        String rangeMode = support.rangeMode(range, settingsService.preferredRangeOrDefault());
-        long total = chargingProcessDao.count(buildCondition(carId, fromStr, toStr, geofenceId, incompleteOnly));
-        List<ChargingProcessEnrichedDto> data = repository.findEnriched(
-                carId, from, to, geofenceId, incompleteOnly, rangeMode, s, support.offset(p, s));
-        return PageResponse.of(data, p, s, total);
-    }
-
     @Cacheable(value = "chargingProcess", key = "#id")
-    public ChargingProcessDto getLean(long id) {
+    public ChargingProcessDto get(long id) {
         return chargingProcessDao.findById(id)
                 .orElseThrow(() -> new NotFoundException("Charging process not found: " + id));
     }
 
-    public ChargingProcessEnrichedDto getEnriched(long id, String range) {
-        String rangeMode = support.rangeMode(range, settingsService.preferredRangeOrDefault());
-        return repository.findEnrichedById(id, rangeMode)
-                .orElseThrow(() -> new NotFoundException("Charging process not found: " + id));
-    }
-
     public List<ChargeSampleDto> samples(long id) {
-        getLean(id);
+        get(id);
         return chargeDao.findByProcessId(id);
     }
 
-    private ChargingProcessSearchCondition buildCondition(Long carId, String fromStr, String toStr,
-                                                          Long geofenceId, Boolean incompleteOnly) {
+    private ChargingProcessSearchCondition condition(Long carId, String fromStr, String toStr,
+                                                     Long geofenceId, Boolean incompleteOnly) {
         Instant from = support.parseInstant(fromStr, "from");
         Instant to = support.parseInstant(toStr, "to");
         return ChargingProcessSearchCondition.builder()
@@ -98,9 +58,5 @@ public class ChargingProcessService {
                 .geofenceId(geofenceId)
                 .incompleteOnly(incompleteOnly)
                 .build();
-    }
-
-    public static boolean isEnriched(String view) {
-        return DriveService.isEnriched(view);
     }
 }

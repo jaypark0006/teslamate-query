@@ -1,4 +1,4 @@
-package com.teslamate.query.repository;
+package com.teslamate.query.dao;
 
 import com.teslamate.query.db.JdbiRepository;
 import com.teslamate.query.dto.ChargingStatsDto;
@@ -15,9 +15,9 @@ import com.teslamate.query.dto.ChargeEnergyCostDto;
 import java.util.List;
 
 @Repository
-public class StatsRepository extends JdbiRepository {
+public class StatsDao extends JdbiRepository {
 
-    public StatsRepository(Jdbi jdbi) {
+    public StatsDao(Jdbi jdbi) {
         super(jdbi);
     }
 

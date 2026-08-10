@@ -1,6 +1,5 @@
 package com.teslamate.query.db;
 
-import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.HandleCallback;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.Query;
@@ -8,9 +7,7 @@ import org.jdbi.v3.core.statement.Query;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Base for repositories: all DB access goes through JDBI with constructor-mapped types.
- */
+/** Base for analytics Daos that use fluent JDBI (fixed SQL + named binds). */
 public abstract class JdbiRepository {
 
     protected final Jdbi jdbi;
@@ -21,18 +18,6 @@ public abstract class JdbiRepository {
 
     protected <T> T inHandle(HandleCallback<T, RuntimeException> callback) {
         return jdbi.withHandle(callback);
-    }
-
-    protected <T> List<T> list(SqlQueryBuilder builder, Class<T> type) {
-        return inHandle(h -> builder.createQuery(h).mapTo(type).list());
-    }
-
-    protected <T> Optional<T> one(SqlQueryBuilder builder, Class<T> type) {
-        return inHandle(h -> builder.createQuery(h).mapTo(type).findOne());
-    }
-
-    protected long longValue(SqlQueryBuilder builder) {
-        return inHandle(h -> builder.createQuery(h).mapTo(Long.class).one());
     }
 
     protected <T> Optional<T> queryOne(String sql, Class<T> type, Object... kvPairs) {
@@ -85,7 +70,7 @@ public abstract class JdbiRepository {
 
     private static void bindPairs(Query q, Object... kvPairs) {
         if (kvPairs.length % 2 != 0) {
-            throw new IllegalArgumentException("bind pairs must be even: name, value, ...");
+            throw new IllegalArgumentException("bind pairs must be even");
         }
         for (int i = 0; i < kvPairs.length; i += 2) {
             q.bind(String.valueOf(kvPairs[i]), kvPairs[i + 1]);

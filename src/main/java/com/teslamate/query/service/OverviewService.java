@@ -3,7 +3,7 @@ package com.teslamate.query.service;
 import com.teslamate.query.dao.CarDao;
 import com.teslamate.query.dto.LatestSnapshotDto;
 import com.teslamate.query.dto.OverviewDto;
-import com.teslamate.query.repository.StatsRepository;
+import com.teslamate.query.dao.StatsDao;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -12,14 +12,14 @@ import java.time.Instant;
 @Service
 public class OverviewService {
 
-    private final StatsRepository statsRepository;
+    private final StatsDao statsDao;
     private final CarDao carDao;
     private final SettingsService settingsService;
     private final QuerySupport support;
 
-    public OverviewService(StatsRepository statsRepository, CarDao carDao,
+    public OverviewService(StatsDao statsDao, CarDao carDao,
                            SettingsService settingsService, QuerySupport support) {
-        this.statsRepository = statsRepository;
+        this.statsDao = statsDao;
         this.carDao = carDao;
         this.settingsService = settingsService;
         this.support = support;
@@ -33,22 +33,22 @@ public class OverviewService {
         String rangeMode = support.rangeMode(range, settingsService.preferredRangeOrDefault());
 
         LatestSnapshotDto latest = carDao.findLatest(carId).orElse(null);
-        var charge = statsRepository.chargeEnergyAndCost(carId, from, to);
+        var charge = statsDao.chargeEnergyAndCost(carId, from, to);
 
         return new OverviewDto(
                 carId,
                 from,
                 to,
                 latest,
-                statsRepository.totalDistance(carId, from, to),
-                statsRepository.netConsumptionWhPerKm(carId, from, to, rangeMode),
-                statsRepository.grossConsumptionWhPerKm(carId, from, to, rangeMode),
+                statsDao.totalDistance(carId, from, to),
+                statsDao.netConsumptionWhPerKm(carId, from, to, rangeMode),
+                statsDao.grossConsumptionWhPerKm(carId, from, to, rangeMode),
                 charge.energyAdded(),
                 charge.cost(),
-                statsRepository.driveCount(carId, from, to),
-                statsRepository.chargeCount(carId, from, to),
-                statsRepository.latestFirmware(carId),
-                statsRepository.lfpBattery(carId)
+                statsDao.driveCount(carId, from, to),
+                statsDao.chargeCount(carId, from, to),
+                statsDao.latestFirmware(carId),
+                statsDao.lfpBattery(carId)
         );
     }
 }

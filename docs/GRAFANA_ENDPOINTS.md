@@ -17,7 +17,7 @@
 
 | Dashboard | 用哪个 API | 说明 |
 |-----------|------------|------|
-| **Drives** | `GET /api/v1/drives?carId&from&to&minDistance&size=` | lean：先 id 再 load |
+| **Drives** | `GET /api/v1/drives?carId&from&to&minDistance&size=` | Condition → findIds → findByIds |
 | incomplete | 同上 `&incompleteOnly=true` | |
 | **Drive Details** | `GET /drives/{id}` + `GET /drives/{id}/positions` | 轨迹 |
 | **Charges** | `GET /api/v1/charging-processes?carId&from&to` | lean 两步 |
@@ -42,8 +42,6 @@
 2. 解析根对象（即 FeatureCollection）
 3. Geomap **GeoJSON** 层；或按 `properties.kind` 过滤 drive/charge  
 4. LineString = 轨迹，Point = 充电  
-
-可选宽表：`view=enriched`（仍走 join SQL，非主路径）。
 
 ## 多 Dao 编排（map/tracks）
 
