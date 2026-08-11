@@ -10,17 +10,27 @@ Grafana  →  HTTP  →  teslamate-query  →  PostgreSQL (read-only)
 
 ## 跑起来
 
-```bash
-export DB_HOST=database   # 或 localhost（隧道）
-export DB_NAME=teslamate DB_USER=teslamate DB_PASS=...
-# 默认关闭 API Key（compose 内网）
-export AUTH_ENABLED=false
+### A. Docker：query + 自建 Grafana（推荐）
 
-mvn spring-boot:run
+见 **[docs/SELF_HOSTED_GRAFANA.md](docs/SELF_HOSTED_GRAFANA.md)**。
+
+```bash
+cp .env.example .env   # 填 TeslaMate Postgres
+docker compose up -d --build
+# Grafana  http://localhost:3000  (admin/admin)
+# API      http://localhost:8080/swagger-ui.html
+```
+
+### B. 仅本地 Java
+
+```bash
+export DB_HOST=localhost DB_NAME=teslamate DB_USER=teslamate DB_PASS=...
+export AUTH_ENABLED=false
+./mvnw spring-boot:run
 # Swagger: http://localhost:8080/swagger-ui.html
 ```
 
-生产 compose 内与 Grafana 同网：`http://teslamate-query:8080`，**不要**映射 8080 到公网。若要对公网暴露，再设 `AUTH_ENABLED=true` 与 `API_KEYS`。
+compose 内 Grafana 访问 API：`http://teslamate-query:8080`。公网暴露时再开 `AUTH_ENABLED=true`。
 
 ## 核心 API
 

@@ -1,14 +1,62 @@
+# Self-hosted stack: teslamate-query + Grafana (Infinity HTTP → REST).
+# Postgres is external (your existing TeslaMate DB or a tunnel to it).
+#
+# Quick start:
+#   cp .env.example .env   # set DB_* to your TeslaMate Postgres
+#   docker compose up -d --build
+#   open http://localhost:3000  (admin / admin — change on first login)
+#   query API: http://localhost:8080/swagger-ui.html
+#
+# Network: Grafana reaches the API as http://teslamate-query:8080 (service name).
+
 services:
   teslamate-query:
     build: .
+    container_name: teslamate-query
     ports:
-      - "8080:8080"
+      - "${QUERY_PORT:-8080}:8080"
     environment:
-      DB_HOST: ${DB_HOST:-database}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-teslamate}
       DB_USER: ${DB_USER:-teslamate}
       DB_PASS: ${DB_PASS:-secret}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
       API_KEYS: ${API_KEYS:-dev-api-key}
-      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+    # Reach Postgres on the host (macOS Docker Desktop / Linux with host-gateway)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: teslamate-query-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      # Pre-install Infinity (HTTP/JSON → our REST API)
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+      # Optional: skip plugin signature for local plugins
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: yesoreyeram-infinity-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      teslamate-query:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  grafana-data:
