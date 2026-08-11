@@ -1,20 +1,40 @@
 package com.teslamate.query.dao;
 
-import com.teslamate.query.dto.SettingsDto;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import com.teslamate.query.entity.SettingsEntity;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
-@RegisterConstructorMapper(SettingsDto.class)
-public interface SettingsDao {
+/** settings table (global TeslaMate settings, usually one row). */
+@Repository
+public class SettingsDao {
 
-    @SqlQuery("""
-            SELECT id, unit_of_length, unit_of_temperature, unit_of_pressure,
-                   preferred_range, base_url, grafana_url, language
-            FROM settings
-            ORDER BY id
-            LIMIT 1
-            """)
-    Optional<SettingsDto> find();
+    private final Jdbi jdbi;
+
+    public SettingsDao(Jdbi jdbi) {
+        this.jdbi = jdbi;
+    }
+
+    public Optional<SettingsEntity> find() {
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT * FROM settings ORDER BY id LIMIT 1")
+                .map(ConstructorMapper.of(SettingsEntity.class))
+                .findOne());
+    }
+
+    public Optional<SettingsEntity> findById(long id) {
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM settings WHERE id = :id")
+                .bind("id", id)
+                .map(ConstructorMapper.of(SettingsEntity.class))
+                .findOne());
+    }
+
+    public List<SettingsEntity> findAll() {
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM settings ORDER BY id")
+                .map(ConstructorMapper.of(SettingsEntity.class))
+                .list());
+    }
 }

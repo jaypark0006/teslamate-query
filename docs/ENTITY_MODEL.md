@@ -11,19 +11,37 @@ public record DriveEntity(
 ) {}
 ```
 
+## 业务表覆盖
+
+| Table | Entity | Condition | list/byId API |
+|-------|--------|-----------|---------------|
+| cars | CarEntity | — (small) | `/cars` |
+| car_settings | CarSettingsEntity | — | `/car-settings` |
+| settings | SettingsEntity | — | `/settings` |
+| drives | DriveEntity | DriveSearchCondition | `/drives` |
+| charging_processes | ChargingProcessEntity | ChargingProcessSearchCondition | `/charging-processes` |
+| positions | PositionEntity | PositionSearchCondition | `/positions` (scoped) |
+| charges | ChargeEntity | ChargeSearchCondition | `/charges` (scoped) |
+| states | StateEntity | StateSearchCondition | `/states` |
+| updates | UpdateEntity | UpdateSearchCondition | `/updates` |
+| addresses | AddressEntity | AddressSearchCondition | `/addresses` |
+| geofences | GeofenceEntity | GeofenceSearchCondition | `/geofences` |
+
+`positions` / `charges` 必须带范围条件（driveId 或 carId+时间 / processId 或时间），防止全表扫。
+
 ## 约定
 
 | 层 | 做什么 |
 |----|--------|
 | Entity | 表行；列名只在 `@ColumnName` 写一次 |
-| Dao | `SELECT * FROM drives` / 条件用 Condition；映射到 Entity |
+| Dao | `count` / `findIds` / `findByIds` / `findById`；映射到 Entity |
 | Condition | 单表 WHERE，字面量列名（`car_id`），无别名、无 join |
-| 多表 | Service 多 Dao，不用 Condition 联查 |
-| API DTO | `EntityMapper` 转换，可加派生字段 |
+| 多表 | Service 多 Dao，不用 Condition 联查（如 cars + car_settings → CarDto） |
+| API DTO | `EntityMapper` 转换，可加派生字段（如 state.durationSeconds） |
 
 **不要**再抽 `Entity.Table` 常量类：和 `@ColumnName` 重复，改列要改两处。
 
-Dao 用 `SELECT *` 即可，列增删时主要维护 Entity。
+Dao 用 `SELECT *` 即可（`states.state` 为 PG enum 时 `state::text`）。
 
 ## Dynamic WHERE
 

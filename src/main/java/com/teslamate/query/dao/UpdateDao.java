@@ -1,32 +1,66 @@
 package com.teslamate.query.dao;
 
-import com.teslamate.query.dto.UpdateDto;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import com.teslamate.query.db.IdOrder;
+import com.teslamate.query.db.condition.UpdateSearchCondition;
+import com.teslamate.query.entity.UpdateEntity;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
+import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
-@RegisterConstructorMapper(UpdateDto.class)
-public interface UpdateDao {
+/** updates table — single-table Condition queries. */
+@Repository
+public class UpdateDao {
 
-    @SqlQuery("""
-            SELECT id, car_id, start_date, end_date, version
-            FROM updates
-            WHERE car_id = :carId
-              AND start_date >= :from AND start_date <= :to
-            ORDER BY start_date DESC
-            """)
-    List<UpdateDto> findByCarAndTime(
-            @Bind("carId") long carId,
-            @Bind("from") Instant from,
-            @Bind("to") Instant to);
+    private final Jdbi jdbi;
 
-    @SqlQuery("""
-            SELECT split_part(version, ' ', 1)
-            FROM updates WHERE car_id = :carId
-            ORDER BY start_date DESC LIMIT 1
-            """)
-    String latestFirmware(@Bind("carId") long carId);
+    public UpdateDao(Jdbi jdbi) {
+        this.jdbi = jdbi;
+    }
+
+    public long count(UpdateSearchCondition condition) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery("SELECT COUNT(*) FROM updates " + condition.whereClause());
+            condition.params().forEach(q::bind);
+            return q.mapTo(Long.class).one();
+        });
+    }
+
+    public List<Long> findIds(UpdateSearchCondition condition, int limit, int offset) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery(
+                    "SELECT id FROM updates "
+                            + condition.whereClause() + " "
+                            + condition.sortClause()
+                            + " LIMIT :limit OFFSET :offset");
+            condition.params().forEach(q::bind);
+            q.bind("limit", limit).bind("offset", offset);
+            return q.mapTo(Long.class).list();
+        });
+    }
+
+    public List<UpdateEntity> findByIds(Collection<Long> ids) {
+        if (IdOrder.isEmpty(ids)) {
+            return List.of();
+        }
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM updates WHERE id IN (<ids>)")
+                .bindList("ids", ids)
+                .map(ConstructorMapper.of(UpdateEntity.class))
+                .list());
+    }
+
+    public List<UpdateEntity> findByIdsOrdered(Collection<Long> ids) {
+        return IdOrder.align(ids, findByIds(ids), UpdateEntity::id);
+    }
+
+    public Optional<UpdateEntity> findById(long id) {
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM updates WHERE id = :id")
+                .bind("id", id)
+                .map(ConstructorMapper.of(UpdateEntity.class))
+                .findOne());
+    }
 }

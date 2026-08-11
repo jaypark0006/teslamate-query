@@ -1,29 +1,71 @@
 package com.teslamate.query.dao;
 
-import com.teslamate.query.dto.StateDto;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import com.teslamate.query.db.IdOrder;
+import com.teslamate.query.db.condition.StateSearchCondition;
+import com.teslamate.query.entity.StateEntity;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
+import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
-@RegisterConstructorMapper(StateDto.class)
-public interface StateDao {
+/** states table — single-table Condition queries. */
+@Repository
+public class StateDao {
 
-    @SqlQuery("""
-            SELECT id, car_id, state::text AS state, start_date, end_date,
-                   CASE WHEN end_date IS NOT NULL
-                        THEN extract(epoch FROM (end_date - start_date))::bigint
-                        ELSE NULL END AS duration_seconds
-            FROM states
-            WHERE car_id = :carId
-              AND start_date <= :to
-              AND (end_date IS NULL OR end_date >= :from)
-            ORDER BY start_date
-            """)
-    List<StateDto> findByCarAndTime(
-            @Bind("carId") long carId,
-            @Bind("from") Instant from,
-            @Bind("to") Instant to);
+    private final Jdbi jdbi;
+
+    public StateDao(Jdbi jdbi) {
+        this.jdbi = jdbi;
+    }
+
+    public long count(StateSearchCondition condition) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery("SELECT COUNT(*) FROM states " + condition.whereClause());
+            condition.params().forEach(q::bind);
+            return q.mapTo(Long.class).one();
+        });
+    }
+
+    public List<Long> findIds(StateSearchCondition condition, int limit, int offset) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery(
+                    "SELECT id FROM states "
+                            + condition.whereClause() + " "
+                            + condition.sortClause()
+                            + " LIMIT :limit OFFSET :offset");
+            condition.params().forEach(q::bind);
+            q.bind("limit", limit).bind("offset", offset);
+            return q.mapTo(Long.class).list();
+        });
+    }
+
+    public List<StateEntity> findByIds(Collection<Long> ids) {
+        if (IdOrder.isEmpty(ids)) {
+            return List.of();
+        }
+        // state is a PG enum — cast to text for stable String mapping
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT id, car_id, state::text AS state, start_date, end_date "
+                                + "FROM states WHERE id IN (<ids>)")
+                .bindList("ids", ids)
+                .map(ConstructorMapper.of(StateEntity.class))
+                .list());
+    }
+
+    public List<StateEntity> findByIdsOrdered(Collection<Long> ids) {
+        return IdOrder.align(ids, findByIds(ids), StateEntity::id);
+    }
+
+    public Optional<StateEntity> findById(long id) {
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT id, car_id, state::text AS state, start_date, end_date "
+                                + "FROM states WHERE id = :id")
+                .bind("id", id)
+                .map(ConstructorMapper.of(StateEntity.class))
+                .findOne());
+    }
 }

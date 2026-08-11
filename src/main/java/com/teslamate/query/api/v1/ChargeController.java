@@ -1,8 +1,8 @@
 package com.teslamate.query.api.v1;
 
+import com.teslamate.query.dto.ChargeDto;
 import com.teslamate.query.dto.PageResponse;
-import com.teslamate.query.dto.UpdateDto;
-import com.teslamate.query.service.UpdateService;
+import com.teslamate.query.service.ChargeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,30 +12,30 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/updates")
-@Tag(name = "Updates")
-public class UpdateController {
+@RequestMapping("/api/v1/charges")
+@Tag(name = "Charges")
+public class ChargeController {
 
-    private final UpdateService updateService;
+    private final ChargeService chargeService;
 
-    public UpdateController(UpdateService updateService) {
-        this.updateService = updateService;
+    public ChargeController(ChargeService chargeService) {
+        this.chargeService = chargeService;
     }
 
     @GetMapping
-    @Operation(summary = "List software updates (Condition → ids → rows)")
-    public PageResponse<UpdateDto> list(
-            @RequestParam(required = false) Long carId,
+    @Operation(summary = "List charge samples (requires chargingProcessId, or from+to)")
+    public PageResponse<ChargeDto> list(
+            @RequestParam(required = false) Long chargingProcessId,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size
     ) {
-        return updateService.list(carId, from, to, page, size);
+        return chargeService.list(chargingProcessId, from, to, page, size);
     }
 
     @GetMapping("/{id}")
-    public UpdateDto get(@PathVariable long id) {
-        return updateService.get(id);
+    public ChargeDto get(@PathVariable long id) {
+        return chargeService.get(id);
     }
 }

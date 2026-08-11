@@ -17,7 +17,9 @@ public class SettingsService {
 
     @Cacheable("settings")
     public SettingsDto get() {
-        return settingsDao.find().orElseThrow(() -> new NotFoundException("Settings not found"));
+        return settingsDao.find()
+                .map(EntityMapper::toSettingsDto)
+                .orElseThrow(() -> new NotFoundException("Settings not found"));
     }
 
     /** preferred_range from DB, fallback rated (matches common TeslaMate installs). */

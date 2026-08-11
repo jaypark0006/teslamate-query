@@ -29,9 +29,14 @@ mvn spring-boot:run
 | 资源 | 路径 |
 |------|------|
 | cars / latest | `/api/v1/cars` |
+| car_settings | `/api/v1/car-settings` |
 | settings | `/api/v1/settings` |
-| drives + positions | `/api/v1/drives` |
-| charging + samples | `/api/v1/charging-processes` |
+| drives | `/api/v1/drives` |
+| positions | `/api/v1/positions` |
+| charging_processes | `/api/v1/charging-processes` |
+| charges (samples) | `/api/v1/charges` |
+| states / updates | `/api/v1/states` · `/updates` |
+| addresses / geofences | `/api/v1/addresses` · `/geofences` |
 | map GeoJSON | `/api/v1/map/tracks` |
 | battery series | `/api/v1/series/battery` |
 

@@ -5,6 +5,7 @@ import com.teslamate.query.dao.DriveDao;
 import com.teslamate.query.dao.PositionDao;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.db.condition.DriveSearchCondition;
+import com.teslamate.query.db.condition.PositionSearchCondition;
 import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.entity.ChargingProcessEntity;
@@ -108,8 +109,13 @@ public class MapTracksService {
         if (lim > 20_000) {
             throw new BadRequestException("limit max 20000 for battery series; narrow time range");
         }
-        return positionDao.findCleanForCarInRange(carId, range[0], range[1], lim).stream()
-                .map(EntityMapper::toPositionDto)
-                .toList();
+        PositionSearchCondition condition = PositionSearchCondition.builder()
+                .carId(carId)
+                .dateFrom(range[0])
+                .dateTo(range[1])
+                .cleanOnly(true)
+                .build();
+        List<Long> ids = positionDao.findIds(condition, lim, 0);
+        return EntityMapper.toPositionDtos(positionDao.findByIdsOrdered(ids));
     }
 }

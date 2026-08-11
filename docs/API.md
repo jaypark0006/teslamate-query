@@ -1,82 +1,48 @@
 # API reference (v1)
 
 Base path: `/api/v1`  
-Auth: header `X-API-Key` (or query `api_key`)
+Auth: default **off** (`AUTH_ENABLED=false`). When on: header `X-API-Key` (or query `api_key`).
 
 ## Conventions
 
 - Timestamps: ISO-8601 UTC (`2024-01-01T00:00:00Z`)
-- **Units are metric** in field names (`distanceKm`, temps in °C, ranges in km)
-- List responses: `{ "data": [...], "page", "size", "total" }`
+- Units are metric (`distance` km, temps °C, ranges km)
+- Paged lists: `{ "data": [...], "page", "size", "total" }`
 - Errors: `{ "code", "message", "timestamp", "path" }`
-- **Domain resources are lean by default** (table columns + foreign keys)
-- Grafana-wide rows: `view=enriched` (optional; joins allowed only here)
+- **Entity 1:1 table**; multi-table only in Service (multi-Dao)
 
-## Core resources (lean)
+## Single-table resources
 
-### GET /cars
-### GET /cars/{id}
-### GET /cars/{id}/latest
+| Table | Endpoints |
+|-------|-----------|
+| cars | `GET /cars` · `/cars/{id}` |
+| car_settings | `GET /car-settings` · `/car-settings/{id}` |
+| settings | `GET /settings` |
+| drives | `GET /drives?...` · `/drives/{id}` |
+| charging_processes | `GET /charging-processes?...` · `/{id}` |
+| positions | `GET /positions?...` · `/positions/{id}` |
+| charges | `GET /charges?...` · `/charges/{id}` |
+| states | `GET /states?...` · `/states/{id}` |
+| updates | `GET /updates?...` · `/updates/{id}` |
+| addresses | `GET /addresses?...` · `?ids=` · `/{id}` |
+| geofences | `GET /geofences?...` · `/{id}` |
 
-### GET /settings
-Global units / preferred range (read once per Grafana dashboard).
+### Filter notes
 
-### GET /geofences
-### GET /addresses/{id}
-### GET /addresses?ids=1,2,3
-Batch resolve address FKs (max 200) for client/Grafana joins.
+- **positions**: require `driveId`, or `carId` + `from` + `to` (optional `cleanOnly`)
+- **charges**: require `chargingProcessId`, or `from` + `to`
+- **states**: optional `carId`, `from`/`to` (interval overlap)
+- **updates**: optional `carId`, `from`/`to` on `start_date`
+- **drives / charging-processes**: optional `carId`, time range, `geofenceId`, `incompleteOnly`, …
 
-### GET /drives
-Query: `carId`, `from`, `to`, `minDistance`, `minDuration`, `geofenceId`, `incompleteOnly`, `page`, `size`  
-Optional: `view=enriched`, `range=ideal|rated` (enriched only)
+## Nested convenience (multi-Dao)
 
-Lean fields include both ideal/rated ranges and FK ids:
-`startAddressId`, `endAddressId`, `startGeofenceId`, `endGeofenceId`, `startPositionId`, `endPositionId`.
-
-### GET /drives/{id}
-### GET /drives/{id}/positions?downsample=
-
-### GET /charging-processes  (alias `/charges`)
-Query: `carId`, `from`, `to`, `geofenceId`, `incompleteOnly`, `page`, `size`  
-Optional: `chargeType=AC|DC` (**lean only**, joins `charges` only when set)  
-Optional: `view=enriched`, `range=`
-
-Lean fields: energy, SOC, cost, both range pairs, `positionId`, `addressId`, `geofenceId`.
-
-### GET /charging-processes/{id}
-### GET /charging-processes/{id}/samples
-
-## Enriched view (Grafana tables)
-
-```
-GET /drives?view=enriched&range=ideal&...
-GET /charging-processes?view=enriched&range=ideal&...
-```
-
-Adds display labels, optional consumption, AC/DC, lat/lon, etc.  
-Prefer lean + `/geofences` + `/addresses?ids=` composition when possible.
-
-## Aggregates
-
-### GET /overview?carId&from&to&range
-### GET /stats/drives?carId&from&to&groupBy&range
-### GET /stats/charging?carId&from&to
-### GET /stats/efficiency?carId&from&to&range
-### GET /stats/period?carId&from&to&period&range
-### GET /stats/mileage?carId&from&to
-### GET /stats/vampire-drain?carId&from&to&range
-### GET /stats/projected-range?carId&from&to&range
-### GET /stats/battery-health?carId&from&to&range
-### GET /stats/locations?carId&from&to
-
-## Events / series
-
-### GET /timeline?carId&from&to
-### GET /trips/summary?carId&from&to&range
-### GET /states?carId&from&to
-### GET /updates?carId&from&to
-### GET /positions?carId&from&to&cleanOnly&downsample&page&size
+- `GET /drives/{id}/positions?downsample=`
+- `GET /charging-processes/{id}/samples`
+- `GET /cars/{id}/latest` — multi-table snapshot
+- `GET /map/tracks?carId&from&to` — GeoJSON composition
+- `GET /series/battery?carId&from&to` — SOC series from positions
 
 ## Health
 
-### GET /health  (no auth)
+`GET /health` (no auth)
