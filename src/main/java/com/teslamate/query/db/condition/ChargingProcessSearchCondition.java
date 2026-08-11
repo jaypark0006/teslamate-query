@@ -1,10 +1,11 @@
 package com.teslamate.query.db.condition;
 
 import com.teslamate.query.db.JdbiCondition;
+import com.teslamate.query.entity.ChargingProcessEntity.Table;
 
 import java.time.Instant;
 
-/** Dynamic filters for {@code charging_processes cp}. */
+/** Single-table filters for {@link Table#NAME} only (no join, no alias). */
 public class ChargingProcessSearchCondition extends JdbiCondition {
 
     public static Builder builder() {
@@ -14,43 +15,38 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
     public static final class Builder extends ChargingProcessSearchCondition {
 
         public Builder() {
-            // default business filter used by Grafana charges list
-            conditions.add("(cp.charge_energy_added IS NULL OR cp.charge_energy_added > 0)");
+            conditions.add("(" + Table.CHARGE_ENERGY_ADDED + " IS NULL OR "
+                    + Table.CHARGE_ENERGY_ADDED + " > 0)");
         }
 
         public Builder carId(Long value) {
-            eq("cp.car_id", "carId", value);
+            eq(Table.CAR_ID, "carId", value);
             return this;
         }
 
         public Builder startDateFrom(Instant value) {
-            gte("cp.start_date", "startDateFrom", value);
+            gte(Table.START_DATE, "startDateFrom", value);
             return this;
         }
 
         public Builder startDateTo(Instant value) {
-            lte("cp.start_date", "startDateTo", value);
+            lte(Table.START_DATE, "startDateTo", value);
             return this;
         }
 
         public Builder geofenceId(Long value) {
-            eq("cp.geofence_id", "geofenceId", value);
+            eq(Table.GEOFENCE_ID, "geofenceId", value);
             return this;
         }
 
         public Builder incompleteOnly(Boolean value) {
-            rawNoParam("cp.end_date IS NULL", Boolean.TRUE.equals(value));
-            return this;
-        }
-
-        public Builder orderByStartDateDesc() {
-            orderBy("cp.start_date", "DESC");
+            rawNoParam(Table.END_DATE + " IS NULL", Boolean.TRUE.equals(value));
             return this;
         }
 
         public ChargingProcessSearchCondition build() {
             if (sortClause().isEmpty()) {
-                orderByStartDateDesc();
+                orderBy(Table.START_DATE, "DESC");
             }
             return this;
         }

@@ -9,11 +9,14 @@ Controller
 
 ## Patterns
 
-1. **JdbiCondition** (ASRS): `whereClause()` + `params()` + optional `sortClause()`
-2. **SqlObject Dao**: `@Define whereClause` + `@BindMap` + `@RegisterConstructorMapper`
-3. **Two-step load**: `findIds(condition)` → `findByIdsOrdered(ids)`
-4. **Spring DI**: `jdbi.onDemand(XDao.class)` as `@Bean`
-5. **No repository package** for resources; analytics live in `StatsDao` / `AnalyticsDao`
+1. **Entity = 1 table**: `entity/*Entity` + nested `Table.NAME` / `Table.COL_*` / `Table.COLUMNS`
+2. **Condition = single-table only**: column names from `Table.*`, **no alias, no join**
+3. **Multi-table**: Service multi-Dao (ids then load) — **not** Condition
+4. **SqlObject Dao**: `@Define whereClause` + `@BindMap`; maps to **Entity**
+5. **API DTO**: `EntityMapper` entity → dto for HTTP
+6. **Analytics**: `StatsDao` / `AnalyticsDao` fixed SQL (optional Grafana KPIs)
+
+See also `ENTITY_MODEL.md`.
 
 ## Package map
 

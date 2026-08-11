@@ -1,7 +1,7 @@
 package com.teslamate.query.dao;
 
-import com.teslamate.query.dto.DrivePositionDto;
-import com.teslamate.query.dto.PositionDto;
+import com.teslamate.query.entity.PositionEntity;
+import com.teslamate.query.entity.PositionEntity.Table;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindList;
@@ -11,43 +11,25 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
-@RegisterConstructorMapper(PositionDto.class)
-@RegisterConstructorMapper(DrivePositionDto.class)
+@RegisterConstructorMapper(PositionEntity.class)
 public interface PositionDao {
 
-    String SELECT = """
-            SELECT id, car_id, drive_id, date, latitude, longitude, elevation, speed, power,
-                   odometer, ideal_battery_range_km, rated_battery_range_km,
-                   battery_level, usable_battery_level, outside_temp, inside_temp
-            FROM positions
-            """;
+    @SqlQuery("SELECT " + Table.COLUMNS + " FROM " + Table.NAME + " WHERE " + Table.ID + " IN (<ids>)")
+    List<PositionEntity> findByIds(@BindList("ids") Collection<Long> ids);
 
-    @SqlQuery(SELECT + " WHERE id IN (<ids>)")
-    List<PositionDto> findByIds(@BindList("ids") Collection<Long> ids);
+    @SqlQuery("SELECT " + Table.COLUMNS + " FROM " + Table.NAME
+            + " WHERE " + Table.DRIVE_ID + " = :driveId ORDER BY " + Table.DATE)
+    List<PositionEntity> findByDriveId(@Bind("driveId") long driveId);
 
-    @SqlQuery("""
-            SELECT id, date, latitude, longitude, elevation, speed, power,
-                   odometer, ideal_battery_range_km, rated_battery_range_km,
-                   battery_level, usable_battery_level, outside_temp, inside_temp
-            FROM positions
-            WHERE drive_id = :driveId
-            ORDER BY date
-            """)
-    List<DrivePositionDto> findByDriveId(@Bind("driveId") long driveId);
+    @SqlQuery("SELECT " + Table.COLUMNS + " FROM " + Table.NAME
+            + " WHERE " + Table.DRIVE_ID + " IN (<driveIds>) ORDER BY " + Table.DRIVE_ID + ", " + Table.DATE)
+    List<PositionEntity> findByDriveIds(@BindList("driveIds") Collection<Long> driveIds);
 
-    @SqlQuery(SELECT + """
-            WHERE drive_id IN (<driveIds>)
-            ORDER BY drive_id, date
-            """)
-    List<PositionDto> findByDriveIds(@BindList("driveIds") Collection<Long> driveIds);
-
-    @SqlQuery(SELECT + """
-            WHERE car_id = :carId AND date >= :from AND date <= :to
-              AND ideal_battery_range_km IS NOT NULL
-            ORDER BY date
-            LIMIT :limit
-            """)
-    List<PositionDto> findCleanForCarInRange(
+    @SqlQuery("SELECT " + Table.COLUMNS + " FROM " + Table.NAME
+            + " WHERE " + Table.CAR_ID + " = :carId AND " + Table.DATE + " >= :from AND " + Table.DATE + " <= :to"
+            + " AND " + Table.IDEAL_BATTERY_RANGE_KM + " IS NOT NULL"
+            + " ORDER BY " + Table.DATE + " LIMIT :limit")
+    List<PositionEntity> findCleanForCarInRange(
             @Bind("carId") long carId,
             @Bind("from") Instant from,
             @Bind("to") Instant to,
