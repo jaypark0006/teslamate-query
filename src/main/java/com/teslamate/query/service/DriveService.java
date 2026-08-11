@@ -6,6 +6,8 @@ import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
 import com.teslamate.query.dto.PageResponse;
+import com.teslamate.query.entity.DriveEntity;
+import com.teslamate.query.entity.PositionEntity;
 import com.teslamate.query.exception.NotFoundException;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -36,24 +38,28 @@ public class DriveService {
         int s = support.size(size);
         long total = driveDao.count(condition);
         List<Long> ids = driveDao.findIds(condition, s, support.offset(p, s));
-        return PageResponse.of(driveDao.findByIdsOrdered(ids), p, s, total);
+        List<DriveEntity> rows = driveDao.findByIdsOrdered(ids);
+        return PageResponse.of(EntityMapper.toDriveDtos(rows), p, s, total);
     }
 
     @Cacheable(value = "drive", key = "#id")
     public DriveDto get(long id) {
-        return driveDao.findById(id).orElseThrow(() -> new NotFoundException("Drive not found: " + id));
+        return driveDao.findById(id)
+                .map(EntityMapper::toDriveDto)
+                .orElseThrow(() -> new NotFoundException("Drive not found: " + id));
     }
 
     public List<DrivePositionDto> positions(long id, Integer downsampleSeconds) {
         get(id);
-        List<DrivePositionDto> all = positionDao.findByDriveId(id);
-        if (downsampleSeconds == null || downsampleSeconds <= 0 || all.size() <= 2) {
-            return all;
+        List<PositionEntity> all = positionDao.findByDriveId(id);
+        List<DrivePositionDto> mapped = all.stream().map(EntityMapper::toDrivePositionDto).toList();
+        if (downsampleSeconds == null || downsampleSeconds <= 0 || mapped.size() <= 2) {
+            return mapped;
         }
         long bucketMs = downsampleSeconds * 1000L;
         ArrayList<DrivePositionDto> out = new ArrayList<>();
         Long lastBucket = null;
-        for (DrivePositionDto pt : all) {
+        for (DrivePositionDto pt : mapped) {
             if (pt.date() == null) {
                 continue;
             }
@@ -63,8 +69,8 @@ public class DriveService {
                 lastBucket = b;
             }
         }
-        if (!all.isEmpty() && (out.isEmpty() || !out.getLast().id().equals(all.getLast().id()))) {
-            out.add(all.getLast());
+        if (!mapped.isEmpty() && (out.isEmpty() || !out.getLast().id().equals(mapped.getLast().id()))) {
+            out.add(mapped.getLast());
         }
         return out;
     }

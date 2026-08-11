@@ -33,18 +33,20 @@ public class ChargingProcessService {
         int s = support.size(size);
         long total = chargingProcessDao.count(condition);
         List<Long> ids = chargingProcessDao.findIds(condition, s, support.offset(p, s));
-        return PageResponse.of(chargingProcessDao.findByIdsOrdered(ids), p, s, total);
+        return PageResponse.of(
+                EntityMapper.toChargingProcessDtos(chargingProcessDao.findByIdsOrdered(ids)), p, s, total);
     }
 
     @Cacheable(value = "chargingProcess", key = "#id")
     public ChargingProcessDto get(long id) {
         return chargingProcessDao.findById(id)
+                .map(EntityMapper::toChargingProcessDto)
                 .orElseThrow(() -> new NotFoundException("Charging process not found: " + id));
     }
 
     public List<ChargeSampleDto> samples(long id) {
         get(id);
-        return chargeDao.findByProcessId(id);
+        return chargeDao.findByProcessId(id).stream().map(EntityMapper::toChargeSampleDto).toList();
     }
 
     private ChargingProcessSearchCondition condition(Long carId, String fromStr, String toStr,

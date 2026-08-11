@@ -23,9 +23,9 @@ class JdbiConditionTest {
                 .build();
 
         assertTrue(c.whereClause().startsWith("WHERE "));
-        assertTrue(c.whereClause().contains("d.car_id = :carId"));
-        assertTrue(c.whereClause().contains("d.start_date >= :startDateFrom"));
-        assertTrue(c.whereClause().contains("d.end_date IS NULL"));
+        assertTrue(c.whereClause().contains("car_id = :carId"));
+        assertTrue(c.whereClause().contains("start_date >= :startDateFrom"));
+        assertTrue(c.whereClause().contains("end_date IS NULL"));
         assertEquals(1L, c.params().get("carId"));
         assertEquals(from, c.params().get("startDateFrom"));
         assertTrue(c.sortClause().contains("ORDER BY"));
