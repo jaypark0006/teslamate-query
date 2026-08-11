@@ -1,33 +1,25 @@
-# Architecture (post-refactor)
+# Architecture（核心优先）
 
 ```
-Controller
-  → Service (params, paging, multi-Dao orchestration)
-      → SqlObject Dao + SearchCondition (list/filter)
-      → StatsDao / AnalyticsDao (fixed aggregate SQL for Grafana KPIs)
+Controller → Service → Dao (Entity)
+                 ↘ MapTracksService 多 Dao 编排
 ```
 
-## Patterns
+## 范围内
 
-1. **Entity = 1 table**: `@ColumnName("col")` on fields only (no nested Table class)
-2. **Condition = single-table only**: literal column names, **no alias, no join**
-3. **Multi-table**: Service multi-Dao (ids then load) — **not** Condition
-4. **SqlObject Dao**: `@Define whereClause` + `@BindMap`; maps to **Entity**
-5. **API DTO**: `EntityMapper` entity → dto for HTTP
-6. **Analytics**: `StatsDao` / `AnalyticsDao` fixed SQL (optional Grafana KPIs)
+- 车辆 / 设置 / 围栏 / 地址  
+- 行程、充电会话、采样、按 drive 的 positions  
+- states / updates（简单表）  
+- map/tracks、series/battery  
 
-See also `ENTITY_MODEL.md`.
+## 范围外
 
-## Package map
+- 从 Grafana 搬运的 gross consumption CTE、vampire、period rollup 等统计 SQL  
+- 需要时再单独加接口，不堆进核心  
 
-| Package | Role |
-|---------|------|
-| `dao` | All data access |
-| `db` | JdbiCondition, JdbiUpdate, IdOrder, JdbiRepository base |
-| `db.condition` | Drive/ChargingProcess search builders |
-| `service` | Business orchestration only |
-| `api.v1` | REST |
+## 模式
 
-## Grafana
-
-See `GRAFANA_ENDPOINTS.md`. Lean resources only (enriched join path removed).
+1. Entity + `@ColumnName`（无嵌套 Table 类）  
+2. 单表 Condition + 字符串拼接 WHERE  
+3. `findIds` → `findByIds`  
+4. 默认 `AUTH_ENABLED=false`（依赖 Docker 网络隔离）  

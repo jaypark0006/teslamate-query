@@ -1,10 +1,14 @@
 package com.teslamate.query.api.v1;
 
+import com.teslamate.query.dao.UpdateDao;
 import com.teslamate.query.dto.UpdateDto;
-import com.teslamate.query.service.AdvancedQueryService;
+import com.teslamate.query.service.QuerySupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -13,10 +17,12 @@ import java.util.List;
 @Tag(name = "Updates")
 public class UpdateController {
 
-    private final AdvancedQueryService service;
+    private final UpdateDao updateDao;
+    private final QuerySupport support;
 
-    public UpdateController(AdvancedQueryService service) {
-        this.service = service;
+    public UpdateController(UpdateDao updateDao, QuerySupport support) {
+        this.updateDao = updateDao;
+        this.support = support;
     }
 
     @GetMapping
@@ -26,6 +32,7 @@ public class UpdateController {
             @RequestParam String from,
             @RequestParam String to
     ) {
-        return service.updates(carId, from, to);
+        var r = support.requireRange(from, to);
+        return updateDao.findByCarAndTime(carId, r[0], r[1]);
     }
 }

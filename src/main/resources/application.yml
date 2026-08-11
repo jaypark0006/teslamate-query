@@ -36,7 +36,7 @@ management:
 teslamate:
   query:
     api-keys: ${API_KEYS:dev-api-key}
-    auth-enabled: ${AUTH_ENABLED:true}
+    auth-enabled: ${AUTH_ENABLED:false}
     default-page-size: 50
     max-page-size: 500
     cache-ttl-seconds: 60

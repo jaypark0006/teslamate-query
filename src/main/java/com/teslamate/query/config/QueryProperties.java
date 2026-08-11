@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 public class QueryProperties {
 
     private String apiKeys = "dev-api-key";
-    private boolean authEnabled = true;
+    private boolean authEnabled = false;
     private int defaultPageSize = 50;
     private int maxPageSize = 500;
     private int cacheTtlSeconds = 60;
