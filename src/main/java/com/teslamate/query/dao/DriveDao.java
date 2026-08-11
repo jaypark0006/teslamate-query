@@ -3,53 +3,67 @@ package com.teslamate.query.dao;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.entity.DriveEntity;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.BindList;
-import org.jdbi.v3.sqlobject.customizer.BindMap;
-import org.jdbi.v3.sqlobject.customizer.Define;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
-import org.jdbi.v3.stringtemplate4.UseStringTemplateEngine;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
+import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
-@RegisterConstructorMapper(DriveEntity.class)
-public interface DriveDao {
+/**
+ * drives table. Dynamic filters via {@link DriveSearchCondition} string-concatenated
+ * (no StringTemplate — avoids {@code <}/{@code >} escaping).
+ */
+@Repository
+public class DriveDao {
 
-    @SqlQuery("SELECT COUNT(*) FROM drives <whereClause>")
-    @UseStringTemplateEngine
-    long count(@Define("whereClause") String whereClause, @BindMap Map<String, Object> params);
+    private final Jdbi jdbi;
 
-    @SqlQuery("SELECT id FROM drives <whereClause> <sortClause> LIMIT :limit OFFSET :offset")
-    @UseStringTemplateEngine
-    List<Long> findIds(
-            @Define("whereClause") String whereClause,
-            @Define("sortClause") String sortClause,
-            @BindMap Map<String, Object> params,
-            @Bind("limit") int limit,
-            @Bind("offset") int offset);
-
-    @SqlQuery("SELECT * FROM drives WHERE id IN (<ids>)")
-    List<DriveEntity> findByIds(@BindList("ids") Collection<Long> ids);
-
-    @SqlQuery("SELECT * FROM drives WHERE id = :id")
-    Optional<DriveEntity> findById(@Bind("id") long id);
-
-    default long count(DriveSearchCondition condition) {
-        return count(condition.whereClause(), condition.params());
+    public DriveDao(Jdbi jdbi) {
+        this.jdbi = jdbi;
     }
 
-    default List<Long> findIds(DriveSearchCondition condition, int limit, int offset) {
-        return findIds(condition.whereClause(), condition.sortClause(), condition.params(), limit, offset);
+    public long count(DriveSearchCondition condition) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery("SELECT COUNT(*) FROM drives " + condition.whereClause());
+            condition.params().forEach(q::bind);
+            return q.mapTo(Long.class).one();
+        });
     }
 
-    default List<DriveEntity> findByIdsOrdered(Collection<Long> ids) {
+    public List<Long> findIds(DriveSearchCondition condition, int limit, int offset) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery(
+                    "SELECT id FROM drives "
+                            + condition.whereClause() + " "
+                            + condition.sortClause()
+                            + " LIMIT :limit OFFSET :offset");
+            condition.params().forEach(q::bind);
+            q.bind("limit", limit).bind("offset", offset);
+            return q.mapTo(Long.class).list();
+        });
+    }
+
+    public List<DriveEntity> findByIds(Collection<Long> ids) {
         if (IdOrder.isEmpty(ids)) {
             return List.of();
         }
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM drives WHERE id IN (<ids>)")
+                .bindList("ids", ids)
+                .map(ConstructorMapper.of(DriveEntity.class))
+                .list());
+    }
+
+    public List<DriveEntity> findByIdsOrdered(Collection<Long> ids) {
         return IdOrder.align(ids, findByIds(ids), DriveEntity::id);
+    }
+
+    public Optional<DriveEntity> findById(long id) {
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM drives WHERE id = :id")
+                .bind("id", id)
+                .map(ConstructorMapper.of(DriveEntity.class))
+                .findOne());
     }
 }

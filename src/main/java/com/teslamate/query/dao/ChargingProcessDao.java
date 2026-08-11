@@ -3,53 +3,67 @@ package com.teslamate.query.dao;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.entity.ChargingProcessEntity;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.BindList;
-import org.jdbi.v3.sqlobject.customizer.BindMap;
-import org.jdbi.v3.sqlobject.customizer.Define;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
-import org.jdbi.v3.stringtemplate4.UseStringTemplateEngine;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
+import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
-@RegisterConstructorMapper(ChargingProcessEntity.class)
-public interface ChargingProcessDao {
+/**
+ * charging_processes table. Condition SQL is concatenated — safe for {@code >}/{@code <}
+ * in predicates (no StringTemplate).
+ */
+@Repository
+public class ChargingProcessDao {
 
-    @SqlQuery("SELECT COUNT(*) FROM charging_processes <whereClause>")
-    @UseStringTemplateEngine
-    long count(@Define("whereClause") String whereClause, @BindMap Map<String, Object> params);
+    private final Jdbi jdbi;
 
-    @SqlQuery("SELECT id FROM charging_processes <whereClause> <sortClause> LIMIT :limit OFFSET :offset")
-    @UseStringTemplateEngine
-    List<Long> findIds(
-            @Define("whereClause") String whereClause,
-            @Define("sortClause") String sortClause,
-            @BindMap Map<String, Object> params,
-            @Bind("limit") int limit,
-            @Bind("offset") int offset);
-
-    @SqlQuery("SELECT * FROM charging_processes WHERE id IN (<ids>)")
-    List<ChargingProcessEntity> findByIds(@BindList("ids") Collection<Long> ids);
-
-    @SqlQuery("SELECT * FROM charging_processes WHERE id = :id")
-    Optional<ChargingProcessEntity> findById(@Bind("id") long id);
-
-    default long count(ChargingProcessSearchCondition condition) {
-        return count(condition.whereClause(), condition.params());
+    public ChargingProcessDao(Jdbi jdbi) {
+        this.jdbi = jdbi;
     }
 
-    default List<Long> findIds(ChargingProcessSearchCondition condition, int limit, int offset) {
-        return findIds(condition.whereClause(), condition.sortClause(), condition.params(), limit, offset);
+    public long count(ChargingProcessSearchCondition condition) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery("SELECT COUNT(*) FROM charging_processes " + condition.whereClause());
+            condition.params().forEach(q::bind);
+            return q.mapTo(Long.class).one();
+        });
     }
 
-    default List<ChargingProcessEntity> findByIdsOrdered(Collection<Long> ids) {
+    public List<Long> findIds(ChargingProcessSearchCondition condition, int limit, int offset) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery(
+                    "SELECT id FROM charging_processes "
+                            + condition.whereClause() + " "
+                            + condition.sortClause()
+                            + " LIMIT :limit OFFSET :offset");
+            condition.params().forEach(q::bind);
+            q.bind("limit", limit).bind("offset", offset);
+            return q.mapTo(Long.class).list();
+        });
+    }
+
+    public List<ChargingProcessEntity> findByIds(Collection<Long> ids) {
         if (IdOrder.isEmpty(ids)) {
             return List.of();
         }
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM charging_processes WHERE id IN (<ids>)")
+                .bindList("ids", ids)
+                .map(ConstructorMapper.of(ChargingProcessEntity.class))
+                .list());
+    }
+
+    public List<ChargingProcessEntity> findByIdsOrdered(Collection<Long> ids) {
         return IdOrder.align(ids, findByIds(ids), ChargingProcessEntity::id);
+    }
+
+    public Optional<ChargingProcessEntity> findById(long id) {
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM charging_processes WHERE id = :id")
+                .bind("id", id)
+                .map(ConstructorMapper.of(ChargingProcessEntity.class))
+                .findOne());
     }
 }
