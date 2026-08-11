@@ -3,7 +3,6 @@ package com.teslamate.query.dao;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.entity.DriveEntity;
-import com.teslamate.query.entity.DriveEntity.Table;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindList;
@@ -20,11 +19,11 @@ import java.util.Optional;
 @RegisterConstructorMapper(DriveEntity.class)
 public interface DriveDao {
 
-    @SqlQuery("SELECT COUNT(*) FROM " + Table.NAME + " <whereClause>")
+    @SqlQuery("SELECT COUNT(*) FROM drives <whereClause>")
     @UseStringTemplateEngine
     long count(@Define("whereClause") String whereClause, @BindMap Map<String, Object> params);
 
-    @SqlQuery("SELECT " + Table.ID + " FROM " + Table.NAME + " <whereClause> <sortClause> LIMIT :limit OFFSET :offset")
+    @SqlQuery("SELECT id FROM drives <whereClause> <sortClause> LIMIT :limit OFFSET :offset")
     @UseStringTemplateEngine
     List<Long> findIds(
             @Define("whereClause") String whereClause,
@@ -33,10 +32,10 @@ public interface DriveDao {
             @Bind("limit") int limit,
             @Bind("offset") int offset);
 
-    @SqlQuery("SELECT " + Table.COLUMNS + " FROM " + Table.NAME + " WHERE " + Table.ID + " IN (<ids>)")
+    @SqlQuery("SELECT * FROM drives WHERE id IN (<ids>)")
     List<DriveEntity> findByIds(@BindList("ids") Collection<Long> ids);
 
-    @SqlQuery("SELECT " + Table.COLUMNS + " FROM " + Table.NAME + " WHERE " + Table.ID + " = :id")
+    @SqlQuery("SELECT * FROM drives WHERE id = :id")
     Optional<DriveEntity> findById(@Bind("id") long id);
 
     default long count(DriveSearchCondition condition) {
