@@ -6,17 +6,21 @@ Infinity 数据源：`http://teslamate-query:8080`。
 时间：`from=${__from:date:iso}&to=${__to:date:iso}`  
 车：`carId=${car_id}` ← `GET /api/v1/cars`
 
-## 核心接口（本项目范围）
+## 核心接口
 
 | 用途 | Method / Path |
 |------|----------------|
 | Health | `GET /api/v1/health` |
 | 车辆 | `GET /api/v1/cars` · `/cars/{id}` · `/cars/{id}/latest` |
-| 设置 | `GET /api/v1/settings` |
-| 围栏 / 地址 | `GET /api/v1/geofences` · `/addresses?ids=` · `/addresses/{id}` |
+| 车设置 | `GET /api/v1/car-settings` · `/car-settings/{id}` |
+| 全局设置 | `GET /api/v1/settings` |
+| 围栏 | `GET /api/v1/geofences` · `/geofences/{id}` |
+| 地址 | `GET /api/v1/addresses` · `?ids=` · `/{id}` |
 | 行程 | `GET /api/v1/drives?...` · `/drives/{id}` · `/drives/{id}/positions` |
 | 充电会话 | `GET /api/v1/charging-processes?...` · `/{id}` · `/{id}/samples` |
-| 状态 / 升级 | `GET /api/v1/states?...` · `/api/v1/updates?...` |
+| 充电采样 | `GET /api/v1/charges?chargingProcessId=` · `/{id}` |
+| 轨迹点 | `GET /api/v1/positions?driveId=` 或 `carId&from&to` · `/{id}` |
+| 状态 / 升级 | `GET /api/v1/states?...` · `/updates?...` |
 | 多轨迹地图 | `GET /api/v1/map/tracks?carId&from&to` |
 | SOC 曲线 | `GET /api/v1/series/battery?carId&from&to` |
 

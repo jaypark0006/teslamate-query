@@ -1,37 +1,84 @@
 package com.teslamate.query.dao;
 
+import com.teslamate.query.db.IdOrder;
+import com.teslamate.query.db.condition.PositionSearchCondition;
 import com.teslamate.query.entity.PositionEntity;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.BindList;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
+import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
-@RegisterConstructorMapper(PositionEntity.class)
-public interface PositionDao {
+/** positions table — single-table Condition queries. */
+@Repository
+public class PositionDao {
 
-    @SqlQuery("SELECT * FROM positions WHERE id IN (<ids>)")
-    List<PositionEntity> findByIds(@BindList("ids") Collection<Long> ids);
+    private final Jdbi jdbi;
 
-    @SqlQuery("SELECT * FROM positions WHERE drive_id = :driveId ORDER BY date")
-    List<PositionEntity> findByDriveId(@Bind("driveId") long driveId);
+    public PositionDao(Jdbi jdbi) {
+        this.jdbi = jdbi;
+    }
 
-    @SqlQuery("SELECT * FROM positions WHERE drive_id IN (<driveIds>) ORDER BY drive_id, date")
-    List<PositionEntity> findByDriveIds(@BindList("driveIds") Collection<Long> driveIds);
+    public long count(PositionSearchCondition condition) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery("SELECT COUNT(*) FROM positions " + condition.whereClause());
+            condition.params().forEach(q::bind);
+            return q.mapTo(Long.class).one();
+        });
+    }
 
-    @SqlQuery("""
-            SELECT * FROM positions
-            WHERE car_id = :carId AND date >= :from AND date <= :to
-              AND ideal_battery_range_km IS NOT NULL
-            ORDER BY date
-            LIMIT :limit
-            """)
-    List<PositionEntity> findCleanForCarInRange(
-            @Bind("carId") long carId,
-            @Bind("from") Instant from,
-            @Bind("to") Instant to,
-            @Bind("limit") int limit);
+    public List<Long> findIds(PositionSearchCondition condition, int limit, int offset) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery(
+                    "SELECT id FROM positions "
+                            + condition.whereClause() + " "
+                            + condition.sortClause()
+                            + " LIMIT :limit OFFSET :offset");
+            condition.params().forEach(q::bind);
+            q.bind("limit", limit).bind("offset", offset);
+            return q.mapTo(Long.class).list();
+        });
+    }
+
+    public List<PositionEntity> findByIds(Collection<Long> ids) {
+        if (IdOrder.isEmpty(ids)) {
+            return List.of();
+        }
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM positions WHERE id IN (<ids>)")
+                .bindList("ids", ids)
+                .map(ConstructorMapper.of(PositionEntity.class))
+                .list());
+    }
+
+    public List<PositionEntity> findByIdsOrdered(Collection<Long> ids) {
+        return IdOrder.align(ids, findByIds(ids), PositionEntity::id);
+    }
+
+    public Optional<PositionEntity> findById(long id) {
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM positions WHERE id = :id")
+                .bind("id", id)
+                .map(ConstructorMapper.of(PositionEntity.class))
+                .findOne());
+    }
+
+    /** Convenience for multi-DAO composition (drive → positions). */
+    public List<PositionEntity> findByDriveId(long driveId) {
+        PositionSearchCondition c = PositionSearchCondition.builder().driveId(driveId).build();
+        List<Long> ids = findIds(c, 500_000, 0);
+        return findByIdsOrdered(ids);
+    }
+
+    public List<PositionEntity> findByDriveIds(Collection<Long> driveIds) {
+        if (IdOrder.isEmpty(driveIds)) {
+            return List.of();
+        }
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT * FROM positions WHERE drive_id IN (<driveIds>) ORDER BY drive_id, date")
+                .bindList("driveIds", driveIds)
+                .map(ConstructorMapper.of(PositionEntity.class))
+                .list());
+    }
 }

@@ -1,37 +1,72 @@
 package com.teslamate.query.dao;
 
-import com.teslamate.query.dto.GeofenceDto;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.BindList;
-import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import com.teslamate.query.db.IdOrder;
+import com.teslamate.query.db.condition.GeofenceSearchCondition;
+import com.teslamate.query.entity.GeofenceEntity;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
+import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-@RegisterConstructorMapper(GeofenceDto.class)
-public interface GeofenceDao {
+/** geofences table — single-table Condition queries. */
+@Repository
+public class GeofenceDao {
 
-    @SqlQuery("""
-            SELECT id, name, latitude, longitude, radius,
-                   billing_type, cost_per_unit, session_fee
-            FROM geofences
-            ORDER BY name
-            """)
-    List<GeofenceDto> findAll();
+    private final Jdbi jdbi;
 
-    @SqlQuery("""
-            SELECT id, name, latitude, longitude, radius,
-                   billing_type, cost_per_unit, session_fee
-            FROM geofences WHERE id = :id
-            """)
-    Optional<GeofenceDto> findById(@Bind("id") long id);
+    public GeofenceDao(Jdbi jdbi) {
+        this.jdbi = jdbi;
+    }
 
-    @SqlQuery("""
-            SELECT id, name, latitude, longitude, radius,
-                   billing_type, cost_per_unit, session_fee
-            FROM geofences WHERE id IN (<ids>)
-            """)
-    List<GeofenceDto> findByIds(@BindList("ids") Collection<Long> ids);
+    public long count(GeofenceSearchCondition condition) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery("SELECT COUNT(*) FROM geofences " + condition.whereClause());
+            condition.params().forEach(q::bind);
+            return q.mapTo(Long.class).one();
+        });
+    }
+
+    public List<Long> findIds(GeofenceSearchCondition condition, int limit, int offset) {
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery(
+                    "SELECT id FROM geofences "
+                            + condition.whereClause() + " "
+                            + condition.sortClause()
+                            + " LIMIT :limit OFFSET :offset");
+            condition.params().forEach(q::bind);
+            q.bind("limit", limit).bind("offset", offset);
+            return q.mapTo(Long.class).list();
+        });
+    }
+
+    public List<GeofenceEntity> findByIds(Collection<Long> ids) {
+        if (IdOrder.isEmpty(ids)) {
+            return List.of();
+        }
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM geofences WHERE id IN (<ids>)")
+                .bindList("ids", ids)
+                .map(ConstructorMapper.of(GeofenceEntity.class))
+                .list());
+    }
+
+    public List<GeofenceEntity> findByIdsOrdered(Collection<Long> ids) {
+        return IdOrder.align(ids, findByIds(ids), GeofenceEntity::id);
+    }
+
+    public Optional<GeofenceEntity> findById(long id) {
+        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM geofences WHERE id = :id")
+                .bind("id", id)
+                .map(ConstructorMapper.of(GeofenceEntity.class))
+                .findOne());
+    }
+
+    public List<GeofenceEntity> findAll() {
+        GeofenceSearchCondition c = GeofenceSearchCondition.builder().build();
+        List<Long> ids = findIds(c, 10_000, 0);
+        return findByIdsOrdered(ids);
+    }
 }

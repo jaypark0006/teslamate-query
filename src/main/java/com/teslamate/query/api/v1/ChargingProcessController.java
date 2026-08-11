@@ -6,12 +6,16 @@ import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.service.ChargingProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/charging-processes")
 @Tag(name = "Charging Processes")
 public class ChargingProcessController {
 
@@ -21,7 +25,7 @@ public class ChargingProcessController {
         this.service = service;
     }
 
-    @GetMapping({"/charging-processes", "/charges"})
+    @GetMapping
     @Operation(summary = "List charge sessions (Condition → ids → rows)")
     public PageResponse<ChargingProcessDto> list(
             @RequestParam(required = false) Long carId,
@@ -35,12 +39,13 @@ public class ChargingProcessController {
         return service.list(carId, from, to, geofenceId, incompleteOnly, page, size);
     }
 
-    @GetMapping({"/charging-processes/{id}", "/charges/{id}"})
+    @GetMapping("/{id}")
     public ChargingProcessDto get(@PathVariable long id) {
         return service.get(id);
     }
 
-    @GetMapping({"/charging-processes/{id}/samples", "/charges/{id}/samples"})
+    @GetMapping("/{id}/samples")
+    @Operation(summary = "Charge samples for a session (nested convenience)")
     public List<ChargeSampleDto> samples(@PathVariable long id) {
         return service.samples(id);
     }
