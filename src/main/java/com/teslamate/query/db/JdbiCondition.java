@@ -7,14 +7,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ASRS-style dynamic WHERE builder for JDBI {@code @Define("whereClause")} + {@code @BindMap}.
- *
- * <pre>
- *   var c = DriveSearchCondition.builder().carId(1).startDateFrom(from).build();
- *   dao.findIds(c.whereClause(), c.params(), limit, offset);
- * </pre>
- *
- * {@link #whereClause()} is either empty or {@code WHERE a AND b} (including the WHERE keyword).
+ * Dynamic WHERE builder for single-table queries.
+ * <p>
+ * Usage: concatenate into SQL — {@code "SELECT * FROM drives " + condition.whereClause()}.
+ * Do <b>not</b> feed fragments into StringTemplate: {@code <}/{@code >} in predicates
+ * (e.g. {@code distance > 0}) would need escaping there.
  */
 public abstract class JdbiCondition {
 
@@ -22,6 +19,7 @@ public abstract class JdbiCondition {
     protected final Map<String, Object> params = new LinkedHashMap<>();
     private final Map<String, String> sorts = new LinkedHashMap<>();
 
+    /** Empty, or {@code WHERE a AND b} (includes the WHERE keyword). */
     public final String whereClause() {
         return conditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", conditions);
     }

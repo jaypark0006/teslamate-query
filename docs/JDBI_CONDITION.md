@@ -1,56 +1,34 @@
-# JDBI Condition 模式（对齐 ASRS）
-
-参考 `asrs` 的 `JdbiCondition` / `JdbiUpdate` + SqlObject `@Define` / `@BindMap`。
+# JdbiCondition（单表动态 WHERE）
 
 ## 用法
 
 ```java
-var condition = DriveSearchCondition.builder()
+var c = DriveSearchCondition.builder()
     .carId(1L)
     .startDateFrom(from)
-    .startDateTo(to)
-    .minDistance(5.0)
+    .minDistance(1.0)   // 生成 distance >= :minDistance，含 > 也安全
     .build();
 
-long total = driveDao.count(condition);
-List<Long> ids = driveDao.findIds(condition, limit, offset);
-List<DriveDto> rows = driveDao.findByIdsOrdered(ids);
+// 字符串拼接，不用 StringTemplate
+"SELECT id FROM drives " + c.whereClause() + " " + c.sortClause() + " LIMIT :limit"
 ```
 
-生成 SQL 片段：
+## 为什么不用 StringTemplate / `@Define("<whereClause>")`
 
-- `condition.whereClause()` → `""` 或 `WHERE d.car_id = :carId AND ...`
-- `condition.params()` → `@BindMap`
-- `condition.sortClause()` → `ORDER BY d.start_date DESC`
+StringTemplate 把 `<` `>` 当模板语法。Condition 里常见：
 
-Dao：
-
-```java
-@SqlQuery("SELECT d.id FROM drives d <whereClause> <sortClause> LIMIT :limit OFFSET :offset")
-@UseStringTemplateEngine
-List<Long> findIds(@Define("whereClause") String whereClause,
-                   @Define("sortClause") String sortClause,
-                   @BindMap Map<String, Object> params,
-                   @Bind int limit, @Bind int offset);
+```sql
+charge_energy_added > 0
+distance >= :min
 ```
 
-## Spring DI
+若塞进 `<whereClause>` 会解析失败或要写成 `\>` 转义，又臭又长。
 
-`JdbiConfig`：
+**本项目约定：动态片段用 Java 字符串拼接 + named bind；固定 SQL 才用 SqlObject 注解。**
 
-- `SqlObjectPlugin` + `PostgresPlugin` + **全局 `StringTemplateEngine`**
-- `SnakeCaseColumnNameMatcher`（一次）
-- `jdbi.onDemand(DriveDao.class)` 等注册为 Bean
-- Service 只注入 Dao + 拼 Condition，不写拼接 SQL
+JDBI 的 `IN (<ids>)` + `bindList` 是 JDBI 自己的占位语法，**不是** StringTemplate，可继续用。
 
-## 与 ASRS 的对应
+## 范围
 
-| ASRS | teslamate-query |
-|------|-----------------|
-| `JdbiCondition` | `com.teslamate.query.db.JdbiCondition` |
-| `JdbiUpdate` | `com.teslamate.query.db.JdbiUpdate` |
-| `*SearchCondition` | `db.condition.DriveSearchCondition` 等 |
-| `@Define whereClause` + `@BindMap` | 相同 |
-| 代码生成 entity condition | 手写少量 condition（够用） |
-
-读路径主推 Condition；写路径预留 Update（当前几乎只读）。
+- Condition：仅 **单表** 过滤，列名无别名  
+- 多表：Service 多 Dao，不把 join 写进 Condition  

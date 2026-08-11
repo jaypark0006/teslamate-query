@@ -24,3 +24,7 @@ public record DriveEntity(
 **不要**再抽 `Entity.Table` 常量类：和 `@ColumnName` 重复，改列要改两处。
 
 Dao 用 `SELECT *` 即可，列增删时主要维护 Entity。
+
+## Dynamic WHERE
+
+Condition fragments are concatenated in Java (see `JDBI_CONDITION.md`). No StringTemplate escaping of `<`/`>`.
