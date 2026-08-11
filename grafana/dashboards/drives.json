@@ -1,0 +1,89 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "teslamate-query" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "columns": [],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "teslamate-query" },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "refId": "A",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "http://teslamate-query:8080/api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Drives",
+      "type": "table"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["teslamate-query"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "teslamate-query" },
+        "definition": "http://teslamate-query:8080/api/v1/cars",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Car",
+        "multi": false,
+        "name": "car_id",
+        "options": [],
+        "query": {
+          "columns": [
+            { "selector": "name", "text": "Name", "type": "string" },
+            { "selector": "id", "text": "Id", "type": "string" }
+          ],
+          "filters": [],
+          "format": "table",
+          "refId": "VariableQuery",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://teslamate-query:8080/api/v1/cars",
+          "url_options": { "method": "GET" }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Drives (REST)",
+  "uid": "tmq-drives",
+  "version": 1,
+  "weekStart": ""
+}
