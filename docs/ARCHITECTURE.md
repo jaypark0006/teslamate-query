@@ -9,8 +9,8 @@ Controller
 
 ## Patterns
 
-1. **Entity = 1 table**: `entity/*Entity` + nested `Table.NAME` / `Table.COL_*` / `Table.COLUMNS`
-2. **Condition = single-table only**: column names from `Table.*`, **no alias, no join**
+1. **Entity = 1 table**: `@ColumnName("col")` on fields only (no nested Table class)
+2. **Condition = single-table only**: literal column names, **no alias, no join**
 3. **Multi-table**: Service multi-Dao (ids then load) — **not** Condition
 4. **SqlObject Dao**: `@Define whereClause` + `@BindMap`; maps to **Entity**
 5. **API DTO**: `EntityMapper` entity → dto for HTTP
