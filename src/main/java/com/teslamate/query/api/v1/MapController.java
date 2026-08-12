@@ -4,6 +4,7 @@ import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.service.MapTracksService;
 import com.teslamate.query.service.QuerySupport;
+import com.teslamate.query.service.TripMapService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,10 +20,12 @@ import java.util.List;
 public class MapController {
 
     private final MapTracksService mapTracksService;
+    private final TripMapService tripMapService;
     private final QuerySupport support;
 
-    public MapController(MapTracksService mapTracksService, QuerySupport support) {
+    public MapController(MapTracksService mapTracksService, TripMapService tripMapService, QuerySupport support) {
         this.mapTracksService = mapTracksService;
+        this.tripMapService = tripMapService;
         this.support = support;
     }
 
@@ -39,6 +42,23 @@ public class MapController {
     ) {
         return mapTracksService.tracks(carId, from, to, maxDrives, maxCharges,
                 support.units(lengthUnit, tempUnit));
+    }
+
+    @GetMapping("/map/trip")
+    @Operation(summary = "Trip GeoJSON: drive paths + charge points + derived park points")
+    public MapTracksDto trip(
+            @RequestParam long carId,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(required = false) Integer minParkMin,
+            @RequestParam(required = false) Integer microDriveThresholdMin,
+            @RequestParam(required = false) Integer maxDrives,
+            @RequestParam(required = false) Integer maxCharges,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return tripMapService.trip(carId, from, to, minParkMin, microDriveThresholdMin,
+                maxDrives, maxCharges, support.units(lengthUnit, tempUnit));
     }
 
     @GetMapping("/series/battery")

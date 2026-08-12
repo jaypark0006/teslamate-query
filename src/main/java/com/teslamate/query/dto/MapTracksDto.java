@@ -20,8 +20,13 @@ public record MapTracksDto(
             Instant to,
             int driveCount,
             int chargeCount,
+            int parkCount,
             int totalPathPoints
-    ) {}
+    ) {
+        public Meta(long carId, Instant from, Instant to, int driveCount, int chargeCount, int totalPathPoints) {
+            this(carId, from, to, driveCount, chargeCount, 0, totalPathPoints);
+        }
+    }
 
     public record Feature(
             String type,
@@ -41,8 +46,12 @@ public record MapTracksDto(
     }
 
     public static Feature point(long chargeId, BigDecimal lon, BigDecimal lat, Map<String, Object> props) {
-        props.put("kind", "charge");
-        props.put("id", chargeId);
+        return point("charge", chargeId, lon, lat, props);
+    }
+
+    public static Feature point(String kind, long id, BigDecimal lon, BigDecimal lat, Map<String, Object> props) {
+        props.put("kind", kind);
+        props.put("id", id);
         return new Feature("Feature", new Geometry("Point", List.of(lon, lat)), props);
     }
 }
