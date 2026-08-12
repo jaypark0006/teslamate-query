@@ -79,4 +79,4 @@ docker build -t teslamate-query:local .
 
 ## 技术
 
-Java 21 · Spring Boot 3 · JDBI 3 · PostgreSQL
+Java 21 · Spring Boot **4.1** · JDBI 3 · PostgreSQL
