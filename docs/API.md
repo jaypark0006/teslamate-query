@@ -6,10 +6,24 @@ Auth: default **off** (`AUTH_ENABLED=false`). When on: header `X-API-Key` (or qu
 ## Conventions
 
 - Timestamps: ISO-8601 UTC (`2024-01-01T00:00:00Z`)
-- Units are metric (`distance` km, temps °C, ranges km)
-- Paged lists: `{ "data": [...], "page", "size", "total" }`
+- **DB is always metric** (km, °C, km/h, m). Conversion is **not** done in SQL.
+- Display units via query params (optional):
+  - `lengthUnit=km|mi` (default `km`)
+  - `tempUnit=C|F` (default `C`)
+- After load, Service converts length / temp / speed / elevation for the response.
+- Paged lists: `{ "data", "page", "size", "total", "units": { "length", "temperature", "speed", "elevation" } }`
+- Field names may still say `*Km` / `*C` for compatibility; **values follow `units`**.
+- Filter `minDistance` is in **`lengthUnit`**, then converted to km for SQL.
 - Errors: `{ "code", "message", "timestamp", "path" }`
 - **Entity 1:1 table**; multi-table only in Service (multi-Dao)
+
+### Example
+
+```http
+GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
+```
+
+→ `minDistance` means 10 **miles** in the filter; JSON distances/temps are mi / °F; `units.length` is `"mi"`.
 
 ## Single-table resources
 

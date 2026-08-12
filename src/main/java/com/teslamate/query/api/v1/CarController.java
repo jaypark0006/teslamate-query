@@ -3,6 +3,7 @@ package com.teslamate.query.api.v1;
 import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.LatestSnapshotDto;
 import com.teslamate.query.service.CarService;
+import com.teslamate.query.service.QuerySupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +16,11 @@ import java.util.List;
 public class CarController {
 
     private final CarService carService;
+    private final QuerySupport support;
 
-    public CarController(CarService carService) {
+    public CarController(CarService carService, QuerySupport support) {
         this.carService = carService;
+        this.support = support;
     }
 
     @GetMapping
@@ -34,7 +37,11 @@ public class CarController {
 
     @GetMapping("/{id}/latest")
     @Operation(summary = "Latest telemetry snapshot (position or charge sample)")
-    public LatestSnapshotDto latest(@PathVariable long id) {
-        return carService.latest(id);
+    public LatestSnapshotDto latest(
+            @PathVariable long id,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return carService.latest(id, support.units(lengthUnit, tempUnit));
     }
 }

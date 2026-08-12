@@ -2,6 +2,7 @@ package com.teslamate.query.service;
 
 import com.teslamate.query.dao.PositionDao;
 import com.teslamate.query.db.condition.PositionSearchCondition;
+import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.exception.BadRequestException;
@@ -22,12 +23,9 @@ public class PositionService {
         this.support = support;
     }
 
-    /**
-     * List positions. Requires a scoped filter to avoid full-table scans on ~10M+ rows:
-     * {@code driveId}, or {@code carId} + {@code from}+{@code to}.
-     */
     public PageResponse<PositionDto> list(Long carId, Long driveId, String fromStr, String toStr,
-                                          Boolean cleanOnly, Integer page, Integer size) {
+                                          Boolean cleanOnly, Integer page, Integer size, DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant from = support.parseInstant(fromStr, "from");
         Instant to = support.parseInstant(toStr, "to");
         if (driveId == null && (carId == null || from == null || to == null)) {
@@ -48,12 +46,14 @@ public class PositionService {
         int s = support.size(size);
         long total = positionDao.count(condition);
         List<Long> ids = positionDao.findIds(condition, s, support.offset(p, s));
-        return PageResponse.of(EntityMapper.toPositionDtos(positionDao.findByIdsOrdered(ids)), p, s, total);
+        return PageResponse.of(
+                EntityMapper.toPositionDtos(positionDao.findByIdsOrdered(ids), u), p, s, total, u.toMeta());
     }
 
-    public PositionDto get(long id) {
+    public PositionDto get(long id, DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         return positionDao.findById(id)
-                .map(EntityMapper::toPositionDto)
+                .map(e -> EntityMapper.toPositionDto(e, u))
                 .orElseThrow(() -> new NotFoundException("Position not found: " + id));
     }
 }

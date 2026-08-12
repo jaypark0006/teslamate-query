@@ -37,7 +37,8 @@ public record DriveEntity(
 | Dao | `count` / `findIds` / `findByIds` / `findById`；映射到 Entity |
 | Condition | 单表 WHERE，字面量列名（`car_id`），无别名、无 join |
 | 多表 | Service 多 Dao，不用 Condition 联查（如 cars + car_settings → CarDto） |
-| API DTO | `EntityMapper` 转换，可加派生字段（如 state.durationSeconds） |
+| API DTO | `EntityMapper` + `DisplayUnits`：DB 公制 → 响应按 `lengthUnit`/`tempUnit` 换算 |
+| 单位 | 不在 SQL 里 `convert_km`；`UnitConverter` 在出库后处理 |
 
 **不要**再抽 `Entity.Table` 常量类：和 `@ColumnName` 重复，改列要改两处。
 

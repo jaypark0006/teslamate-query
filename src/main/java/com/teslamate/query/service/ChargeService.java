@@ -2,6 +2,7 @@ package com.teslamate.query.service;
 
 import com.teslamate.query.dao.ChargeDao;
 import com.teslamate.query.db.condition.ChargeSearchCondition;
+import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.ChargeDto;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.exception.BadRequestException;
@@ -22,11 +23,9 @@ public class ChargeService {
         this.support = support;
     }
 
-    /**
-     * List charge samples. Prefer {@code chargingProcessId}; otherwise require {@code from}+{@code to}.
-     */
     public PageResponse<ChargeDto> list(Long chargingProcessId, String fromStr, String toStr,
-                                        Integer page, Integer size) {
+                                        Integer page, Integer size, DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant from = support.parseInstant(fromStr, "from");
         Instant to = support.parseInstant(toStr, "to");
         if (chargingProcessId == null && (from == null || to == null)) {
@@ -45,12 +44,14 @@ public class ChargeService {
         int s = support.size(size);
         long total = chargeDao.count(condition);
         List<Long> ids = chargeDao.findIds(condition, s, support.offset(p, s));
-        return PageResponse.of(EntityMapper.toChargeDtos(chargeDao.findByIdsOrdered(ids)), p, s, total);
+        return PageResponse.of(
+                EntityMapper.toChargeDtos(chargeDao.findByIdsOrdered(ids), u), p, s, total, u.toMeta());
     }
 
-    public ChargeDto get(long id) {
+    public ChargeDto get(long id, DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         return chargeDao.findById(id)
-                .map(EntityMapper::toChargeDto)
+                .map(e -> EntityMapper.toChargeDto(e, u))
                 .orElseThrow(() -> new NotFoundException("Charge not found: " + id));
     }
 }
