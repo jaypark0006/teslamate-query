@@ -6,6 +6,7 @@ import com.teslamate.query.dao.PositionDao;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.db.condition.PositionSearchCondition;
+import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.entity.ChargingProcessEntity;
@@ -40,7 +41,9 @@ public class MapTracksService {
         this.support = support;
     }
 
-    public MapTracksDto tracks(long carId, String fromStr, String toStr, Integer maxDrives, Integer maxCharges) {
+    public MapTracksDto tracks(long carId, String fromStr, String toStr, Integer maxDrives, Integer maxCharges,
+                               DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant[] range = support.requireRange(fromStr, toStr);
         Instant from = range[0];
         Instant to = range[1];
@@ -82,8 +85,9 @@ public class MapTracksService {
             Map<String, Object> props = new HashMap<>();
             props.put("startDate", d.startDate() != null ? d.startDate().toString() : null);
             props.put("endDate", d.endDate() != null ? d.endDate().toString() : null);
-            props.put("distanceKm", d.distance());
+            props.put("distance", UnitConverter.length(d.distance(), u));
             props.put("durationMin", d.durationMin());
+            props.put("units", u.toMeta());
             features.add(MapTracksDto.lineString(d.id(), coords, props));
         }
         for (ChargingProcessEntity c : charges) {
@@ -103,7 +107,9 @@ public class MapTracksService {
                 new MapTracksDto.Meta(carId, from, to, drives.size(), charges.size(), totalPts));
     }
 
-    public List<PositionDto> batterySeries(long carId, String fromStr, String toStr, Integer limit) {
+    public List<PositionDto> batterySeries(long carId, String fromStr, String toStr, Integer limit,
+                                           DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant[] range = support.requireRange(fromStr, toStr);
         int lim = limit == null ? 5000 : Math.min(Math.max(limit, 1), 50_000);
         if (lim > 20_000) {
@@ -116,6 +122,6 @@ public class MapTracksService {
                 .cleanOnly(true)
                 .build();
         List<Long> ids = positionDao.findIds(condition, lim, 0);
-        return EntityMapper.toPositionDtos(positionDao.findByIdsOrdered(ids));
+        return EntityMapper.toPositionDtos(positionDao.findByIdsOrdered(ids), u);
     }
 }

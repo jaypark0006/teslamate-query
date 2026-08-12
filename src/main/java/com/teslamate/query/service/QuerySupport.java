@@ -1,6 +1,7 @@
 package com.teslamate.query.service;
 
 import com.teslamate.query.config.QueryProperties;
+import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.exception.BadRequestException;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,15 @@ public class QuerySupport {
 
     public QuerySupport(QueryProperties properties) {
         this.properties = properties;
+    }
+
+    /**
+     * Parse display units from query params. Defaults: {@code km}, {@code C}.
+     * Filter inputs such as {@code minDistance} are interpreted in {@code lengthUnit}
+     * and converted to km for SQL.
+     */
+    public DisplayUnits units(String lengthUnit, String tempUnit) {
+        return DisplayUnits.of(lengthUnit, tempUnit);
     }
 
     public int page(Integer page) {

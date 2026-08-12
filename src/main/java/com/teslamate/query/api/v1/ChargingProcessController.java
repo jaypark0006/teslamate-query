@@ -4,13 +4,10 @@ import com.teslamate.query.dto.ChargeSampleDto;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.service.ChargingProcessService;
+import com.teslamate.query.service.QuerySupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -20,13 +17,15 @@ import java.util.List;
 public class ChargingProcessController {
 
     private final ChargingProcessService service;
+    private final QuerySupport support;
 
-    public ChargingProcessController(ChargingProcessService service) {
+    public ChargingProcessController(ChargingProcessService service, QuerySupport support) {
         this.service = service;
+        this.support = support;
     }
 
     @GetMapping
-    @Operation(summary = "List charge sessions (Condition → ids → rows)")
+    @Operation(summary = "List charge sessions")
     public PageResponse<ChargingProcessDto> list(
             @RequestParam(required = false) Long carId,
             @RequestParam(required = false) String from,
@@ -34,19 +33,29 @@ public class ChargingProcessController {
             @RequestParam(required = false) Long geofenceId,
             @RequestParam(required = false) Boolean incompleteOnly,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
     ) {
-        return service.list(carId, from, to, geofenceId, incompleteOnly, page, size);
+        return service.list(carId, from, to, geofenceId, incompleteOnly, page, size,
+                support.units(lengthUnit, tempUnit));
     }
 
     @GetMapping("/{id}")
-    public ChargingProcessDto get(@PathVariable long id) {
-        return service.get(id);
+    public ChargingProcessDto get(
+            @PathVariable long id,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return service.get(id, support.units(lengthUnit, tempUnit));
     }
 
     @GetMapping("/{id}/samples")
-    @Operation(summary = "Charge samples for a session (nested convenience)")
-    public List<ChargeSampleDto> samples(@PathVariable long id) {
-        return service.samples(id);
+    public List<ChargeSampleDto> samples(
+            @PathVariable long id,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return service.samples(id, support.units(lengthUnit, tempUnit));
     }
 }

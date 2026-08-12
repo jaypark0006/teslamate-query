@@ -3,11 +3,11 @@ package com.teslamate.query.service;
 import com.teslamate.query.dao.ChargeDao;
 import com.teslamate.query.dao.ChargingProcessDao;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
+import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.ChargeSampleDto;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.exception.NotFoundException;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -27,26 +27,30 @@ public class ChargingProcessService {
     }
 
     public PageResponse<ChargingProcessDto> list(Long carId, String fromStr, String toStr, Long geofenceId,
-                                                 Boolean incompleteOnly, Integer page, Integer size) {
+                                                 Boolean incompleteOnly, Integer page, Integer size,
+                                                 DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         ChargingProcessSearchCondition condition = condition(carId, fromStr, toStr, geofenceId, incompleteOnly);
         int p = support.page(page);
         int s = support.size(size);
         long total = chargingProcessDao.count(condition);
         List<Long> ids = chargingProcessDao.findIds(condition, s, support.offset(p, s));
         return PageResponse.of(
-                EntityMapper.toChargingProcessDtos(chargingProcessDao.findByIdsOrdered(ids)), p, s, total);
+                EntityMapper.toChargingProcessDtos(chargingProcessDao.findByIdsOrdered(ids), u),
+                p, s, total, u.toMeta());
     }
 
-    @Cacheable(value = "chargingProcess", key = "#id")
-    public ChargingProcessDto get(long id) {
+    public ChargingProcessDto get(long id, DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         return chargingProcessDao.findById(id)
-                .map(EntityMapper::toChargingProcessDto)
+                .map(e -> EntityMapper.toChargingProcessDto(e, u))
                 .orElseThrow(() -> new NotFoundException("Charging process not found: " + id));
     }
 
-    public List<ChargeSampleDto> samples(long id) {
-        get(id);
-        return chargeDao.findByProcessId(id).stream().map(EntityMapper::toChargeSampleDto).toList();
+    public List<ChargeSampleDto> samples(long id, DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
+        get(id, DisplayUnits.METRIC);
+        return chargeDao.findByProcessId(id).stream().map(e -> EntityMapper.toChargeSampleDto(e, u)).toList();
     }
 
     private ChargingProcessSearchCondition condition(Long carId, String fromStr, String toStr,

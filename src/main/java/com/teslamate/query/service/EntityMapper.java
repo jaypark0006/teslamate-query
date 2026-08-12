@@ -1,5 +1,6 @@
 package com.teslamate.query.service;
 
+import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.AddressDto;
 import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.CarSettingsDto;
@@ -9,6 +10,7 @@ import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
 import com.teslamate.query.dto.GeofenceDto;
+import com.teslamate.query.dto.LatestSnapshotDto;
 import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.dto.SettingsDto;
 import com.teslamate.query.dto.StateDto;
@@ -30,86 +32,149 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.List;
 
-/** Entity (table row) → API DTO. Keep API shape stable; Entity stays 1:1 with DB. */
+/**
+ * Entity (metric table row) → API DTO.
+ * Length / temperature / speed / elevation are converted with {@link DisplayUnits}.
+ * Field names keep historical *Km / *C suffixes; values follow response {@code units}.
+ */
 public final class EntityMapper {
 
     private EntityMapper() {}
 
-    public static DriveDto toDriveDto(DriveEntity e) {
-        Double avgSpeed = null;
+    public static DriveDto toDriveDto(DriveEntity e, DisplayUnits u) {
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
+        Double avgSpeedKmh = null;
         if (e.distance() != null && e.durationMin() != null && e.durationMin() > 0) {
-            avgSpeed = BigDecimal.valueOf(e.distance() / (e.durationMin() * 60.0) * 3600.0)
+            avgSpeedKmh = BigDecimal.valueOf(e.distance() / (e.durationMin() * 60.0) * 3600.0)
                     .setScale(4, RoundingMode.HALF_UP).doubleValue();
         }
         return new DriveDto(
-                e.id(), e.carId(), e.startDate(), e.endDate(), e.durationMin(), e.distance(),
-                e.startIdealRangeKm(), e.endIdealRangeKm(), e.startRatedRangeKm(), e.endRatedRangeKm(),
-                e.outsideTempAvg() == null ? null : e.outsideTempAvg().doubleValue(),
-                e.insideTempAvg() == null ? null : e.insideTempAvg().doubleValue(),
-                avgSpeed, e.speedMax(), e.powerMax(), e.powerMin(), e.ascent(), e.descent(),
+                e.id(), e.carId(), e.startDate(), e.endDate(), e.durationMin(),
+                UnitConverter.length(e.distance(), units),
+                UnitConverter.length(e.startIdealRangeKm(), units),
+                UnitConverter.length(e.endIdealRangeKm(), units),
+                UnitConverter.length(e.startRatedRangeKm(), units),
+                UnitConverter.length(e.endRatedRangeKm(), units),
+                UnitConverter.temp(e.outsideTempAvg() == null ? null : e.outsideTempAvg().doubleValue(), units),
+                UnitConverter.temp(e.insideTempAvg() == null ? null : e.insideTempAvg().doubleValue(), units),
+                UnitConverter.speed(avgSpeedKmh, units),
+                UnitConverter.speed(e.speedMax(), units),
+                e.powerMax(), e.powerMin(),
+                UnitConverter.elevation(e.ascent(), units),
+                UnitConverter.elevation(e.descent(), units),
                 e.startPositionId(), e.endPositionId(), e.startAddressId(), e.endAddressId(),
                 e.startGeofenceId(), e.endGeofenceId()
         );
     }
 
-    public static List<DriveDto> toDriveDtos(List<DriveEntity> list) {
-        return list.stream().map(EntityMapper::toDriveDto).toList();
+    public static List<DriveDto> toDriveDtos(List<DriveEntity> list, DisplayUnits u) {
+        return list.stream().map(e -> toDriveDto(e, u)).toList();
     }
 
-    public static ChargingProcessDto toChargingProcessDto(ChargingProcessEntity e) {
+    public static ChargingProcessDto toChargingProcessDto(ChargingProcessEntity e, DisplayUnits u) {
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new ChargingProcessDto(
                 e.id(), e.carId(), e.startDate(), e.endDate(),
                 e.chargeEnergyAdded(), e.chargeEnergyUsed(), e.durationMin(),
                 e.startBatteryLevel(), e.endBatteryLevel(),
-                e.startIdealRangeKm(), e.endIdealRangeKm(), e.startRatedRangeKm(), e.endRatedRangeKm(),
-                e.outsideTempAvg(), e.cost(), e.positionId(), e.addressId(), e.geofenceId()
+                UnitConverter.length(e.startIdealRangeKm(), units),
+                UnitConverter.length(e.endIdealRangeKm(), units),
+                UnitConverter.length(e.startRatedRangeKm(), units),
+                UnitConverter.length(e.endRatedRangeKm(), units),
+                UnitConverter.temp(e.outsideTempAvg(), units),
+                e.cost(), e.positionId(), e.addressId(), e.geofenceId()
         );
     }
 
-    public static List<ChargingProcessDto> toChargingProcessDtos(List<ChargingProcessEntity> list) {
-        return list.stream().map(EntityMapper::toChargingProcessDto).toList();
+    public static List<ChargingProcessDto> toChargingProcessDtos(List<ChargingProcessEntity> list, DisplayUnits u) {
+        return list.stream().map(e -> toChargingProcessDto(e, u)).toList();
     }
 
-    public static DrivePositionDto toDrivePositionDto(PositionEntity e) {
+    public static DrivePositionDto toDrivePositionDto(PositionEntity e, DisplayUnits u) {
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new DrivePositionDto(
-                e.id(), e.date(), e.latitude(), e.longitude(), e.elevation(), e.speed(), e.power(),
-                e.odometer(), e.idealBatteryRangeKm(), e.ratedBatteryRangeKm(),
-                e.batteryLevel(), e.usableBatteryLevel(), e.outsideTemp(), e.insideTemp()
+                e.id(), e.date(), e.latitude(), e.longitude(),
+                UnitConverter.elevation(e.elevation(), units),
+                UnitConverter.speed(e.speed(), units),
+                e.power(),
+                UnitConverter.length(e.odometer(), units),
+                UnitConverter.length(e.idealBatteryRangeKm(), units),
+                UnitConverter.length(e.ratedBatteryRangeKm(), units),
+                e.batteryLevel(), e.usableBatteryLevel(),
+                UnitConverter.temp(e.outsideTemp(), units),
+                UnitConverter.temp(e.insideTemp(), units)
         );
     }
 
-    public static PositionDto toPositionDto(PositionEntity e) {
+    public static PositionDto toPositionDto(PositionEntity e, DisplayUnits u) {
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new PositionDto(
-                e.id(), e.carId(), e.driveId(), e.date(), e.latitude(), e.longitude(), e.elevation(),
-                e.speed(), e.power(), e.odometer(), e.idealBatteryRangeKm(), e.ratedBatteryRangeKm(),
-                e.batteryLevel(), e.usableBatteryLevel(), e.outsideTemp(), e.insideTemp()
+                e.id(), e.carId(), e.driveId(), e.date(), e.latitude(), e.longitude(),
+                UnitConverter.elevation(e.elevation(), units),
+                UnitConverter.speed(e.speed(), units),
+                e.power(),
+                UnitConverter.length(e.odometer(), units),
+                UnitConverter.length(e.idealBatteryRangeKm(), units),
+                UnitConverter.length(e.ratedBatteryRangeKm(), units),
+                e.batteryLevel(), e.usableBatteryLevel(),
+                UnitConverter.temp(e.outsideTemp(), units),
+                UnitConverter.temp(e.insideTemp(), units)
         );
     }
 
-    public static List<PositionDto> toPositionDtos(List<PositionEntity> list) {
-        return list.stream().map(EntityMapper::toPositionDto).toList();
+    public static List<PositionDto> toPositionDtos(List<PositionEntity> list, DisplayUnits u) {
+        return list.stream().map(e -> toPositionDto(e, u)).toList();
     }
 
-    public static ChargeDto toChargeDto(ChargeEntity e) {
+    public static ChargeDto toChargeDto(ChargeEntity e, DisplayUnits u) {
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new ChargeDto(
                 e.id(), e.chargingProcessId(), e.date(), e.batteryLevel(), e.usableBatteryLevel(),
                 e.chargeEnergyAdded(), e.chargerPower(), e.chargerVoltage(), e.chargerActualCurrent(),
                 e.chargerPhases(), e.fastChargerPresent(), e.fastChargerType(),
-                e.idealBatteryRangeKm(), e.ratedBatteryRangeKm(), e.outsideTemp(), e.batteryHeaterOn()
+                UnitConverter.length(e.idealBatteryRangeKm(), units),
+                UnitConverter.length(e.ratedBatteryRangeKm(), units),
+                UnitConverter.temp(e.outsideTemp(), units),
+                e.batteryHeaterOn()
         );
     }
 
-    public static List<ChargeDto> toChargeDtos(List<ChargeEntity> list) {
-        return list.stream().map(EntityMapper::toChargeDto).toList();
+    public static List<ChargeDto> toChargeDtos(List<ChargeEntity> list, DisplayUnits u) {
+        return list.stream().map(e -> toChargeDto(e, u)).toList();
     }
 
-    /** Nested under charging-process; omits chargingProcessId for compact charts. */
-    public static ChargeSampleDto toChargeSampleDto(ChargeEntity e) {
+    public static ChargeSampleDto toChargeSampleDto(ChargeEntity e, DisplayUnits u) {
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new ChargeSampleDto(
                 e.id(), e.date(), e.batteryLevel(), e.usableBatteryLevel(), e.chargeEnergyAdded(),
                 e.chargerPower(), e.chargerVoltage(), e.chargerActualCurrent(), e.chargerPhases(),
-                e.fastChargerPresent(), e.fastChargerType(), e.idealBatteryRangeKm(), e.ratedBatteryRangeKm(),
-                e.outsideTemp(), e.batteryHeaterOn()
+                e.fastChargerPresent(), e.fastChargerType(),
+                UnitConverter.length(e.idealBatteryRangeKm(), units),
+                UnitConverter.length(e.ratedBatteryRangeKm(), units),
+                UnitConverter.temp(e.outsideTemp(), units),
+                e.batteryHeaterOn()
+        );
+    }
+
+    public static LatestSnapshotDto toLatestSnapshotDto(LatestSnapshotDto raw, DisplayUnits u) {
+        if (raw == null) {
+            return null;
+        }
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
+        if (units.isMetric()) {
+            return raw;
+        }
+        return new LatestSnapshotDto(
+                raw.carId(), raw.date(), raw.source(),
+                raw.batteryLevel(), raw.usableBatteryLevel(),
+                UnitConverter.length(raw.idealBatteryRangeKm(), units),
+                UnitConverter.length(raw.ratedBatteryRangeKm(), units),
+                UnitConverter.length(raw.odometerKm(), units),
+                raw.latitude(), raw.longitude(),
+                UnitConverter.temp(raw.outsideTempC(), units),
+                UnitConverter.temp(raw.insideTempC(), units),
+                UnitConverter.speed(raw.speed(), units),
+                raw.power(), raw.chargerPower(), raw.chargerVoltage()
         );
     }
 
@@ -145,15 +210,17 @@ public final class EntityMapper {
         return list.stream().map(EntityMapper::toAddressDto).toList();
     }
 
-    public static GeofenceDto toGeofenceDto(GeofenceEntity e) {
+    public static GeofenceDto toGeofenceDto(GeofenceEntity e, DisplayUnits u) {
+        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new GeofenceDto(
-                e.id(), e.name(), e.latitude(), e.longitude(), e.radius(),
+                e.id(), e.name(), e.latitude(), e.longitude(),
+                UnitConverter.elevation(e.radius(), units),
                 e.billingType(), e.costPerUnit(), e.sessionFee()
         );
     }
 
-    public static List<GeofenceDto> toGeofenceDtos(List<GeofenceEntity> list) {
-        return list.stream().map(EntityMapper::toGeofenceDto).toList();
+    public static List<GeofenceDto> toGeofenceDtos(List<GeofenceEntity> list, DisplayUnits u) {
+        return list.stream().map(e -> toGeofenceDto(e, u)).toList();
     }
 
     public static SettingsDto toSettingsDto(SettingsEntity e) {
@@ -174,7 +241,6 @@ public final class EntityMapper {
         return list.stream().map(EntityMapper::toCarSettingsDto).toList();
     }
 
-    /** cars + optional car_settings (multi-DAO composition). */
     public static CarDto toCarDto(CarEntity car, CarSettingsEntity settings) {
         return new CarDto(
                 car.id(), car.name(), car.vin(), car.model(), car.marketingName(), car.trimBadging(),

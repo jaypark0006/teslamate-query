@@ -2,6 +2,7 @@ package com.teslamate.query.service;
 
 import com.teslamate.query.dao.CarDao;
 import com.teslamate.query.dao.CarSettingsDao;
+import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.LatestSnapshotDto;
 import com.teslamate.query.entity.CarEntity;
@@ -46,10 +47,12 @@ public class CarService {
         return EntityMapper.toCarDto(car, settings);
     }
 
-    public LatestSnapshotDto latest(long carId) {
+    public LatestSnapshotDto latest(long carId, DisplayUnits units) {
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         get(carId);
-        return carDao.findLatest(carId)
+        LatestSnapshotDto raw = carDao.findLatest(carId)
                 .orElseThrow(() -> new NotFoundException("No telemetry found for car: " + carId));
+        return EntityMapper.toLatestSnapshotDto(raw, u);
     }
 
     private Map<Long, CarSettingsEntity> loadSettings(List<CarEntity> cars) {
