@@ -1,5 +1,6 @@
 package com.teslamate.query.dao;
 
+import com.teslamate.query.db.ConditionBinder;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.AddressSearchCondition;
 import com.teslamate.query.entity.AddressEntity;
@@ -25,7 +26,7 @@ public class AddressDao {
     public long count(AddressSearchCondition condition) {
         return jdbi.withHandle(h -> {
             Query q = h.createQuery("SELECT COUNT(*) FROM addresses " + condition.whereClause());
-            condition.params().forEach(q::bind);
+            ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
     }
@@ -37,7 +38,7 @@ public class AddressDao {
                             + condition.whereClause() + " "
                             + condition.sortClause()
                             + " LIMIT :limit OFFSET :offset");
-            condition.params().forEach(q::bind);
+            ConditionBinder.bind(q, condition);
             q.bind("limit", limit).bind("offset", offset);
             return q.mapTo(Long.class).list();
         });

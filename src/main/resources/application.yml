@@ -5,7 +5,7 @@ spring:
   application:
     name: teslamate-query
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:teslamate}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:teslamate}?options=-c%20TimeZone%3DUTC
     username: ${DB_USER:teslamate}
     password: ${DB_PASS:secret}
     hikari:
@@ -16,7 +16,6 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=60s
-  # Jackson 3 (Boot 4): dates default to ISO-8601; WRITE_DATES_AS_TIMESTAMPS was removed
   jackson:
     default-property-inclusion: non_null
 

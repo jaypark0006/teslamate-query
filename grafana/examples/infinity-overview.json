@@ -1,8 +1,0 @@
-{
-  "title": "TeslaMate Query - Overview (Infinity example)",
-  "targets_example": {
-    "url": "http://teslamate-query:8080/api/v1/overview?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}",
-    "headers": { "X-API-Key": "${TESLAMATE_QUERY_API_KEY}" },
-    "notes": "Map JSON fields totalDistanceKm, netConsumptionWhPerKm, latest.batteryLevel to stat panels"
-  }
-}

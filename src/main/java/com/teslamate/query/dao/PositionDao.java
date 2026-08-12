@@ -1,8 +1,10 @@
 package com.teslamate.query.dao;
 
+import com.teslamate.query.db.ConditionBinder;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.PositionSearchCondition;
 import com.teslamate.query.entity.PositionEntity;
+import com.teslamate.query.entity.PositionPathPoint;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
@@ -12,9 +14,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-/** positions table — single-table Condition queries. */
 @Repository
 public class PositionDao {
+
+    private static final int DEFAULT_ID_CAP = 50_000;
 
     private final Jdbi jdbi;
 
@@ -25,20 +28,41 @@ public class PositionDao {
     public long count(PositionSearchCondition condition) {
         return jdbi.withHandle(h -> {
             Query q = h.createQuery("SELECT COUNT(*) FROM positions " + condition.whereClause());
-            condition.params().forEach(q::bind);
+            ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
     }
 
     public List<Long> findIds(PositionSearchCondition condition, int limit, int offset) {
+        int cap = Math.min(Math.max(limit, 1), DEFAULT_ID_CAP);
         return jdbi.withHandle(h -> {
             Query q = h.createQuery(
                     "SELECT id FROM positions "
                             + condition.whereClause() + " "
                             + condition.sortClause()
                             + " LIMIT :limit OFFSET :offset");
-            condition.params().forEach(q::bind);
-            q.bind("limit", limit).bind("offset", offset);
+            ConditionBinder.bind(q, condition);
+            q.bind("limit", cap).bind("offset", offset);
+            return q.mapTo(Long.class).list();
+        });
+    }
+
+    /**
+     * One id per time bucket (seconds) so list/series span the whole window.
+     */
+    public List<Long> findIdsBucketed(PositionSearchCondition condition, int bucketSeconds, int limit) {
+        int bucket = Math.max(bucketSeconds, 1);
+        int cap = Math.min(Math.max(limit, 1), DEFAULT_ID_CAP);
+        return jdbi.withHandle(h -> {
+            Query q = h.createQuery(
+                    "SELECT id FROM ("
+                            + " SELECT id, date, ROW_NUMBER() OVER ("
+                            + "   PARTITION BY FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec) ORDER BY date"
+                            + " ) AS rn FROM positions "
+                            + condition.whereClause()
+                            + ") t WHERE rn = 1 ORDER BY date LIMIT :limit");
+            ConditionBinder.bind(q, condition);
+            q.bind("bucketSec", bucket).bind("limit", cap);
             return q.mapTo(Long.class).list();
         });
     }
@@ -64,21 +88,16 @@ public class PositionDao {
                 .findOne());
     }
 
-    /** Convenience for multi-DAO composition (drive → positions). */
-    public List<PositionEntity> findByDriveId(long driveId) {
-        PositionSearchCondition c = PositionSearchCondition.builder().driveId(driveId).build();
-        List<Long> ids = findIds(c, 500_000, 0);
-        return findByIdsOrdered(ids);
-    }
-
-    public List<PositionEntity> findByDriveIds(Collection<Long> driveIds) {
+    public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds) {
         if (IdOrder.isEmpty(driveIds)) {
             return List.of();
         }
         return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT * FROM positions WHERE drive_id IN (<driveIds>) ORDER BY drive_id, date")
+                        "SELECT drive_id, date, longitude, latitude FROM positions "
+                                + "WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL "
+                                + "ORDER BY drive_id, date")
                 .bindList("driveIds", driveIds)
-                .map(ConstructorMapper.of(PositionEntity.class))
+                .map(ConstructorMapper.of(PositionPathPoint.class))
                 .list());
     }
 }

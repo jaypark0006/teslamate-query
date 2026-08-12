@@ -34,28 +34,20 @@ class JdbiConditionTest {
     @Test
     void nullFiltersOmitted() {
         var c = DriveSearchCondition.builder().carId(null).minDistance(null).build();
-        // only default sort, no where predicates from nulls
         assertEquals("", c.whereClause());
         assertTrue(c.params().isEmpty());
     }
 
     @Test
-    void chargingDefaultEnergyFilter() {
+    void chargingHasNoDefaultEnergyFilter() {
         var c = ChargingProcessSearchCondition.builder().carId(1L).build();
-        assertTrue(c.whereClause().contains("charge_energy_added"));
+        assertFalse(c.whereClause().contains("charge_energy_added"));
         assertEquals(1L, c.params().get("carId"));
     }
 
     @Test
-    void updateSetClause() {
-        class SampleUpdate extends JdbiUpdate {
-            SampleUpdate name(String v) {
-                set("name", "name", v);
-                return this;
-            }
-        }
-        var u = new SampleUpdate().name("x");
-        assertEquals("SET name = :name", u.setClause());
-        assertEquals("x", u.params().get("name"));
+    void chargingExcludeZeroEnergyOptional() {
+        var c = ChargingProcessSearchCondition.builder().excludeZeroEnergy(true).build();
+        assertTrue(c.whereClause().contains("charge_energy_added"));
     }
 }

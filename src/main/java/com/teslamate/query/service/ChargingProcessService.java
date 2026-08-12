@@ -27,10 +27,11 @@ public class ChargingProcessService {
     }
 
     public PageResponse<ChargingProcessDto> list(Long carId, String fromStr, String toStr, Long geofenceId,
-                                                 Boolean incompleteOnly, Integer page, Integer size,
-                                                 DisplayUnits units) {
+                                                 Boolean incompleteOnly, Boolean excludeZeroEnergy,
+                                                 Integer page, Integer size, DisplayUnits units) {
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
-        ChargingProcessSearchCondition condition = condition(carId, fromStr, toStr, geofenceId, incompleteOnly);
+        ChargingProcessSearchCondition condition =
+                condition(carId, fromStr, toStr, geofenceId, incompleteOnly, excludeZeroEnergy);
         int p = support.page(page);
         int s = support.size(size);
         long total = chargingProcessDao.count(condition);
@@ -54,7 +55,8 @@ public class ChargingProcessService {
     }
 
     private ChargingProcessSearchCondition condition(Long carId, String fromStr, String toStr,
-                                                     Long geofenceId, Boolean incompleteOnly) {
+                                                     Long geofenceId, Boolean incompleteOnly,
+                                                     Boolean excludeZeroEnergy) {
         Instant from = support.parseInstant(fromStr, "from");
         Instant to = support.parseInstant(toStr, "to");
         return ChargingProcessSearchCondition.builder()
@@ -63,6 +65,7 @@ public class ChargingProcessService {
                 .startDateTo(to)
                 .geofenceId(geofenceId)
                 .incompleteOnly(incompleteOnly)
+                .excludeZeroEnergy(excludeZeroEnergy)
                 .build();
     }
 }

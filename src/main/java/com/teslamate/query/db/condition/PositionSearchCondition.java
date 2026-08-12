@@ -37,6 +37,11 @@ public class PositionSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder newestFirst() {
+            orderBy("date", "DESC");
+            return this;
+        }
+
         public PositionSearchCondition build() {
             if (sortClause().isEmpty()) {
                 orderBy("date", "ASC");

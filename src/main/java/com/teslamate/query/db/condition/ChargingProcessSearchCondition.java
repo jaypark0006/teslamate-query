@@ -13,10 +13,6 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
 
     public static final class Builder extends ChargingProcessSearchCondition {
 
-        public Builder() {
-            conditions.add("(charge_energy_added IS NULL OR charge_energy_added > 0)");
-        }
-
         public Builder carId(Long value) {
             eq("car_id", "carId", value);
             return this;
@@ -39,6 +35,12 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
 
         public Builder incompleteOnly(Boolean value) {
             rawNoParam("end_date IS NULL", Boolean.TRUE.equals(value));
+            return this;
+        }
+
+        public Builder excludeZeroEnergy(Boolean value) {
+            rawNoParam("(charge_energy_added IS NULL OR charge_energy_added > 0)",
+                    Boolean.TRUE.equals(value));
             return this;
         }
 

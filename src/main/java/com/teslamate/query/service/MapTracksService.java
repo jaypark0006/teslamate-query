@@ -12,7 +12,7 @@ import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.entity.ChargingProcessEntity;
 import com.teslamate.query.entity.DriveEntity;
 import com.teslamate.query.entity.PositionEntity;
-import com.teslamate.query.exception.BadRequestException;
+import com.teslamate.query.entity.PositionPathPoint;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class MapTracksService {
+
+    private static final int BATTERY_SERIES_MAX = 20_000;
+    private static final int BATTERY_SERIES_DEFAULT_BUCKET = 120;
 
     private final DriveDao driveDao;
     private final ChargingProcessDao chargingProcessDao;
@@ -54,10 +57,11 @@ public class MapTracksService {
         List<Long> driveIds = driveDao.findIds(driveCond, driveLimit, 0);
         List<DriveEntity> drives = driveDao.findByIdsOrdered(driveIds);
 
-        List<PositionEntity> pathPoints = driveIds.isEmpty() ? List.of() : positionDao.findByDriveIds(driveIds);
-        Map<Long, List<PositionEntity>> byDrive = pathPoints.stream()
+        List<PositionPathPoint> pathPoints =
+                driveIds.isEmpty() ? List.of() : positionDao.findPathPointsByDriveIds(driveIds);
+        Map<Long, List<PositionPathPoint>> byDrive = pathPoints.stream()
                 .filter(p -> p.driveId() != null)
-                .collect(Collectors.groupingBy(PositionEntity::driveId, LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
 
         var chargeCond = ChargingProcessSearchCondition.builder().carId(carId).startDateFrom(from).startDateTo(to).build();
         List<Long> chargeIds = chargingProcessDao.findIds(chargeCond, chargeLimit, 0);
@@ -71,12 +75,10 @@ public class MapTracksService {
         List<MapTracksDto.Feature> features = new ArrayList<>();
         int totalPts = 0;
         for (DriveEntity d : drives) {
-            List<PositionEntity> pts = byDrive.getOrDefault(d.id(), List.of());
+            List<PositionPathPoint> pts = byDrive.getOrDefault(d.id(), List.of());
             List<List<BigDecimal>> coords = new ArrayList<>();
-            for (PositionEntity p : pts) {
-                if (p.longitude() != null && p.latitude() != null) {
-                    coords.add(List.of(p.longitude(), p.latitude()));
-                }
+            for (PositionPathPoint p : pts) {
+                coords.add(List.of(p.longitude(), p.latitude()));
             }
             if (coords.size() < 2) {
                 continue;
@@ -111,17 +113,16 @@ public class MapTracksService {
                                            DisplayUnits units) {
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant[] range = support.requireRange(fromStr, toStr);
-        int lim = limit == null ? 5000 : Math.min(Math.max(limit, 1), 50_000);
-        if (lim > 20_000) {
-            throw new BadRequestException("limit max 20000 for battery series; narrow time range");
-        }
+        int lim = limit == null ? 5000 : Math.min(Math.max(limit, 1), BATTERY_SERIES_MAX);
+        long spanSec = Math.max(1, range[1].getEpochSecond() - range[0].getEpochSecond());
+        int bucket = (int) Math.max(BATTERY_SERIES_DEFAULT_BUCKET, spanSec / lim);
         PositionSearchCondition condition = PositionSearchCondition.builder()
                 .carId(carId)
                 .dateFrom(range[0])
                 .dateTo(range[1])
                 .cleanOnly(true)
                 .build();
-        List<Long> ids = positionDao.findIds(condition, lim, 0);
+        List<Long> ids = positionDao.findIdsBucketed(condition, bucket, lim);
         return EntityMapper.toPositionDtos(positionDao.findByIdsOrdered(ids), u);
     }
 }

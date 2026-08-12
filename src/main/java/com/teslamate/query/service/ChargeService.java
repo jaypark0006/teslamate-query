@@ -1,7 +1,9 @@
 package com.teslamate.query.service;
 
 import com.teslamate.query.dao.ChargeDao;
+import com.teslamate.query.dao.ChargingProcessDao;
 import com.teslamate.query.db.condition.ChargeSearchCondition;
+import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.ChargeDto;
 import com.teslamate.query.dto.PageResponse;
@@ -16,30 +18,47 @@ import java.util.List;
 public class ChargeService {
 
     private final ChargeDao chargeDao;
+    private final ChargingProcessDao chargingProcessDao;
     private final QuerySupport support;
 
-    public ChargeService(ChargeDao chargeDao, QuerySupport support) {
+    public ChargeService(ChargeDao chargeDao, ChargingProcessDao chargingProcessDao, QuerySupport support) {
         this.chargeDao = chargeDao;
+        this.chargingProcessDao = chargingProcessDao;
         this.support = support;
     }
 
-    public PageResponse<ChargeDto> list(Long chargingProcessId, String fromStr, String toStr,
+    public PageResponse<ChargeDto> list(Long chargingProcessId, Long carId, String fromStr, String toStr,
                                         Integer page, Integer size, DisplayUnits units) {
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant from = support.parseInstant(fromStr, "from");
         Instant to = support.parseInstant(toStr, "to");
-        if (chargingProcessId == null && (from == null || to == null)) {
+        if (chargingProcessId == null && (carId == null || from == null || to == null)) {
             throw new BadRequestException(
-                    "charges list requires chargingProcessId, or from and to (ISO-8601)");
+                    "charges list requires chargingProcessId, or carId with from and to (ISO-8601)");
         }
         if (from != null && to != null && from.isAfter(to)) {
             throw new BadRequestException("from must be before to");
         }
-        ChargeSearchCondition condition = ChargeSearchCondition.builder()
+        ChargeSearchCondition.Builder builder = ChargeSearchCondition.builder()
                 .chargingProcessId(chargingProcessId)
                 .dateFrom(from)
-                .dateTo(to)
-                .build();
+                .dateTo(to);
+        if (chargingProcessId == null) {
+            List<Long> processIds = chargingProcessDao.findIds(
+                    ChargingProcessSearchCondition.builder()
+                            .carId(carId)
+                            .startDateFrom(from)
+                            .startDateTo(to)
+                            .build(),
+                    2000, 0);
+            if (processIds.isEmpty()) {
+                int p = support.page(page);
+                int s = support.size(size);
+                return PageResponse.of(List.of(), p, s, 0, u.toMeta());
+            }
+            builder.chargingProcessIds(processIds);
+        }
+        ChargeSearchCondition condition = builder.build();
         int p = support.page(page);
         int s = support.size(size);
         long total = chargeDao.count(condition);

@@ -24,6 +24,7 @@ services:
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
       API_KEYS: ${API_KEYS:-dev-api-key}
       DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      TZ: UTC
     # Reach Postgres on the host (macOS Docker Desktop / Linux with host-gateway)
     extra_hosts:
       - "host.docker.internal:host-gateway"

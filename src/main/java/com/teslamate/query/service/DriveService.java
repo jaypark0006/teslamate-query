@@ -3,21 +3,22 @@ package com.teslamate.query.service;
 import com.teslamate.query.dao.DriveDao;
 import com.teslamate.query.dao.PositionDao;
 import com.teslamate.query.db.condition.DriveSearchCondition;
+import com.teslamate.query.db.condition.PositionSearchCondition;
 import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.entity.DriveEntity;
-import com.teslamate.query.entity.PositionEntity;
 import com.teslamate.query.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class DriveService {
+
+    private static final int POSITION_CAP = 50_000;
 
     private final DriveDao driveDao;
     private final PositionDao positionDao;
@@ -54,28 +55,16 @@ public class DriveService {
     public List<DrivePositionDto> positions(long id, Integer downsampleSeconds, DisplayUnits units) {
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         get(id, DisplayUnits.METRIC);
-        List<PositionEntity> all = positionDao.findByDriveId(id);
-        List<DrivePositionDto> mapped = all.stream().map(e -> EntityMapper.toDrivePositionDto(e, u)).toList();
-        if (downsampleSeconds == null || downsampleSeconds <= 0 || mapped.size() <= 2) {
-            return mapped;
+        PositionSearchCondition cond = PositionSearchCondition.builder().driveId(id).build();
+        List<Long> ids;
+        if (downsampleSeconds != null && downsampleSeconds > 0) {
+            ids = positionDao.findIdsBucketed(cond, downsampleSeconds, POSITION_CAP);
+        } else {
+            ids = positionDao.findIds(cond, POSITION_CAP, 0);
         }
-        long bucketMs = downsampleSeconds * 1000L;
-        ArrayList<DrivePositionDto> out = new ArrayList<>();
-        Long lastBucket = null;
-        for (DrivePositionDto pt : mapped) {
-            if (pt.date() == null) {
-                continue;
-            }
-            long b = pt.date().toEpochMilli() / bucketMs;
-            if (lastBucket == null || b != lastBucket) {
-                out.add(pt);
-                lastBucket = b;
-            }
-        }
-        if (!mapped.isEmpty() && (out.isEmpty() || !out.getLast().id().equals(mapped.getLast().id()))) {
-            out.add(mapped.getLast());
-        }
-        return out;
+        return positionDao.findByIdsOrdered(ids).stream()
+                .map(e -> EntityMapper.toDrivePositionDto(e, u))
+                .toList();
     }
 
     private DriveSearchCondition condition(Long carId, String fromStr, String toStr, Double minDistanceKm,

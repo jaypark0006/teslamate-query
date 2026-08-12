@@ -17,6 +17,11 @@ public class ChargeSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder chargingProcessIds(java.util.Collection<Long> values) {
+            in("charging_process_id", "processIds", values);
+            return this;
+        }
+
         public Builder dateFrom(Instant value) {
             gte("date", "dateFrom", value);
             return this;

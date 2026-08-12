@@ -3,10 +3,7 @@ package com.teslamate.query.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * Lean charging session: {@code charging_processes} columns + FK ids.
- * AC/DC, max voltage, address labels live in samples or enriched view.
- */
+/** Lean charging session: {@code charging_processes} columns + FK ids. */
 public record ChargingProcessDto(
         Long id,
         Long carId,

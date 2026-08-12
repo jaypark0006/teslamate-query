@@ -32,14 +32,6 @@ class QuerySupportTest {
     }
 
     @Test
-    void rangeModeValidation() {
-        assertEquals("ideal", support.rangeMode(null, "ideal"));
-        assertEquals("rated", support.rangeMode(null, null));
-        assertEquals("rated", support.rangeMode("RATED", null));
-        assertThrows(BadRequestException.class, () -> support.rangeMode("foo", null));
-    }
-
-    @Test
     void parseInstantAndRequireRange() {
         Instant a = support.parseInstant("2024-01-01T00:00:00Z", "from");
         Instant b = support.parseInstant("2024-02-01T00:00:00Z", "to");

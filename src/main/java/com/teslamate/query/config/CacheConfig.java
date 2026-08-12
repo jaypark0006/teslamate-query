@@ -14,8 +14,7 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager(QueryProperties props) {
         CaffeineCacheManager manager = new CaffeineCacheManager(
-                "cars", "settings", "geofences", "addresses", "carSettings",
-                "drive", "chargingProcess"
+                "cars", "settings", "geofences", "addresses", "carSettings"
         );
         manager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(2000)

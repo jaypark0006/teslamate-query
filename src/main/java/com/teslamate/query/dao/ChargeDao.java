@@ -1,5 +1,6 @@
 package com.teslamate.query.dao;
 
+import com.teslamate.query.db.ConditionBinder;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.ChargeSearchCondition;
 import com.teslamate.query.entity.ChargeEntity;
@@ -25,7 +26,7 @@ public class ChargeDao {
     public long count(ChargeSearchCondition condition) {
         return jdbi.withHandle(h -> {
             Query q = h.createQuery("SELECT COUNT(*) FROM charges " + condition.whereClause());
-            condition.params().forEach(q::bind);
+            ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
     }
@@ -37,7 +38,7 @@ public class ChargeDao {
                             + condition.whereClause() + " "
                             + condition.sortClause()
                             + " LIMIT :limit OFFSET :offset");
-            condition.params().forEach(q::bind);
+            ConditionBinder.bind(q, condition);
             q.bind("limit", limit).bind("offset", offset);
             return q.mapTo(Long.class).list();
         });
@@ -64,10 +65,21 @@ public class ChargeDao {
                 .findOne());
     }
 
-    /** Convenience for multi-DAO composition (charging_process → charges). */
     public List<ChargeEntity> findByProcessId(long processId) {
         ChargeSearchCondition c = ChargeSearchCondition.builder().chargingProcessId(processId).build();
-        List<Long> ids = findIds(c, 100_000, 0);
+        List<Long> ids = findIds(c, 50_000, 0);
         return findByIdsOrdered(ids);
+    }
+
+    public Optional<ChargeEntity> findLatestByProcessIds(Collection<Long> processIds) {
+        if (IdOrder.isEmpty(processIds)) {
+            return Optional.empty();
+        }
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT * FROM charges WHERE charging_process_id IN (<processIds>) "
+                                + "ORDER BY date DESC LIMIT 1")
+                .bindList("processIds", processIds)
+                .map(ConstructorMapper.of(ChargeEntity.class))
+                .findOne());
     }
 }
