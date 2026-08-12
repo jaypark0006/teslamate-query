@@ -16,9 +16,8 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=60s
+  # Jackson 3 (Boot 4): dates default to ISO-8601; WRITE_DATES_AS_TIMESTAMPS was removed
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
     default-property-inclusion: non_null
 
 management:

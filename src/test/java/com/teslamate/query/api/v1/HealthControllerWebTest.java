@@ -1,29 +1,37 @@
 package com.teslamate.query.api.v1;
 
-import com.teslamate.query.config.QueryProperties;
 import com.teslamate.query.dao.HealthDao;
-import com.teslamate.query.security.ApiKeyAuthFilter;
+import com.teslamate.query.exception.GlobalExceptionHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = HealthController.class)
-@Import({ApiKeyAuthFilter.class, QueryProperties.class})
+/**
+ * Standalone MockMvc (no full Boot context) — avoids Boot 4 slice + @EnableCaching coupling.
+ */
+@ExtendWith(MockitoExtension.class)
 class HealthControllerWebTest {
 
-    @Autowired
-    MockMvc mockMvc;
+    @Mock
+    private HealthDao healthDao;
 
-    @MockBean
-    HealthDao healthDao;
+    private MockMvc mockMvc;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(new HealthController(healthDao))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
     @Test
     void healthIsPublicAndUp() throws Exception {
