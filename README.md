@@ -32,6 +32,26 @@ export AUTH_ENABLED=false
 
 compose 内 Grafana 访问 API：`http://teslamate-query:8080`。公网暴露时再开 `AUTH_ENABLED=true`。
 
+## GitHub CI
+
+仓库已含 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)：
+
+| Job | 做什么 |
+|-----|--------|
+| **test** | JDK 21 + `mvn verify`（单元 / Web 切片测试，不连真实 DB） |
+| **docker** | 构建镜像（不 push） |
+
+触发：`push` / `PR` 到 `main` · `master` · `grok45`，或 Actions 页 **Run workflow**。
+
+本地等价：
+
+```bash
+mvn -B verify
+docker build -t teslamate-query:local .
+```
+
+以后若要 **push 到 GHCR**，在 workflow 里加 `docker/login-action` + `push: true`，并配置 `packages: write` 权限。
+
 ## 核心 API
 
 见 [docs/GRAFANA_ENDPOINTS.md](docs/GRAFANA_ENDPOINTS.md)、[docs/ENTITY_MODEL.md](docs/ENTITY_MODEL.md)、[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
