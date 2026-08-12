@@ -1,5 +1,8 @@
 # Grafana 如何配合 REST API 调整
 
+> **Status:** design notes. Implemented paths are only those in [GRAFANA_ENDPOINTS.md](./GRAFANA_ENDPOINTS.md).  
+> `/overview`, `/stats/*`, `/timeline`, and `view=enriched` were **not** built.
+
 核心前提：
 
 1. **每个页面的请求发起人是 Grafana**（时间窗、变量、面板刷新都由它驱动）

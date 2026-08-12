@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.util.Locale;
 
 @Component
 public class QuerySupport {
@@ -28,7 +27,10 @@ public class QuerySupport {
     }
 
     public int page(Integer page) {
-        return page == null || page < 1 ? 1 : page;
+        if (page == null || page < 1) {
+            return 1;
+        }
+        return Math.min(page, 1_000_000);
     }
 
     public int size(Integer size) {
@@ -40,19 +42,11 @@ public class QuerySupport {
     }
 
     public int offset(int page, int size) {
-        return (page - 1) * size;
-    }
-
-    public String rangeMode(String range, String preferredFromSettings) {
-        String r = (range != null && !range.isBlank()) ? range : preferredFromSettings;
-        if (r == null || r.isBlank()) {
-            r = "rated";
+        long off = (long) (page - 1) * size;
+        if (off > Integer.MAX_VALUE) {
+            throw new BadRequestException("page too large");
         }
-        r = r.trim().toLowerCase(Locale.ROOT);
-        if (!r.equals("ideal") && !r.equals("rated")) {
-            throw new BadRequestException("range must be 'ideal' or 'rated'");
-        }
-        return r;
+        return (int) off;
     }
 
     public Instant parseInstant(String value, String name) {

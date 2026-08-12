@@ -22,9 +22,10 @@ public class ChargeController {
     }
 
     @GetMapping
-    @Operation(summary = "List charge samples (requires chargingProcessId, or from+to)")
+    @Operation(summary = "List charge samples (requires chargingProcessId, or carId+from+to)")
     public PageResponse<ChargeDto> list(
             @RequestParam(required = false) Long chargingProcessId,
+            @RequestParam(required = false) Long carId,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) Integer page,
@@ -32,7 +33,7 @@ public class ChargeController {
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return chargeService.list(chargingProcessId, from, to, page, size,
+        return chargeService.list(chargingProcessId, carId, from, to, page, size,
                 support.units(lengthUnit, tempUnit));
     }
 

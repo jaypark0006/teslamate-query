@@ -82,6 +82,14 @@ public abstract class JdbiCondition {
         }
     }
 
+    protected final void in(String sqlColumn, String paramName, java.util.Collection<?> values) {
+        if (values == null || values.isEmpty()) {
+            return;
+        }
+        conditions.add(sqlColumn + " IN (<" + paramName + ">)");
+        params.put(paramName, values);
+    }
+
     protected final void orderBy(String sqlColumn, String direction) {
         sorts.put(sqlColumn, direction);
     }

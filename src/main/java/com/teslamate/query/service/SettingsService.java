@@ -21,14 +21,4 @@ public class SettingsService {
                 .map(EntityMapper::toSettingsDto)
                 .orElseThrow(() -> new NotFoundException("Settings not found"));
     }
-
-    /** preferred_range from DB, fallback rated (matches common TeslaMate installs). */
-    public String preferredRangeOrDefault() {
-        try {
-            String r = get().preferredRange();
-            return r == null || r.isBlank() ? "rated" : r;
-        } catch (Exception e) {
-            return "rated";
-        }
-    }
 }

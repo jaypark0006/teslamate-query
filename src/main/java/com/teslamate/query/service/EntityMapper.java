@@ -156,6 +156,30 @@ public final class EntityMapper {
         );
     }
 
+    public static LatestSnapshotDto fromPosition(PositionEntity p) {
+        return new LatestSnapshotDto(
+                p.carId(), p.date(), "position",
+                p.batteryLevel(), p.usableBatteryLevel(),
+                p.idealBatteryRangeKm(), p.ratedBatteryRangeKm(),
+                p.odometer(), p.latitude(), p.longitude(),
+                p.outsideTemp(), p.insideTemp(),
+                p.speed(), p.power(), null, null
+        );
+    }
+
+    public static LatestSnapshotDto fromCharge(ChargeEntity c, Long carId, PositionEntity pos) {
+        return new LatestSnapshotDto(
+                carId, c.date(), "charge",
+                c.batteryLevel(), c.usableBatteryLevel(),
+                c.idealBatteryRangeKm(), c.ratedBatteryRangeKm(),
+                pos == null ? null : pos.odometer(),
+                pos == null ? null : pos.latitude(),
+                pos == null ? null : pos.longitude(),
+                c.outsideTemp(), null,
+                null, null, c.chargerPower(), c.chargerVoltage()
+        );
+    }
+
     public static LatestSnapshotDto toLatestSnapshotDto(LatestSnapshotDto raw, DisplayUnits u) {
         if (raw == null) {
             return null;

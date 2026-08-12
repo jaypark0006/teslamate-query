@@ -15,9 +15,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Standalone MockMvc (no full Boot context) — avoids Boot 4 slice + @EnableCaching coupling.
- */
 @ExtendWith(MockitoExtension.class)
 class HealthControllerWebTest {
 
@@ -40,5 +37,14 @@ class HealthControllerWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.database").value("UP"));
+    }
+
+    @Test
+    void healthDownWhenPingFails() throws Exception {
+        when(healthDao.ping()).thenThrow(new RuntimeException("db"));
+        mockMvc.perform(get("/api/v1/health"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value("DOWN"))
+                .andExpect(jsonPath("$.database").value("DOWN"));
     }
 }

@@ -18,7 +18,7 @@ Infinity 数据源：`http://teslamate-query:8080`。
 | 地址 | `GET /api/v1/addresses` · `?ids=` · `/{id}` |
 | 行程 | `GET /api/v1/drives?...` · `/drives/{id}` · `/drives/{id}/positions` |
 | 充电会话 | `GET /api/v1/charging-processes?...` · `/{id}` · `/{id}/samples` |
-| 充电采样 | `GET /api/v1/charges?chargingProcessId=` · `/{id}` |
+| 充电采样 | `GET /api/v1/charges?chargingProcessId=` 或 `carId&from&to` · `/{id}` |
 | 轨迹点 | `GET /api/v1/positions?driveId=` 或 `carId&from&to` · `/{id}` |
 | 状态 / 升级 | `GET /api/v1/states?...` · `/updates?...` |
 | 多轨迹地图 | `GET /api/v1/map/tracks?carId&from&to` |

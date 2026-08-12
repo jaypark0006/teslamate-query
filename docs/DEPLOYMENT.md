@@ -10,7 +10,7 @@
 | DB_USER | teslamate | Prefer dedicated read-only user |
 | DB_PASS | secret | Password |
 | API_KEYS | dev-api-key | Comma-separated API keys |
-| AUTH_ENABLED | true | Disable only for local debugging |
+| AUTH_ENABLED | false | Set true when exposing beyond compose/LAN |
 | SERVER_PORT | 8080 | HTTP port |
 | DB_POOL_SIZE | 10 | Hikari pool size |
 

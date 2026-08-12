@@ -1,5 +1,6 @@
 package com.teslamate.query.dao;
 
+import com.teslamate.query.db.ConditionBinder;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.entity.ChargingProcessEntity;
@@ -12,10 +13,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * charging_processes table. Condition SQL is concatenated — safe for {@code >}/{@code <}
- * in predicates (no StringTemplate).
- */
 @Repository
 public class ChargingProcessDao {
 
@@ -28,7 +25,7 @@ public class ChargingProcessDao {
     public long count(ChargingProcessSearchCondition condition) {
         return jdbi.withHandle(h -> {
             Query q = h.createQuery("SELECT COUNT(*) FROM charging_processes " + condition.whereClause());
-            condition.params().forEach(q::bind);
+            ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
     }
@@ -40,7 +37,7 @@ public class ChargingProcessDao {
                             + condition.whereClause() + " "
                             + condition.sortClause()
                             + " LIMIT :limit OFFSET :offset");
-            condition.params().forEach(q::bind);
+            ConditionBinder.bind(q, condition);
             q.bind("limit", limit).bind("offset", offset);
             return q.mapTo(Long.class).list();
         });

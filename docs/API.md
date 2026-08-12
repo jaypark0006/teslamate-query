@@ -44,10 +44,10 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 ### Filter notes
 
 - **positions**: require `driveId`, or `carId` + `from` + `to` (optional `cleanOnly`)
-- **charges**: require `chargingProcessId`, or `from` + `to`
+- **charges**: require `chargingProcessId`, or `carId` + `from` + `to`
 - **states**: optional `carId`, `from`/`to` (interval overlap)
 - **updates**: optional `carId`, `from`/`to` on `start_date`
-- **drives / charging-processes**: optional `carId`, time range, `geofenceId`, `incompleteOnly`, …
+- **drives / charging-processes**: optional `carId`, time range, `geofenceId`, `incompleteOnly`; charging-processes also `excludeZeroEnergy`
 
 ## Nested convenience (multi-Dao)
 

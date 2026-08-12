@@ -32,12 +32,13 @@ public class ChargingProcessController {
             @RequestParam(required = false) String to,
             @RequestParam(required = false) Long geofenceId,
             @RequestParam(required = false) Boolean incompleteOnly,
+            @RequestParam(required = false) Boolean excludeZeroEnergy,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return service.list(carId, from, to, geofenceId, incompleteOnly, page, size,
+        return service.list(carId, from, to, geofenceId, incompleteOnly, excludeZeroEnergy, page, size,
                 support.units(lengthUnit, tempUnit));
     }
 
