@@ -22,6 +22,7 @@ Infinity 数据源：`http://teslamate-query:8080`。
 | 轨迹点 | `GET /api/v1/positions?driveId=` 或 `carId&from&to` · `/{id}` |
 | 状态 / 升级 | `GET /api/v1/states?...` · `/updates?...` |
 | 多轨迹地图 | `GET /api/v1/map/tracks?carId&from&to` |
+| Trip 地图（驾/充/停） | `GET /api/v1/map/trip?carId&from&to` |
 | SOC 曲线 | `GET /api/v1/series/battery?carId&from&to` |
 
 列表 JSON 根路径多为 `data`（分页）。

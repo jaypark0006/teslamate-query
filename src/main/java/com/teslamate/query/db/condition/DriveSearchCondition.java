@@ -52,6 +52,23 @@ public class DriveSearchCondition extends JdbiCondition {
             return this;
         }
 
+        /** Interval overlaps [from, to]: start_date <= to AND (end_date IS NULL OR end_date >= from). */
+        public Builder overlapping(Instant from, Instant to) {
+            if (to != null) {
+                lte("start_date", "overlapTo", to);
+            }
+            if (from != null) {
+                conditions.add("(end_date IS NULL OR end_date >= :overlapFrom)");
+                params.put("overlapFrom", from);
+            }
+            return this;
+        }
+
+        public Builder oldestFirst() {
+            orderBy("start_date", "ASC");
+            return this;
+        }
+
         public DriveSearchCondition build() {
             if (sortClause().isEmpty()) {
                 orderBy("start_date", "DESC");

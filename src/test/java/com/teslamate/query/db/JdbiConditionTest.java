@@ -39,6 +39,15 @@ class JdbiConditionTest {
     }
 
     @Test
+    void driveOverlapUsesEndDate() {
+        Instant from = Instant.parse("2025-10-01T00:00:00Z");
+        Instant to = Instant.parse("2025-10-08T00:00:00Z");
+        var c = DriveSearchCondition.builder().carId(1L).overlapping(from, to).build();
+        assertTrue(c.whereClause().contains("start_date <= :overlapTo"));
+        assertTrue(c.whereClause().contains("end_date IS NULL OR end_date >= :overlapFrom"));
+    }
+
+    @Test
     void chargingHasNoDefaultEnergyFilter() {
         var c = ChargingProcessSearchCondition.builder().carId(1L).build();
         assertFalse(c.whereClause().contains("charge_energy_added"));

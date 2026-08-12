@@ -67,7 +67,7 @@ docker build -t teslamate-query:local .
 | charges (samples) | `/api/v1/charges` |
 | states / updates | `/api/v1/states` · `/updates` |
 | addresses / geofences | `/api/v1/addresses` · `/geofences` |
-| map GeoJSON | `/api/v1/map/tracks` |
+| map GeoJSON | `/api/v1/map/tracks` · `/map/trip` |
 | battery series | `/api/v1/series/battery` |
 
 ## 数据层约定

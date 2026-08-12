@@ -55,6 +55,7 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 - `GET /charging-processes/{id}/samples`
 - `GET /cars/{id}/latest` — multi-table snapshot
 - `GET /map/tracks?carId&from&to` — GeoJSON composition
+- `GET /map/trip?carId&from&to` — drive lines + charge/park points (overlap window; parks derived in Service)
 - `GET /series/battery?carId&from&to` — SOC series from positions
 
 ## Health

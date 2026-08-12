@@ -44,6 +44,17 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder overlapping(Instant from, Instant to) {
+            if (to != null) {
+                lte("start_date", "overlapTo", to);
+            }
+            if (from != null) {
+                conditions.add("(end_date IS NULL OR end_date >= :overlapFrom)");
+                params.put("overlapFrom", from);
+            }
+            return this;
+        }
+
         public ChargingProcessSearchCondition build() {
             if (sortClause().isEmpty()) {
                 orderBy("start_date", "DESC");
