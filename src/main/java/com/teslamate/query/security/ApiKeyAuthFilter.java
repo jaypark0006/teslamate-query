@@ -1,6 +1,5 @@
 package com.teslamate.query.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.teslamate.query.config.QueryProperties;
 import com.teslamate.query.dto.ErrorResponse;
 import jakarta.servlet.FilterChain;
@@ -10,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -20,12 +20,12 @@ import java.util.Set;
 public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
     private final QueryProperties properties;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final Set<String> keys;
 
-    public ApiKeyAuthFilter(QueryProperties properties, ObjectMapper objectMapper) {
+    public ApiKeyAuthFilter(QueryProperties properties, JsonMapper jsonMapper) {
         this.properties = properties;
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
         this.keys = new HashSet<>(properties.resolvedApiKeys());
     }
 
@@ -57,7 +57,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
                     Instant.now(),
                     path
             );
-            objectMapper.writeValue(response.getOutputStream(), body);
+            jsonMapper.writeValue(response.getOutputStream(), body);
             return;
         }
 
