@@ -6,7 +6,10 @@ import com.teslamate.query.service.ChargeService;
 import com.teslamate.query.service.QuerySupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/charges")
@@ -22,7 +25,7 @@ public class ChargeController {
     }
 
     @GetMapping
-    @Operation(summary = "List charge samples (requires chargingProcessId, or carId+from+to)")
+    @Operation(summary = "Query sample points; prefer chargingProcessId. Path /charges/{id} is not a session.")
     public PageResponse<ChargeDto> list(
             @RequestParam(required = false) Long chargingProcessId,
             @RequestParam(required = false) Long carId,
@@ -34,19 +37,6 @@ public class ChargeController {
             @RequestParam(required = false) String tempUnit
     ) {
         return chargeService.list(chargingProcessId, carId, from, to, page, size,
-                support.units(lengthUnit, tempUnit));
-    }
-
-    @GetMapping("/{chargingProcessId}")
-    @Operation(summary = "All samples in one charging session (chargingProcessId)")
-    public PageResponse<ChargeDto> listByProcess(
-            @PathVariable long chargingProcessId,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size,
-            @RequestParam(required = false) String lengthUnit,
-            @RequestParam(required = false) String tempUnit
-    ) {
-        return chargeService.list(chargingProcessId, null, null, null, page, size,
                 support.units(lengthUnit, tempUnit));
     }
 }
