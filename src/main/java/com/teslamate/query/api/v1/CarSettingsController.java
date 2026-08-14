@@ -28,8 +28,8 @@ public class CarSettingsController {
         return carSettingsService.list();
     }
 
-    @GetMapping("/{id}")
-    public CarSettingsDto get(@PathVariable long id) {
-        return carSettingsService.get(id);
+    @GetMapping("/{carSettingsId}")
+    public CarSettingsDto get(@PathVariable long carSettingsId) {
+        return carSettingsService.get(carSettingsId);
     }
 }

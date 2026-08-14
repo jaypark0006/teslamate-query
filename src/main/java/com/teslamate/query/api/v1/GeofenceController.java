@@ -33,12 +33,12 @@ public class GeofenceController {
         return geofenceService.list(name, page, size, support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{geofenceId}")
     public GeofenceDto get(
-            @PathVariable long id,
+            @PathVariable long geofenceId,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return geofenceService.get(id, support.units(lengthUnit, tempUnit));
+        return geofenceService.get(geofenceId, support.units(lengthUnit, tempUnit));
     }
 }

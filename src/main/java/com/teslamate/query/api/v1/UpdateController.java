@@ -34,8 +34,8 @@ public class UpdateController {
         return updateService.list(carId, from, to, page, size);
     }
 
-    @GetMapping("/{id}")
-    public UpdateDto get(@PathVariable long id) {
-        return updateService.get(id);
+    @GetMapping("/{updateId}")
+    public UpdateDto get(@PathVariable long updateId) {
+        return updateService.get(updateId);
     }
 }

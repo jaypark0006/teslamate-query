@@ -34,8 +34,8 @@ public class StateController {
         return stateService.list(carId, from, to, page, size);
     }
 
-    @GetMapping("/{id}")
-    public StateDto get(@PathVariable long id) {
-        return stateService.get(id);
+    @GetMapping("/{stateId}")
+    public StateDto get(@PathVariable long stateId) {
+        return stateService.get(stateId);
     }
 }

@@ -37,12 +37,12 @@ public class ChargeController {
                 support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{chargeId}")
     public ChargeDto get(
-            @PathVariable long id,
+            @PathVariable long chargeId,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return chargeService.get(id, support.units(lengthUnit, tempUnit));
+        return chargeService.get(chargeId, support.units(lengthUnit, tempUnit));
     }
 }

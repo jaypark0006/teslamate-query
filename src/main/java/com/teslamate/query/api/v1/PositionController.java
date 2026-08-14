@@ -38,12 +38,12 @@ public class PositionController {
                 support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{positionId}")
     public PositionDto get(
-            @PathVariable long id,
+            @PathVariable long positionId,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return positionService.get(id, support.units(lengthUnit, tempUnit));
+        return positionService.get(positionId, support.units(lengthUnit, tempUnit));
     }
 }
