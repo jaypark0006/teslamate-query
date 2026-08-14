@@ -1,20 +1,16 @@
 package com.teslamate.query.config;
 
-import com.teslamate.query.security.ApiKeyAuthFilter;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
+import org.springframework.core.task.VirtualThreadTaskExecutor;
+import org.springframework.web.reactive.config.BlockingExecutionConfigurer;
+import org.springframework.web.reactive.config.WebFluxConfigurer;
 
 @Configuration
-public class WebConfig {
+public class WebConfig implements WebFluxConfigurer {
 
-    @Bean
-    public FilterRegistrationBean<ApiKeyAuthFilter> apiKeyFilter(ApiKeyAuthFilter filter) {
-        FilterRegistrationBean<ApiKeyAuthFilter> reg = new FilterRegistrationBean<>();
-        reg.setFilter(filter);
-        reg.addUrlPatterns("/api/*");
-        reg.setOrder(Ordered.HIGHEST_PRECEDENCE + 10);
-        return reg;
+    @Override
+    public void configureBlockingExecution(BlockingExecutionConfigurer configurer) {
+        // Controllers still use blocking JDBI; offload them off the Netty event loop.
+        configurer.setExecutor(new VirtualThreadTaskExecutor("http-block-"));
     }
 }

@@ -2,22 +2,24 @@ package com.teslamate.query.security;
 
 import com.teslamate.query.config.QueryProperties;
 import com.teslamate.query.dto.ErrorResponse;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.core.Ordered;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
 @Component
-public class ApiKeyAuthFilter extends OncePerRequestFilter {
+public class ApiKeyAuthFilter implements WebFilter, Ordered {
 
     private final QueryProperties properties;
     private final JsonMapper jsonMapper;
@@ -30,38 +32,41 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         if (!properties.isAuthEnabled()) {
-            filterChain.doFilter(request, response);
-            return;
+            return chain.filter(exchange);
         }
 
-        String path = request.getRequestURI();
+        String path = exchange.getRequest().getPath().value();
         if (isPublic(path)) {
-            filterChain.doFilter(request, response);
-            return;
+            return chain.filter(exchange);
         }
 
-        String key = request.getHeader("X-API-Key");
+        String key = exchange.getRequest().getHeaders().getFirst("X-API-Key");
         if (key == null || key.isBlank()) {
-            key = request.getParameter("api_key");
+            key = exchange.getRequest().getQueryParams().getFirst("api_key");
         }
 
         if (key == null || !keys.contains(key)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            ServerHttpResponse response = exchange.getResponse();
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
             ErrorResponse body = new ErrorResponse(
                     "UNAUTHORIZED",
                     "Missing or invalid API key. Provide X-API-Key header.",
                     Instant.now(),
                     path
             );
-            jsonMapper.writeValue(response.getOutputStream(), body);
-            return;
+            DataBuffer buffer = response.bufferFactory().wrap(jsonMapper.writeValueAsBytes(body));
+            return response.writeWith(Mono.just(buffer));
         }
 
-        filterChain.doFilter(request, response);
+        return chain.filter(exchange);
+    }
+
+    @Override
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE + 10;
     }
 
     private boolean isPublic(String path) {

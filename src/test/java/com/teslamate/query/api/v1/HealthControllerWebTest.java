@@ -7,13 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class HealthControllerWebTest {
@@ -21,30 +17,34 @@ class HealthControllerWebTest {
     @Mock
     private HealthDao healthDao;
 
-    private MockMvc mockMvc;
+    private WebTestClient client;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new HealthController(healthDao))
-                .setControllerAdvice(new GlobalExceptionHandler())
+        client = WebTestClient.bindToController(new HealthController(healthDao))
+                .controllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
     @Test
-    void healthIsPublicAndUp() throws Exception {
+    void healthIsPublicAndUp() {
         when(healthDao.ping()).thenReturn(1);
-        mockMvc.perform(get("/api/v1/health"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("UP"))
-                .andExpect(jsonPath("$.database").value("UP"));
+        client.get().uri("/api/v1/health")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("UP")
+                .jsonPath("$.database").isEqualTo("UP");
     }
 
     @Test
-    void healthDownWhenPingFails() throws Exception {
+    void healthDownWhenPingFails() {
         when(healthDao.ping()).thenThrow(new RuntimeException("db"));
-        mockMvc.perform(get("/api/v1/health"))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.status").value("DOWN"))
-                .andExpect(jsonPath("$.database").value("DOWN"));
+        client.get().uri("/api/v1/health")
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("DOWN")
+                .jsonPath("$.database").isEqualTo("DOWN");
     }
 }
