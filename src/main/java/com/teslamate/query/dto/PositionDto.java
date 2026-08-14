@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 public record PositionDto(
-        Long id,
+        Long positionId,
         Long carId,
         Long driveId,
         Instant date,
