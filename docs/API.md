@@ -25,6 +25,39 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 
 → `minDistance` means 10 **miles** in the filter; JSON distances/temps are mi / °F; `units.length` is `"mi"`.
 
+## IDs (read this first)
+
+| Name | Table | Meaning |
+|------|--------|---------|
+| `carId` | cars | Vehicle |
+| `driveId` | drives | One trip |
+| **`chargingProcessId`** | **charging_processes** | **One charging session** (plug-in to unplug) |
+| `charge` row `id` | charges | One telemetry sample *inside* a session |
+| `positionId` | positions | One GPS/telemetry point |
+| `addressId` / `geofenceId` | addresses / geofences | Place labels |
+
+JSON `"id"` on a resource is **that resource’s own primary key**.  
+A session’s samples are **not** `/charges/{chargingProcessId}`.
+
+### How to get all samples for one session
+
+```http
+GET /api/v1/charging-processes/{chargingProcessId}/charges
+```
+
+Same data, query style:
+
+```http
+GET /api/v1/charges?chargingProcessId={chargingProcessId}
+```
+
+Example: session `364` (from `GET /charging-processes?carId=1`):
+
+```http
+GET /api/v1/charging-processes/364/charges
+GET /api/v1/charges?chargingProcessId=364
+```
+
 ## Single-table resources
 
 | Table | Endpoints |
@@ -33,9 +66,9 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 | car_settings | `GET /car-settings` · `/car-settings/{carSettingsId}` |
 | settings | `GET /settings` |
 | drives | `GET /drives?...` · `/drives/{driveId}` |
-| charging_processes | `GET /charging-processes?...` · `/{chargingProcessId}` |
+| charging_processes | `GET /charging-processes?...` · `/{chargingProcessId}` · `/{chargingProcessId}/charges` |
 | positions | `GET /positions?...` · `/positions/{positionId}` |
-| charges | `GET /charges?...` · `/charges/{chargingProcessId}` (list of samples) |
+| charges | `GET /charges?chargingProcessId=` or `carId&from&to` |
 | states | `GET /states?...` · `/states/{stateId}` |
 | updates | `GET /updates?...` · `/updates/{updateId}` |
 | addresses | `GET /addresses?...` · `?ids=` · `/{addressId}` |
@@ -52,7 +85,7 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 ## Nested convenience (multi-Dao)
 
 - `GET /drives/{driveId}/positions?downsample=`
-- `GET /charging-processes/{chargingProcessId}/samples`
+- `GET /charging-processes/{chargingProcessId}/charges`
 - `GET /cars/{carId}/latest` — multi-table snapshot
 - `GET /map/tracks?carId&from&to` — GeoJSON composition
 - `GET /map/trip?carId&from&to` — drive lines + charge/park points (overlap window; parks derived in Service)
