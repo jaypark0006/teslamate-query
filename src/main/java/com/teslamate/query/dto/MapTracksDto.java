@@ -5,10 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Grafana Geomap-friendly payload: GeoJSON FeatureCollection + optional meta.
- * Features: LineString (drives) and Point (charges).
- */
+/** GeoJSON FeatureCollection. Feature ids are named by kind (driveId / chargingProcessId / parkIndex). */
 public record MapTracksDto(
         String type,
         List<Feature> features,
@@ -19,14 +16,10 @@ public record MapTracksDto(
             Instant from,
             Instant to,
             int driveCount,
-            int chargeCount,
+            int chargingProcessCount,
             int parkCount,
             int totalPathPoints
-    ) {
-        public Meta(long carId, Instant from, Instant to, int driveCount, int chargeCount, int totalPathPoints) {
-            this(carId, from, to, driveCount, chargeCount, 0, totalPathPoints);
-        }
-    }
+    ) {}
 
     public record Feature(
             String type,
@@ -39,19 +32,22 @@ public record MapTracksDto(
             Object coordinates
     ) {}
 
-    public static Feature lineString(long driveId, List<List<BigDecimal>> lonLat, Map<String, Object> props) {
+    public static Feature driveLine(long driveId, List<List<BigDecimal>> lonLat, Map<String, Object> props) {
         props.put("kind", "drive");
-        props.put("id", driveId);
+        props.put("driveId", driveId);
         return new Feature("Feature", new Geometry("LineString", lonLat), props);
     }
 
-    public static Feature point(long chargeId, BigDecimal lon, BigDecimal lat, Map<String, Object> props) {
-        return point("charge", chargeId, lon, lat, props);
+    public static Feature chargePoint(long chargingProcessId, BigDecimal lon, BigDecimal lat,
+                                      Map<String, Object> props) {
+        props.put("kind", "charge");
+        props.put("chargingProcessId", chargingProcessId);
+        return new Feature("Feature", new Geometry("Point", List.of(lon, lat)), props);
     }
 
-    public static Feature point(String kind, long id, BigDecimal lon, BigDecimal lat, Map<String, Object> props) {
-        props.put("kind", kind);
-        props.put("id", id);
+    public static Feature parkPoint(int parkIndex, BigDecimal lon, BigDecimal lat, Map<String, Object> props) {
+        props.put("kind", "park");
+        props.put("parkIndex", parkIndex);
         return new Feature("Feature", new Geometry("Point", List.of(lon, lat)), props);
     }
 }

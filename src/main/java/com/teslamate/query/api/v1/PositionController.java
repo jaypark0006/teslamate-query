@@ -5,8 +5,12 @@ import com.teslamate.query.dto.PositionDto;
 import com.teslamate.query.service.PositionService;
 import com.teslamate.query.service.QuerySupport;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/positions")
@@ -22,10 +26,11 @@ public class PositionController {
     }
 
     @GetMapping
-    @Operation(summary = "List positions (requires driveId, or carId+from+to)")
+    @Operation(summary = "Query position rows. For all points of one drive use GET /drives/{driveId}/positions.")
     public PageResponse<PositionDto> list(
             @RequestParam(required = false) Long carId,
             @RequestParam(required = false) Long driveId,
+            @Parameter(description = "date >= from (row time, not drive start)")
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) Boolean cleanOnly,
@@ -36,14 +41,5 @@ public class PositionController {
     ) {
         return positionService.list(carId, driveId, from, to, cleanOnly, page, size,
                 support.units(lengthUnit, tempUnit));
-    }
-
-    @GetMapping("/{positionId}")
-    public PositionDto get(
-            @PathVariable long positionId,
-            @RequestParam(required = false) String lengthUnit,
-            @RequestParam(required = false) String tempUnit
-    ) {
-        return positionService.get(positionId, support.units(lengthUnit, tempUnit));
     }
 }

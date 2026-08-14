@@ -37,7 +37,12 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 | `addressId` / `geofenceId` | addresses / geofences | Place labels |
 
 JSON `"id"` on a resource is **that resource’s own primary key**.  
-A session’s samples are **not** `/charges/{chargingProcessId}`.
+A session’s samples are **not** `/charges/{chargingProcessId}`.  
+A drive’s GPS points are **not** `/positions/{driveId}` — use `/drives/{driveId}/positions`.
+
+**Time `from`/`to`:** `/drives` and `/charging-processes` filter **`start_date` in range**. `/states` and `/map/trip` use **interval overlap**. `/map/tracks` uses start_date (prefer `/map/trip` for Trip).
+
+**Map features:** `kind=drive` → `driveId`; `kind=charge` → `chargingProcessId`; `kind=park` → `parkIndex`.
 
 ### How to get all samples for one session
 
@@ -67,11 +72,11 @@ GET /api/v1/charges?chargingProcessId=364
 | settings | `GET /settings` |
 | drives | `GET /drives?...` · `/drives/{driveId}` |
 | charging_processes | `GET /charging-processes?...` · `/{chargingProcessId}` · `/{chargingProcessId}/charges` |
-| positions | `GET /positions?...` · `/positions/{positionId}` |
+| positions | `GET /positions?driveId=` or `carId&from&to` (no `/{id}` — use `/drives/{driveId}/positions`) |
 | charges | `GET /charges?chargingProcessId=` or `carId&from&to` |
 | states | `GET /states?...` · `/states/{stateId}` |
 | updates | `GET /updates?...` · `/updates/{updateId}` |
-| addresses | `GET /addresses?...` · `?ids=` · `/{addressId}` |
+| addresses | `GET /addresses?...` · `?addressIds=` · `/{addressId}` |
 | geofences | `GET /geofences?...` · `/{geofenceId}` |
 
 ### Filter notes

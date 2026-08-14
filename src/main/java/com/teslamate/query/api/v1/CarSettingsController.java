@@ -29,6 +29,7 @@ public class CarSettingsController {
     }
 
     @GetMapping("/{carSettingsId}")
+    @Operation(summary = "One car_settings row. This is cars.settingsId, not carId.")
     public CarSettingsDto get(@PathVariable long carSettingsId) {
         return carSettingsService.get(carSettingsId);
     }
