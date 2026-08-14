@@ -2,7 +2,7 @@ package com.teslamate.query.dto;
 
 /** Full row from {@code car_settings} table. */
 public record CarSettingsDto(
-        Long carSettingsId,
+        Long id,
         Integer suspendMin,
         Integer suspendAfterIdleMin,
         Boolean reqNotUnlocked,

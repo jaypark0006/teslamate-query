@@ -3,7 +3,7 @@ package com.teslamate.query.dto;
 import java.math.BigDecimal;
 
 public record AddressDto(
-        Long addressId,
+        Long id,
         String displayName,
         String name,
         String road,

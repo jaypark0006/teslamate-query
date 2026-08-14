@@ -8,7 +8,7 @@ import java.time.Instant;
  * Related entities are referenced by id; compose names via /addresses, /geofences, /cars.
  */
 public record DriveDto(
-        Long driveId,
+        Long id,
         Long carId,
         Instant startDate,
         Instant endDate,

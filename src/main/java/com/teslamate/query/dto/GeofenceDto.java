@@ -3,7 +3,7 @@ package com.teslamate.query.dto;
 import java.math.BigDecimal;
 
 public record GeofenceDto(
-        Long geofenceId,
+        Long id,
         String name,
         BigDecimal latitude,
         BigDecimal longitude,

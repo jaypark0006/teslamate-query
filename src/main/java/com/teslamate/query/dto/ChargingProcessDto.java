@@ -5,7 +5,7 @@ import java.time.Instant;
 
 /** Lean charging session: {@code charging_processes} columns + FK ids. */
 public record ChargingProcessDto(
-        Long chargingProcessId,
+        Long id,
         Long carId,
         Instant startDate,
         Instant endDate,
