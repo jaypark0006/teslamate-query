@@ -1,0 +1,14 @@
+{
+  "title": "TeslaMate Query - Drives",
+  "description": "Lean list + optional enriched. Prefer lean + geofence join transform.",
+  "examples": {
+    "lean": "GET /api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+    "enriched": "GET /api/v1/drives?view=enriched&range=${range}&carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+    "compose": {
+      "A": "GET /api/v1/drives?carId=...&from=...&to=...",
+      "B": "GET /api/v1/geofences",
+      "C": "GET /api/v1/addresses?ids=${startAddressIds}",
+      "transform": "Outer join A.startGeofenceId = B.id for display name"
+    }
+  }
+}
