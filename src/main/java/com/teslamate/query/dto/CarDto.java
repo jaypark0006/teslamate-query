@@ -1,7 +1,7 @@
 package com.teslamate.query.dto;
 
 public record CarDto(
-        Long carId,
+        Long id,
         String name,
         String vin,
         String model,

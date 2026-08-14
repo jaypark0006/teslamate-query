@@ -5,7 +5,7 @@ import java.time.Instant;
 
 /** Full row from {@code charges} table. */
 public record ChargeDto(
-        Long chargeId,
+        Long id,
         Long chargingProcessId,
         Instant date,
         Integer batteryLevel,
