@@ -1,7 +1,7 @@
 package com.teslamate.query.dto;
 
 public record SettingsDto(
-        Long id,
+        Long settingsId,
         String unitOfLength,
         String unitOfTemperature,
         String unitOfPressure,

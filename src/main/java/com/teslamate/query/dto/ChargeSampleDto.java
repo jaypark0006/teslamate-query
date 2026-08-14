@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 public record ChargeSampleDto(
-        Long id,
+        Long chargeId,
         Instant date,
         Integer batteryLevel,
         Integer usableBatteryLevel,

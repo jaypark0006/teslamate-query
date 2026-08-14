@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 public record DrivePositionDto(
-        Long id,
+        Long positionId,
         Instant date,
         BigDecimal latitude,
         BigDecimal longitude,

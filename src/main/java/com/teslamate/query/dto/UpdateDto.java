@@ -3,7 +3,7 @@ package com.teslamate.query.dto;
 import java.time.Instant;
 
 public record UpdateDto(
-        Long id,
+        Long updateId,
         Long carId,
         Instant startDate,
         Instant endDate,
