@@ -35,7 +35,7 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 | drives | `GET /drives?...` · `/drives/{driveId}` |
 | charging_processes | `GET /charging-processes?...` · `/{chargingProcessId}` |
 | positions | `GET /positions?...` · `/positions/{positionId}` |
-| charges | `GET /charges?...` · `/charges/{chargeId}` |
+| charges | `GET /charges?...` · `/charges/{chargingProcessId}` (list of samples) |
 | states | `GET /states?...` · `/states/{stateId}` |
 | updates | `GET /updates?...` · `/updates/{updateId}` |
 | addresses | `GET /addresses?...` · `?ids=` · `/{addressId}` |
