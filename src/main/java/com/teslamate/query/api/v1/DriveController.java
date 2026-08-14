@@ -29,6 +29,7 @@ public class DriveController {
     @Operation(summary = "List drives (Condition → ids → rows). DB is metric; pass lengthUnit/tempUnit to convert.")
     public PageResponse<DriveDto> list(
             @RequestParam(required = false) Long carId,
+            @Parameter(description = "start_date >= from (not interval overlap; see /map/trip)")
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @Parameter(description = "Min distance in lengthUnit (default km); converted to km for SQL")
@@ -55,6 +56,7 @@ public class DriveController {
     }
 
     @GetMapping("/{driveId}/positions")
+    @Operation(summary = "All GPS points of this drive (not GET /positions/{driveId})")
     public List<DrivePositionDto> positions(
             @PathVariable long driveId,
             @RequestParam(required = false) Integer downsample,

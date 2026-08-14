@@ -7,6 +7,7 @@ import com.teslamate.query.service.ChargeService;
 import com.teslamate.query.service.ChargingProcessService;
 import com.teslamate.query.service.QuerySupport;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,7 @@ public class ChargingProcessController {
     @Operation(summary = "List charge sessions")
     public PageResponse<ChargingProcessDto> list(
             @RequestParam(required = false) Long carId,
+            @Parameter(description = "start_date >= from (not interval overlap; see /map/trip)")
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) Long geofenceId,

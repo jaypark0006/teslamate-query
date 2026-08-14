@@ -15,14 +15,14 @@ Infinity 数据源：`http://teslamate-query:8080`。
 | 车设置 | `GET /api/v1/car-settings` · `/car-settings/{carSettingsId}` |
 | 全局设置 | `GET /api/v1/settings` |
 | 围栏 | `GET /api/v1/geofences` · `/geofences/{geofenceId}` |
-| 地址 | `GET /api/v1/addresses` · `?ids=` · `/{addressId}` |
+| 地址 | `GET /api/v1/addresses` · `?addressIds=` · `/{addressId}` |
 | 行程 | `GET /api/v1/drives?...` · `/drives/{driveId}` · `/drives/{driveId}/positions` |
 | 充电会话 | `GET /api/v1/charging-processes?...` · `/{chargingProcessId}` |
 | 某次充电的全部采样 | `GET /api/v1/charging-processes/{chargingProcessId}/charges` 或 `GET /charges?chargingProcessId=` |
-| 轨迹点 | `GET /api/v1/positions?driveId=` 或 `carId&from&to` · `/{positionId}` |
+| 轨迹点 | `GET /api/v1/drives/{driveId}/positions` 或 `GET /positions?driveId=` |
 | 状态 / 升级 | `GET /api/v1/states?...` · `/updates?...` |
-| 多轨迹地图 | `GET /api/v1/map/tracks?carId&from&to` |
-| Trip 地图（驾/充/停） | `GET /api/v1/map/trip?carId&from&to` |
+| 多轨迹（start 落在窗内） | `GET /api/v1/map/tracks?carId&from&to` |
+| Trip 地图 overlap + park | `GET /api/v1/map/trip?carId&from&to` |
 | SOC 曲线 | `GET /api/v1/series/battery?carId&from&to` |
 
 列表 JSON 根路径多为 `data`（分页）。

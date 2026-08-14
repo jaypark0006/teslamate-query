@@ -56,14 +56,14 @@ public class TripMapService {
 
     public MapTracksDto trip(long carId, String fromStr, String toStr,
                              Integer minParkMin, Integer microDriveThresholdMin,
-                             Integer maxDrives, Integer maxCharges, DisplayUnits units) {
+                             Integer maxDrives, Integer maxChargingProcesses, DisplayUnits units) {
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant[] range = support.requireRange(fromStr, toStr);
         Instant from = range[0];
         Instant to = range[1];
         Instant now = Instant.now();
         int driveLimit = maxDrives == null ? 80 : Math.min(Math.max(maxDrives, 1), 500);
-        int chargeLimit = maxCharges == null ? 200 : Math.min(Math.max(maxCharges, 1), 1000);
+        int chargeLimit = maxChargingProcesses == null ? 200 : Math.min(Math.max(maxChargingProcesses, 1), 1000);
         int minPark = minParkMin == null ? DEFAULT_MIN_PARK_MIN : Math.max(minParkMin, 0);
         int micro = microDriveThresholdMin == null ? DEFAULT_MICRO_DRIVE_MIN : Math.max(microDriveThresholdMin, 0);
 
@@ -116,7 +116,7 @@ public class TripMapService {
             props.put("durationMin", d.durationMin());
             props.put("incomplete", d.endDate() == null);
             props.put("units", u.toMeta());
-            features.add(MapTracksDto.lineString(d.id(), coords, props));
+            features.add(MapTracksDto.driveLine(d.id(), coords, props));
         }
 
         int parkIdx = 0;
@@ -130,7 +130,7 @@ public class TripMapService {
             props.put("endDate", iso(park.end()));
             props.put("durationMin", park.durationMin());
             props.put("afterDriveId", park.afterDriveId());
-            features.add(MapTracksDto.point("park", parkIdx++, p.longitude(), p.latitude(), props));
+            features.add(MapTracksDto.parkPoint(parkIdx++, p.longitude(), p.latitude(), props));
         }
 
         for (ChargingProcessEntity c : charges) {
@@ -147,7 +147,7 @@ public class TripMapService {
             props.put("cost", c.cost());
             props.put("chargeType", chargeType(sample));
             props.put("incomplete", c.endDate() == null);
-            features.add(MapTracksDto.point("charge", c.id(), p.longitude(), p.latitude(), props));
+            features.add(MapTracksDto.chargePoint(c.id(), p.longitude(), p.latitude(), props));
         }
 
         int parkCount = (int) features.stream().filter(f -> "park".equals(f.properties().get("kind"))).count();

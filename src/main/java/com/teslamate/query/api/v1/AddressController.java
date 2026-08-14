@@ -25,13 +25,13 @@ public class AddressController {
         this.addressService = addressService;
     }
 
-    @GetMapping(params = "ids")
-    @Operation(summary = "Batch get addresses by comma-separated ids")
-    public List<AddressDto> listByIds(
-            @Parameter(description = "Comma-separated ids, max 200")
-            @RequestParam String ids
+    @GetMapping(params = "addressIds")
+    @Operation(summary = "Batch get addresses by comma-separated addressIds")
+    public List<AddressDto> listByAddressIds(
+            @Parameter(description = "Comma-separated addressIds, max 200")
+            @RequestParam String addressIds
     ) {
-        return addressService.listByIds(ids);
+        return addressService.listByIds(addressIds);
     }
 
     @GetMapping

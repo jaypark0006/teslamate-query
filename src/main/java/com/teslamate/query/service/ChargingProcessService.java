@@ -1,10 +1,8 @@
 package com.teslamate.query.service;
 
-import com.teslamate.query.dao.ChargeDao;
 import com.teslamate.query.dao.ChargingProcessDao;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.domain.units.DisplayUnits;
-import com.teslamate.query.dto.ChargeSampleDto;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.PageResponse;
 import com.teslamate.query.exception.NotFoundException;
@@ -17,12 +15,10 @@ import java.util.List;
 public class ChargingProcessService {
 
     private final ChargingProcessDao chargingProcessDao;
-    private final ChargeDao chargeDao;
     private final QuerySupport support;
 
-    public ChargingProcessService(ChargingProcessDao chargingProcessDao, ChargeDao chargeDao, QuerySupport support) {
+    public ChargingProcessService(ChargingProcessDao chargingProcessDao, QuerySupport support) {
         this.chargingProcessDao = chargingProcessDao;
-        this.chargeDao = chargeDao;
         this.support = support;
     }
 
@@ -46,12 +42,6 @@ public class ChargingProcessService {
         return chargingProcessDao.findById(id)
                 .map(e -> EntityMapper.toChargingProcessDto(e, u))
                 .orElseThrow(() -> new NotFoundException("Charging process not found: " + id));
-    }
-
-    public List<ChargeSampleDto> samples(long id, DisplayUnits units) {
-        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
-        get(id, DisplayUnits.METRIC);
-        return chargeDao.findByProcessId(id).stream().map(e -> EntityMapper.toChargeSampleDto(e, u)).toList();
     }
 
     private ChargingProcessSearchCondition condition(Long carId, String fromStr, String toStr,

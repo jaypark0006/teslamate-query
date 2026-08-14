@@ -5,7 +5,6 @@ import com.teslamate.query.dto.AddressDto;
 import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.CarSettingsDto;
 import com.teslamate.query.dto.ChargeDto;
-import com.teslamate.query.dto.ChargeSampleDto;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
@@ -141,19 +140,6 @@ public final class EntityMapper {
 
     public static List<ChargeDto> toChargeDtos(List<ChargeEntity> list, DisplayUnits u) {
         return list.stream().map(e -> toChargeDto(e, u)).toList();
-    }
-
-    public static ChargeSampleDto toChargeSampleDto(ChargeEntity e, DisplayUnits u) {
-        DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
-        return new ChargeSampleDto(
-                e.id(), e.date(), e.batteryLevel(), e.usableBatteryLevel(), e.chargeEnergyAdded(),
-                e.chargerPower(), e.chargerVoltage(), e.chargerActualCurrent(), e.chargerPhases(),
-                e.fastChargerPresent(), e.fastChargerType(),
-                UnitConverter.length(e.idealBatteryRangeKm(), units),
-                UnitConverter.length(e.ratedBatteryRangeKm(), units),
-                UnitConverter.temp(e.outsideTemp(), units),
-                e.batteryHeaterOn()
-        );
     }
 
     public static LatestSnapshotDto fromPosition(PositionEntity p) {

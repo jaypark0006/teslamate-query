@@ -44,14 +44,14 @@ public class MapTracksService {
         this.support = support;
     }
 
-    public MapTracksDto tracks(long carId, String fromStr, String toStr, Integer maxDrives, Integer maxCharges,
-                               DisplayUnits units) {
+    public MapTracksDto tracks(long carId, String fromStr, String toStr, Integer maxDrives,
+                               Integer maxChargingProcesses, DisplayUnits units) {
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
         Instant[] range = support.requireRange(fromStr, toStr);
         Instant from = range[0];
         Instant to = range[1];
         int driveLimit = maxDrives == null ? 80 : Math.min(Math.max(maxDrives, 1), 500);
-        int chargeLimit = maxCharges == null ? 200 : Math.min(Math.max(maxCharges, 1), 1000);
+        int chargeLimit = maxChargingProcesses == null ? 200 : Math.min(Math.max(maxChargingProcesses, 1), 1000);
 
         var driveCond = DriveSearchCondition.builder().carId(carId).startDateFrom(from).startDateTo(to).build();
         List<Long> driveIds = driveDao.findIds(driveCond, driveLimit, 0);
@@ -90,7 +90,7 @@ public class MapTracksService {
             props.put("distance", UnitConverter.length(d.distance(), u));
             props.put("durationMin", d.durationMin());
             props.put("units", u.toMeta());
-            features.add(MapTracksDto.lineString(d.id(), coords, props));
+            features.add(MapTracksDto.driveLine(d.id(), coords, props));
         }
         for (ChargingProcessEntity c : charges) {
             PositionEntity p = c.positionId() == null ? null : posById.get(c.positionId());
@@ -103,10 +103,10 @@ public class MapTracksService {
             props.put("chargeEnergyAdded", c.chargeEnergyAdded());
             props.put("durationMin", c.durationMin());
             props.put("cost", c.cost());
-            features.add(MapTracksDto.point(c.id(), p.longitude(), p.latitude(), props));
+            features.add(MapTracksDto.chargePoint(c.id(), p.longitude(), p.latitude(), props));
         }
         return new MapTracksDto("FeatureCollection", features,
-                new MapTracksDto.Meta(carId, from, to, drives.size(), charges.size(), totalPts));
+                new MapTracksDto.Meta(carId, from, to, drives.size(), charges.size(), 0, totalPts));
     }
 
     public List<PositionDto> batterySeries(long carId, String fromStr, String toStr, Integer limit,
