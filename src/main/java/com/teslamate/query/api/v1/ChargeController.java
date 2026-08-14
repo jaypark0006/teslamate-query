@@ -37,12 +37,16 @@ public class ChargeController {
                 support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{chargeId}")
-    public ChargeDto get(
-            @PathVariable long chargeId,
+    @GetMapping("/{chargingProcessId}")
+    @Operation(summary = "All samples in one charging session (chargingProcessId)")
+    public PageResponse<ChargeDto> listByProcess(
+            @PathVariable long chargingProcessId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return chargeService.get(chargeId, support.units(lengthUnit, tempUnit));
+        return chargeService.list(chargingProcessId, null, null, null, page, size,
+                support.units(lengthUnit, tempUnit));
     }
 }
