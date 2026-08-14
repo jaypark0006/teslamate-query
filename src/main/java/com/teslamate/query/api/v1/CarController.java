@@ -29,19 +29,19 @@ public class CarController {
         return carService.list();
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get car by id")
-    public CarDto get(@PathVariable long id) {
-        return carService.get(id);
+    @GetMapping("/{carId}")
+    @Operation(summary = "Get car by carId")
+    public CarDto get(@PathVariable long carId) {
+        return carService.get(carId);
     }
 
-    @GetMapping("/{id}/latest")
+    @GetMapping("/{carId}/latest")
     @Operation(summary = "Latest telemetry snapshot (position or charge sample)")
     public LatestSnapshotDto latest(
-            @PathVariable long id,
+            @PathVariable long carId,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return carService.latest(id, support.units(lengthUnit, tempUnit));
+        return carService.latest(carId, support.units(lengthUnit, tempUnit));
     }
 }

@@ -11,15 +11,15 @@ Infinity 数据源：`http://teslamate-query:8080`。
 | 用途 | Method / Path |
 |------|----------------|
 | Health | `GET /api/v1/health` |
-| 车辆 | `GET /api/v1/cars` · `/cars/{id}` · `/cars/{id}/latest` |
-| 车设置 | `GET /api/v1/car-settings` · `/car-settings/{id}` |
+| 车辆 | `GET /api/v1/cars` · `/cars/{carId}` · `/cars/{carId}/latest` |
+| 车设置 | `GET /api/v1/car-settings` · `/car-settings/{carSettingsId}` |
 | 全局设置 | `GET /api/v1/settings` |
-| 围栏 | `GET /api/v1/geofences` · `/geofences/{id}` |
-| 地址 | `GET /api/v1/addresses` · `?ids=` · `/{id}` |
-| 行程 | `GET /api/v1/drives?...` · `/drives/{id}` · `/drives/{id}/positions` |
-| 充电会话 | `GET /api/v1/charging-processes?...` · `/{id}` · `/{id}/samples` |
-| 充电采样 | `GET /api/v1/charges?chargingProcessId=` 或 `carId&from&to` · `/{id}` |
-| 轨迹点 | `GET /api/v1/positions?driveId=` 或 `carId&from&to` · `/{id}` |
+| 围栏 | `GET /api/v1/geofences` · `/geofences/{geofenceId}` |
+| 地址 | `GET /api/v1/addresses` · `?ids=` · `/{addressId}` |
+| 行程 | `GET /api/v1/drives?...` · `/drives/{driveId}` · `/drives/{driveId}/positions` |
+| 充电会话 | `GET /api/v1/charging-processes?...` · `/{chargingProcessId}` · `/{chargingProcessId}/samples` |
+| 充电采样 | `GET /api/v1/charges?chargingProcessId=` 或 `carId&from&to` · `/{chargeId}` |
+| 轨迹点 | `GET /api/v1/positions?driveId=` 或 `carId&from&to` · `/{positionId}` |
 | 状态 / 升级 | `GET /api/v1/states?...` · `/updates?...` |
 | 多轨迹地图 | `GET /api/v1/map/tracks?carId&from&to` |
 | Trip 地图（驾/充/停） | `GET /api/v1/map/trip?carId&from&to` |

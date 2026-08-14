@@ -45,9 +45,9 @@ public class AddressController {
         return addressService.list(city, country, page, size);
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get address by id")
-    public AddressDto get(@PathVariable long id) {
-        return addressService.get(id);
+    @GetMapping("/{addressId}")
+    @Operation(summary = "Get address by addressId")
+    public AddressDto get(@PathVariable long addressId) {
+        return addressService.get(addressId);
     }
 }

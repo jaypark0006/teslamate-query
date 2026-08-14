@@ -45,22 +45,22 @@ public class DriveController {
                 incompleteOnly, page, size, support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{driveId}")
     public DriveDto get(
-            @PathVariable long id,
+            @PathVariable long driveId,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return driveService.get(id, support.units(lengthUnit, tempUnit));
+        return driveService.get(driveId, support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{id}/positions")
+    @GetMapping("/{driveId}/positions")
     public List<DrivePositionDto> positions(
-            @PathVariable long id,
+            @PathVariable long driveId,
             @RequestParam(required = false) Integer downsample,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return driveService.positions(id, downsample, support.units(lengthUnit, tempUnit));
+        return driveService.positions(driveId, downsample, support.units(lengthUnit, tempUnit));
     }
 }

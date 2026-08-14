@@ -29,17 +29,17 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 
 | Table | Endpoints |
 |-------|-----------|
-| cars | `GET /cars` · `/cars/{id}` |
-| car_settings | `GET /car-settings` · `/car-settings/{id}` |
+| cars | `GET /cars` · `/cars/{carId}` |
+| car_settings | `GET /car-settings` · `/car-settings/{carSettingsId}` |
 | settings | `GET /settings` |
-| drives | `GET /drives?...` · `/drives/{id}` |
-| charging_processes | `GET /charging-processes?...` · `/{id}` |
-| positions | `GET /positions?...` · `/positions/{id}` |
-| charges | `GET /charges?...` · `/charges/{id}` |
-| states | `GET /states?...` · `/states/{id}` |
-| updates | `GET /updates?...` · `/updates/{id}` |
-| addresses | `GET /addresses?...` · `?ids=` · `/{id}` |
-| geofences | `GET /geofences?...` · `/{id}` |
+| drives | `GET /drives?...` · `/drives/{driveId}` |
+| charging_processes | `GET /charging-processes?...` · `/{chargingProcessId}` |
+| positions | `GET /positions?...` · `/positions/{positionId}` |
+| charges | `GET /charges?...` · `/charges/{chargeId}` |
+| states | `GET /states?...` · `/states/{stateId}` |
+| updates | `GET /updates?...` · `/updates/{updateId}` |
+| addresses | `GET /addresses?...` · `?ids=` · `/{addressId}` |
+| geofences | `GET /geofences?...` · `/{geofenceId}` |
 
 ### Filter notes
 
@@ -51,9 +51,9 @@ GET /api/v1/drives?carId=1&lengthUnit=mi&tempUnit=F&minDistance=10
 
 ## Nested convenience (multi-Dao)
 
-- `GET /drives/{id}/positions?downsample=`
-- `GET /charging-processes/{id}/samples`
-- `GET /cars/{id}/latest` — multi-table snapshot
+- `GET /drives/{driveId}/positions?downsample=`
+- `GET /charging-processes/{chargingProcessId}/samples`
+- `GET /cars/{carId}/latest` — multi-table snapshot
 - `GET /map/tracks?carId&from&to` — GeoJSON composition
 - `GET /map/trip?carId&from&to` — drive lines + charge/park points (overlap window; parks derived in Service)
 - `GET /series/battery?carId&from&to` — SOC series from positions

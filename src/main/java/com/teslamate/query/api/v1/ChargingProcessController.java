@@ -42,21 +42,21 @@ public class ChargingProcessController {
                 support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{chargingProcessId}")
     public ChargingProcessDto get(
-            @PathVariable long id,
+            @PathVariable long chargingProcessId,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return service.get(id, support.units(lengthUnit, tempUnit));
+        return service.get(chargingProcessId, support.units(lengthUnit, tempUnit));
     }
 
-    @GetMapping("/{id}/samples")
+    @GetMapping("/{chargingProcessId}/samples")
     public List<ChargeSampleDto> samples(
-            @PathVariable long id,
+            @PathVariable long chargingProcessId,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return service.samples(id, support.units(lengthUnit, tempUnit));
+        return service.samples(chargingProcessId, support.units(lengthUnit, tempUnit));
     }
 }
