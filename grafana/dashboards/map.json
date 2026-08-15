@@ -712,11 +712,11 @@
               },
               {
                 "id": "custom.width",
-                "value": 72
+                "value": 108
               },
               {
                 "id": "unit",
-                "value": "time:HH:mm"
+                "value": "time:MM-DD HH:mm"
               }
             ]
           },
@@ -882,7 +882,7 @@
         "sortBy": [
           {
             "desc": false,
-            "displayName": "#"
+            "displayName": "Start"
           }
         ]
       },
@@ -969,15 +969,15 @@
               "clockStart": true,
               "clockEnd": true,
               "seq": true,
-              "durationMin": true
+              "durationMin": true,
+              "day": true
             },
             "indexByName": {
-              "day": 0,
-              "time": 1,
-              "timeEnd": 2,
-              "kind": 3,
-              "title": 4,
-              "detail": 5
+              "time": 0,
+              "timeEnd": 1,
+              "kind": 2,
+              "title": 3,
+              "detail": 4
             },
             "renameByName": {}
           }
