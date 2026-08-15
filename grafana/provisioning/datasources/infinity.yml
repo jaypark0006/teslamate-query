@@ -12,6 +12,8 @@ datasources:
       # Base URL used by panels (path only in panel URL field)
       global_queries: []
       auth_method: none
+      # Map path queries can exceed the plugin default (60s)
+      timeoutInSeconds: 180
       # When AUTH_ENABLED=true, set auth_method: headerKey and secureJsonData below
       # authHeader: X-API-Key
     # secureJsonData:

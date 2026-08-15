@@ -1,5 +1,8 @@
 server:
   port: ${SERVER_PORT:8080}
+  netty:
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:180s}
+    connection-timeout: 30s
 
 spring:
   application:

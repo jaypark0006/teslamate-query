@@ -29,6 +29,15 @@ Infinity 数据源：`http://teslamate-query:8080`。
 
 列表 JSON 根路径多为 `data`（分页）。
 
+## 超时（Map 路径容易超过默认）
+
+真正掐断的是 **Grafana 等 API 的时间**，不是 Java 自己先关连接。
+
+1. **Infinity 数据源** → Timeout = **180** 秒（插件默认 60）  
+2. Grafana `grafana.ini`：`[dataproxy] timeout = 180`（或环境变量 `GF_DATAPROXY_TIMEOUT=180`，默认常为 30）
+
+本仓库 compose / `infinity.yml` 已按 180 秒配好。已经手工建过的数据源要在 UI 里改一次并 Save。
+
 ## 刻意不做
 
 - Overview / Drive Stats / Charging Stats / Efficiency / Vampire / Battery Health 等 **大段 Grafana 统计 SQL**

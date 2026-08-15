@@ -13,6 +13,7 @@
 | AUTH_ENABLED | false | Set true when exposing beyond compose/LAN |
 | SERVER_PORT | 8080 | HTTP port |
 | DB_POOL_SIZE | 10 | Hikari pool size |
+| HTTP_IDLE_TIMEOUT | 180s | Netty idle timeout (keep long Grafana map queries open) |
 
 ## Read-only DB user
 
