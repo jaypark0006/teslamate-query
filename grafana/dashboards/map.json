@@ -994,104 +994,128 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "#94a3b8"
           },
           "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0,
-            "spanNulls": false
+            "fillOpacity": 90,
+            "gradientMode": "none",
+            "lineWidth": 1
           },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          "unit": "h",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "driveHours"
+            },
+            "properties": [
               {
-                "color": "text",
-                "value": 0
+                "id": "displayName",
+                "value": "Drive"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#3b82f6",
+                  "mode": "fixed"
+                }
               }
             ]
           },
-          "mappings": [
-            {
-              "options": {
-                "DRIVE": {
-                  "color": "#3b82f6",
-                  "index": 0,
-                  "text": "Drive"
-                }
-              },
-              "type": "value"
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "chargeHours"
             },
-            {
-              "options": {
-                "CHARGE": {
-                  "color": "#22c55e",
-                  "index": 1,
-                  "text": "Charge"
-                }
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Charge"
               },
-              "type": "value"
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#22c55e",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "parkHours"
             },
-            {
-              "options": {
-                "PARK": {
-                  "color": "#94a3b8",
-                  "index": 2,
-                  "text": "Park"
-                }
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Park"
               },
-              "type": "value"
-            }
-          ]
-        },
-        "overrides": []
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#94a3b8",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 24,
         "x": 0,
         "y": 20
       },
       "id": 4,
       "options": {
-        "alignValue": "left",
+        "barRadius": 1,
+        "barWidth": 0.75,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
-        "mergeValues": true,
-        "perPage": 20,
-        "rowHeight": 0.8,
-        "showValue": "auto",
+        "orientation": "vertical",
+        "showValue": "never",
+        "stacking": "normal",
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
-        }
+        },
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 0
       },
       "pluginVersion": "13.0.1",
       "targets": [
         {
           "columns": [
             {
-              "selector": "clockStart",
-              "text": "time",
-              "type": "timestamp"
-            },
-            {
-              "selector": "clockEnd",
-              "text": "timeEnd",
-              "type": "timestamp"
-            },
-            {
-              "selector": "kind",
-              "text": "kind",
-              "type": "string"
-            },
-            {
               "selector": "day",
               "text": "day",
               "type": "string"
+            },
+            {
+              "selector": "driveHours",
+              "text": "driveHours",
+              "type": "number"
+            },
+            {
+              "selector": "chargeHours",
+              "text": "chargeHours",
+              "type": "number"
+            },
+            {
+              "selector": "parkHours",
+              "text": "parkHours",
+              "type": "number"
             }
           ],
           "datasource": {
@@ -1105,56 +1129,16 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/timeline?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}",
+          "url": "/api/v1/cars/${car_id}/timeline/daily?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}",
           "url_options": {
             "data": "",
             "method": "GET"
           }
         }
       ],
-      "timeFrom": "now-36h",
-      "hideTimeOverride": false,
-      "title": "Activity axis",
-      "description": "One row per date. The x-axis is local clock time (about the last 36 hours), not the dashboard’s 30-day picker — otherwise a 20-minute drive is one pixel.",
-      "transformations": [
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "destinationType": "time",
-                "targetField": "time"
-              },
-              {
-                "destinationType": "time",
-                "targetField": "timeEnd"
-              }
-            ]
-          }
-        },
-        {
-          "id": "partitionByValues",
-          "options": {
-            "fields": [
-              "day"
-            ],
-            "keepFields": false
-          }
-        },
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "time",
-                "timeEnd",
-                "kind"
-              ]
-            }
-          }
-        }
-      ],
-      "type": "state-timeline"
+      "title": "Time per day",
+      "description": "Hours of drive / charge / park on each local day in the dashboard time range. Overnight parks count on the day they started.",
+      "type": "barchart"
     }
   ],
   "preload": false,

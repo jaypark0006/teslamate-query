@@ -1,5 +1,6 @@
 package com.teslamate.query.api.v1;
 
+import com.teslamate.query.dto.DailyOccupancyDto;
 import com.teslamate.query.dto.MapPointDto;
 import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.TimelineItemDto;
@@ -42,6 +43,21 @@ public class TripViewController {
             @RequestParam(required = false) String tempUnit
     ) {
         return tripViewService.timeline(carId, from, to, support.minParkMin(minParkMin),
+                support.units(lengthUnit, tempUnit), support.zone(timezone));
+    }
+
+    @GetMapping("/timeline/daily")
+    @Operation(summary = "Hours per local day of DRIVE / CHARGE / PARK (same window as /timeline)")
+    public List<DailyOccupancyDto> daily(
+            @PathVariable long carId,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(required = false) String minParkMin,
+            @RequestParam(required = false) String timezone,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return tripViewService.dailyOccupancy(carId, from, to, support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone));
     }
 
