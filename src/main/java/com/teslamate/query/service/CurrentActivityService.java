@@ -9,7 +9,6 @@ import com.teslamate.query.dao.SettingsDao;
 import com.teslamate.query.dao.UpdateDao;
 import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.db.condition.DriveSearchCondition;
-import com.teslamate.query.db.condition.PositionSearchCondition;
 import com.teslamate.query.db.condition.UpdateSearchCondition;
 import com.teslamate.query.dto.ActivityStatus;
 import com.teslamate.query.dto.CurrentChargingDto;
@@ -25,6 +24,9 @@ import com.teslamate.query.entity.PositionEntity;
 import com.teslamate.query.entity.SettingsEntity;
 import com.teslamate.query.entity.UpdateEntity;
 import com.teslamate.query.exception.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -36,6 +38,7 @@ import java.util.Optional;
 @Service
 public class CurrentActivityService {
 
+    private static final Logger log = LoggerFactory.getLogger(CurrentActivityService.class);
     private static final int ONE = 1;
 
     private final CarDao carDao;
@@ -67,6 +70,7 @@ public class CurrentActivityService {
         this.clock = clock;
     }
 
+    @Cacheable(value = "currentStatus", key = "#carId", sync = true)
     public CurrentStatusDto status(long carId) {
         Snapshot snap = load(carId);
         PositionEntity pos = snap.latestPosition.orElse(null);
@@ -93,6 +97,7 @@ public class CurrentActivityService {
         );
     }
 
+    @Cacheable(value = "currentCharging", key = "#carId", sync = true)
     public CurrentChargingDto charging(long carId) {
         Snapshot snap = load(carId);
         ChargingProcessEntity process = snap.openCharge
@@ -117,6 +122,7 @@ public class CurrentActivityService {
         );
     }
 
+    @Cacheable(value = "currentDrive", key = "#carId", sync = true)
     public CurrentDriveDto drive(long carId) {
         Snapshot snap = load(carId);
         DriveEntity drive = snap.openDrive
@@ -138,6 +144,7 @@ public class CurrentActivityService {
         );
     }
 
+    @Cacheable(value = "currentParking", key = "#carId", sync = true)
     public CurrentParkingDto parking(long carId) {
         Snapshot snap = load(carId);
         if (snap.status != ActivityStatus.PARKING) {
@@ -151,6 +158,7 @@ public class CurrentActivityService {
     }
 
     Snapshot load(long carId) {
+        long t0 = System.nanoTime();
         CarEntity car = carDao.findById(carId)
                 .orElseThrow(() -> new NotFoundException("Car not found: " + carId));
         Optional<ChargingProcessEntity> openCharge = first(
@@ -179,15 +187,13 @@ public class CurrentActivityService {
                             ONE, 0),
                     chargingProcessDao::findById);
         }
-        Optional<PositionEntity> latestPosition = first(
-                positionDao.findIds(
-                        PositionSearchCondition.builder().carId(carId).newestFirst().build(),
-                        ONE, 0),
-                positionDao::findById);
+        Optional<PositionEntity> latestPosition = positionDao.findLatestByCarId(carId);
         Instant now = clock.instant();
         Instant since = ActivityClassifier.statusSince(
                 status, openCharge, openDrive, lastDrive, lastCharge,
                 latestPosition.map(PositionEntity::date).orElse(now));
+        log.info("current snapshot carId={} status={} latestPosMs={}",
+                carId, status, (System.nanoTime() - t0) / 1_000_000);
         return new Snapshot(car, status, since, now, openCharge, openDrive, latestPosition);
     }
 
@@ -195,20 +201,11 @@ public class CurrentActivityService {
         if (hasTpms(latest)) {
             return latest;
         }
-        return first(
-                positionDao.findIds(
-                        PositionSearchCondition.builder().carId(carId).tpmsPresent(true).newestFirst().build(),
-                        ONE, 0),
-                positionDao::findById)
-                .orElse(null);
+        return positionDao.findLatestWithTpmsByCarId(carId).orElse(null);
     }
 
     private Optional<PositionEntity> latestPositionForDrive(long driveId) {
-        return first(
-                positionDao.findIds(
-                        PositionSearchCondition.builder().driveId(driveId).newestFirst().build(),
-                        ONE, 0),
-                positionDao::findById);
+        return positionDao.findLatestByDriveId(driveId);
     }
 
     private String latestFirmware(long carId) {

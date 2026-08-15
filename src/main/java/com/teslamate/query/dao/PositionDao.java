@@ -88,6 +88,34 @@ public class PositionDao {
                 .findOne());
     }
 
+    public Optional<PositionEntity> findLatestByCarId(long carId) {
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT * FROM positions WHERE id = ("
+                                + "SELECT MAX(id) FROM positions WHERE car_id = :carId)")
+                .bind("carId", carId)
+                .map(ConstructorMapper.of(PositionEntity.class))
+                .findOne());
+    }
+
+    public Optional<PositionEntity> findLatestWithTpmsByCarId(long carId) {
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT * FROM positions WHERE id = ("
+                                + "SELECT MAX(id) FROM positions WHERE car_id = :carId "
+                                + "AND tpms_pressure_fl IS NOT NULL)")
+                .bind("carId", carId)
+                .map(ConstructorMapper.of(PositionEntity.class))
+                .findOne());
+    }
+
+    public Optional<PositionEntity> findLatestByDriveId(long driveId) {
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT * FROM positions WHERE id = ("
+                                + "SELECT MAX(id) FROM positions WHERE drive_id = :driveId)")
+                .bind("driveId", driveId)
+                .map(ConstructorMapper.of(PositionEntity.class))
+                .findOne());
+    }
+
     public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds) {
         if (IdOrder.isEmpty(driveIds)) {
             return List.of();

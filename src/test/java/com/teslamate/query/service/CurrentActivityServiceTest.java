@@ -75,9 +75,7 @@ class CurrentActivityServiceTest {
                 Instant.parse("2026-08-13T07:38:21Z"), driveEnd, 54138.01, null)));
         when(chargingProcessDao.findIds(argThat(CurrentActivityServiceTest::completed), anyInt(), anyInt()))
                 .thenReturn(List.of());
-        when(positionDao.findIds(argThat(c -> c != null && !c.whereClause().contains("tpms")), anyInt(), anyInt()))
-                .thenReturn(List.of(10L));
-        when(positionDao.findById(10L)).thenReturn(Optional.of(position(posTime, 39, "161.58", 54139.1)));
+        when(positionDao.findLatestByCarId(1L)).thenReturn(Optional.of(position(posTime, 39, "161.58", 54139.1)));
         when(settingsDao.find()).thenReturn(Optional.of(settings("rated")));
         when(updateDao.findIds(ArgumentMatchers.any(), anyInt(), anyInt())).thenReturn(List.of(17L));
         when(updateDao.findById(17L)).thenReturn(Optional.of(
@@ -106,7 +104,7 @@ class CurrentActivityServiceTest {
                 .thenReturn(List.of(365L));
         when(chargingProcessDao.findById(365L)).thenReturn(Optional.of(chargeProcess()));
         when(driveDao.findIds(ArgumentMatchers.any(), anyInt(), anyInt())).thenReturn(List.of());
-        when(positionDao.findIds(ArgumentMatchers.any(), anyInt(), anyInt())).thenReturn(List.of());
+        when(positionDao.findLatestByCarId(1L)).thenReturn(Optional.empty());
         when(settingsDao.find()).thenReturn(Optional.of(settings("rated")));
         when(chargeDao.findLatestByProcessIds(List.of(365L))).thenReturn(Optional.of(chargeSample()));
 
@@ -141,7 +139,7 @@ class CurrentActivityServiceTest {
                 .thenReturn(List.of());
         when(chargingProcessDao.findIds(argThat(CurrentActivityServiceTest::completed), anyInt(), anyInt()))
                 .thenReturn(List.of());
-        when(positionDao.findIds(ArgumentMatchers.any(), anyInt(), anyInt())).thenReturn(List.of());
+        when(positionDao.findLatestByCarId(1L)).thenReturn(Optional.empty());
     }
 
     private static boolean openEnded(com.teslamate.query.db.JdbiCondition c) {
