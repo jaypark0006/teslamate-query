@@ -27,6 +27,7 @@ import com.teslamate.query.service.trip.ActivitySpan;
 import com.teslamate.query.service.trip.ActivityTimelineComposer;
 import com.teslamate.query.service.trip.DaySplit;
 import com.teslamate.query.service.trip.PathGeometry;
+import com.teslamate.query.service.trip.PathSimplify;
 import com.teslamate.query.service.trip.PlaceLabel;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -207,7 +208,7 @@ public class TripViewService {
                 .collect(Collectors.toMap(GeofenceEntity::id, Function.identity(), (a, b) -> a));
 
         Map<Long, List<PositionPathPoint>> byDrive = includePath
-                ? loadPaths(windowDrives)
+                ? loadPaths(windowDrives, from, to)
                 : Map.of();
 
         List<TimelineItemDto> timeline = new ArrayList<>();
@@ -285,14 +286,27 @@ public class TripViewService {
         out.add(new PositionPathPoint(driveId, p.date(), p.longitude(), p.latitude()));
     }
 
-    private Map<Long, List<PositionPathPoint>> loadPaths(List<DriveEntity> drives) {
+    private Map<Long, List<PositionPathPoint>> loadPaths(List<DriveEntity> drives, Instant from, Instant to) {
         if (drives.isEmpty()) {
             return Map.of();
         }
         List<Long> driveIds = drives.stream().map(DriveEntity::id).toList();
-        return positionDao.findPathPointsByDriveIds(driveIds).stream()
+        Map<Long, List<PositionPathPoint>> raw = positionDao.findPathPointsByDriveIds(driveIds).stream()
                 .filter(p -> p.driveId() != null)
                 .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
+        long spanSec = Math.max(1, to.getEpochSecond() - from.getEpochSecond());
+        double eps = PathSimplify.epsilonMeters(spanSec);
+        Map<Long, List<PositionPathPoint>> slim = new LinkedHashMap<>();
+        int rawN = 0;
+        int slimN = 0;
+        for (Map.Entry<Long, List<PositionPathPoint>> e : raw.entrySet()) {
+            rawN += e.getValue().size();
+            List<PositionPathPoint> keep = PathSimplify.douglasPeucker(e.getValue(), eps);
+            slimN += keep.size();
+            slim.put(e.getKey(), keep);
+        }
+        log.info("path simplify epsilon={}m {} -> {} pts", eps, rawN, slimN);
+        return slim;
     }
 
     private TimelineItemDto toItem(
