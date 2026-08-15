@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 
 import java.time.Instant;
@@ -22,8 +23,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorResponse> notFound(NotFoundException ex, ServerHttpRequest req) {
+        log.warn("404 {} {}", path(req), ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("NOT_FOUND", ex.getMessage(), Instant.now(), path(req)));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> responseStatus(ResponseStatusException ex, ServerHttpRequest req) {
+        int code = ex.getStatusCode().value();
+        String reason = ex.getReason() != null ? ex.getReason() : ex.getStatusCode().toString();
+        if (code == 404) {
+            log.warn("404 {} {}", path(req), reason);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("NOT_FOUND", reason, Instant.now(), path(req)));
+        }
+        if (ex.getStatusCode().is4xxClientError()) {
+            log.warn("{} {} {}", code, path(req), reason);
+            return ResponseEntity.status(ex.getStatusCode())
+                    .body(new ErrorResponse("BAD_REQUEST", reason, Instant.now(), path(req)));
+        }
+        log.error("{} {} {}", code, path(req), reason);
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new ErrorResponse("INTERNAL_ERROR", "Internal server error", Instant.now(), path(req)));
     }
 
     @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
