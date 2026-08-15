@@ -3,9 +3,11 @@ package com.teslamate.query.api.v1;
 import com.teslamate.query.dto.ActivityStatus;
 import com.teslamate.query.dto.CurrentParkingDto;
 import com.teslamate.query.dto.CurrentStatusDto;
+import com.teslamate.query.dto.RecentDriveDto;
 import com.teslamate.query.exception.GlobalExceptionHandler;
 import com.teslamate.query.exception.NotFoundException;
 import com.teslamate.query.service.CurrentActivityService;
+import com.teslamate.query.service.RecentActivityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 
 import static org.mockito.Mockito.when;
 
@@ -22,12 +26,14 @@ class CurrentActivityControllerWebTest {
 
     @Mock
     private CurrentActivityService service;
+    @Mock
+    private RecentActivityService recent;
 
     private WebTestClient client;
 
     @BeforeEach
     void setUp() {
-        client = WebTestClient.bindToController(new CurrentActivityController(service))
+        client = WebTestClient.bindToController(new CurrentActivityController(service, recent))
                 .controllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -69,5 +75,19 @@ class CurrentActivityControllerWebTest {
                 .expectBody()
                 .jsonPath("$.durationMin").isEqualTo(3174)
                 .jsonPath("$.outsideTempC").isEqualTo(33.5);
+    }
+
+    @Test
+    void recentDrivesOk() {
+        when(recent.recentDrives(1L, 5, "0")).thenReturn(List.of(new RecentDriveDto(
+                10L, List.of(10L),
+                Instant.parse("2026-08-13T07:10:58Z"), Instant.parse("2026-08-13T07:35:44Z"),
+                25, 17.0, 2.86, 20.7, 184.6, 163.9, 45, 39, 40.8)));
+        client.get().uri("/api/v1/cars/1/recent/drives?limit=5&mergeGapMin=0")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$[0].id").isEqualTo(10)
+                .jsonPath("$[0].energyUsedKwh").isEqualTo(2.86);
     }
 }

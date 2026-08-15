@@ -33,6 +33,40 @@ public class QuerySupport {
         return Math.min(page, 1_000_000);
     }
 
+    public int recentLimit(Integer limit) {
+        int n = limit == null ? 5 : limit;
+        if (n < 1) {
+            n = 5;
+        }
+        return Math.min(n, 10);
+    }
+
+    public int mergeGapMin(Integer mergeGapMin) {
+        if (mergeGapMin == null || mergeGapMin < 0) {
+            return 0;
+        }
+        return Math.min(mergeGapMin, 180);
+    }
+
+    /** Grafana may send 0, "Off", "5 min", or an unsubstituted ${merge_gap}. */
+    public int mergeGapMin(String raw) {
+        if (raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")) {
+            return 0;
+        }
+        String s = raw.trim();
+        if (s.equalsIgnoreCase("off") || s.equalsIgnoreCase("none")) {
+            return 0;
+        }
+        int i = 0;
+        while (i < s.length() && Character.isDigit(s.charAt(i))) {
+            i++;
+        }
+        if (i == 0) {
+            return 0;
+        }
+        return mergeGapMin(Integer.parseInt(s.substring(0, i)));
+    }
+
     public int size(Integer size) {
         int s = size == null ? properties.getDefaultPageSize() : size;
         if (s < 1) {

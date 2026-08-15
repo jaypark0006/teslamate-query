@@ -24,8 +24,6 @@ import com.teslamate.query.entity.PositionEntity;
 import com.teslamate.query.entity.SettingsEntity;
 import com.teslamate.query.entity.UpdateEntity;
 import com.teslamate.query.exception.NotFoundException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +36,6 @@ import java.util.Optional;
 @Service
 public class CurrentActivityService {
 
-    private static final Logger log = LoggerFactory.getLogger(CurrentActivityService.class);
     private static final int ONE = 1;
 
     private final CarDao carDao;
@@ -158,7 +155,6 @@ public class CurrentActivityService {
     }
 
     Snapshot load(long carId) {
-        long t0 = System.nanoTime();
         CarEntity car = carDao.findById(carId)
                 .orElseThrow(() -> new NotFoundException("Car not found: " + carId));
         Optional<ChargingProcessEntity> openCharge = first(
@@ -192,8 +188,6 @@ public class CurrentActivityService {
         Instant since = ActivityClassifier.statusSince(
                 status, openCharge, openDrive, lastDrive, lastCharge,
                 latestPosition.map(PositionEntity::date).orElse(now));
-        log.info("current snapshot carId={} status={} latestPosMs={}",
-                carId, status, (System.nanoTime() - t0) / 1_000_000);
         return new Snapshot(car, status, since, now, openCharge, openDrive, latestPosition);
     }
 
