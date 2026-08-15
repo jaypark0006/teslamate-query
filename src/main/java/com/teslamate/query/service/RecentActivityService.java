@@ -92,9 +92,12 @@ public class RecentActivityService {
         List<ChargingProcessEntity> rows = chargingProcessDao.findByIdsOrdered(ids);
         Map<Long, ChargeEntity> sampleByProcess = chargeDao.findLatestPerProcess(ids).stream()
                 .collect(Collectors.toMap(ChargeEntity::chargingProcessId, s -> s, (a, b) -> a));
+        Map<Long, List<ChargeEntity>> samplesByProcess = chargeDao.findByProcessIds(ids, 10_000).stream()
+                .collect(Collectors.groupingBy(ChargeEntity::chargingProcessId));
         String preferred = preferredRangeMode();
         return rows.stream()
-                .map(p -> toChargeDto(p, sampleByProcess.get(p.id()), preferred))
+                .map(p -> toChargeDto(
+                        p, sampleByProcess.get(p.id()), samplesByProcess.getOrDefault(p.id(), List.of()), preferred))
                 .toList();
     }
 
@@ -133,6 +136,12 @@ public class RecentActivityService {
             avgSpeed = BigDecimal.valueOf(distance / (duration * 60.0) * 3600.0)
                     .setScale(1, RoundingMode.HALF_UP).doubleValue();
         }
+        Double whKm = null;
+        if (energy != null && distance > 0.2) {
+            whKm = BigDecimal.valueOf(energy / distance * 1000.0)
+                    .setScale(0, RoundingMode.HALF_UP)
+                    .doubleValue();
+        }
         PositionEntity startPos = first.startPositionId() == null ? null : positions.get(first.startPositionId());
         PositionEntity endPos = last.endPositionId() == null ? null : positions.get(last.endPositionId());
         return new RecentDriveDto(
@@ -148,7 +157,8 @@ public class RecentActivityService {
                 endRange == null ? null : round1(endRange.doubleValue()),
                 startPos == null ? null : startPos.batteryLevel(),
                 endPos == null ? null : endPos.batteryLevel(),
-                avgSpeed
+                avgSpeed,
+                whKm
         );
     }
 
@@ -166,11 +176,18 @@ public class RecentActivityService {
                 .collect(Collectors.toMap(PositionEntity::id, p -> p, (a, b) -> a));
     }
 
-    private RecentChargeDto toChargeDto(ChargingProcessEntity p, ChargeEntity sample, String preferred) {
+    private RecentChargeDto toChargeDto(
+            ChargingProcessEntity p,
+            ChargeEntity sample,
+            List<ChargeEntity> samples,
+            String preferred
+    ) {
         ChargeType type = sample == null
                 ? null
                 : ActivityClassifier.chargeType(
                         sample.fastChargerPresent(), sample.fastChargerType(), sample.connChargeCable());
+        var band2080 = ChargeSessionMetrics.band20to80(samples);
+        var band80end = ChargeSessionMetrics.band80toEnd(samples);
         return new RecentChargeDto(
                 p.id(),
                 p.startDate(),
@@ -181,7 +198,13 @@ public class RecentActivityService {
                 pickRange(p.startIdealRangeKm(), p.startRatedRangeKm(), preferred),
                 pickRange(p.endIdealRangeKm(), p.endRatedRangeKm(), preferred),
                 p.startBatteryLevel(),
-                p.endBatteryLevel()
+                p.endBatteryLevel(),
+                ChargeSessionMetrics.efficiencyPercent(p),
+                ChargeSessionMetrics.avgPowerKw(p),
+                band2080 == null ? null : band2080.kw(),
+                band80end == null ? null : band80end.kw(),
+                band2080 == null ? null : band2080.label(),
+                band80end == null ? null : band80end.label()
         );
     }
 

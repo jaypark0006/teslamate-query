@@ -13,6 +13,12 @@ public record RecentChargeDto(
         BigDecimal startRangeKm,
         BigDecimal endRangeKm,
         Integer startSocPercent,
-        Integer endSocPercent
+        Integer endSocPercent,
+        Double efficiencyPercent,
+        Double avgPowerKw,
+        Double power20to80Kw,
+        Double power80toEndKw,
+        String power20to80Label,
+        String power80toEndLabel
 ) {
 }

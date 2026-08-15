@@ -68,6 +68,7 @@ class RecentActivityServiceTest {
         assertEquals(163.9, rows.getFirst().endRangeKm());
         assertEquals(2.86, rows.getFirst().energyUsedKwh());
         assertEquals(40.8, rows.getFirst().avgSpeedKmh());
+        assertEquals(168.0, rows.getFirst().efficiencyWhKm());
     }
 
     @Test
@@ -75,6 +76,7 @@ class RecentActivityServiceTest {
         when(chargingProcessDao.findIds(ArgumentMatchers.any(), anyInt(), anyInt())).thenReturn(List.of(365L));
         when(chargingProcessDao.findByIdsOrdered(List.of(365L))).thenReturn(List.of(process()));
         when(chargeDao.findLatestPerProcess(List.of(365L))).thenReturn(List.of(sample()));
+        when(chargeDao.findByProcessIds(List.of(365L), 10_000)).thenReturn(List.of());
         when(settingsDao.find()).thenReturn(Optional.of(settings("rated")));
 
         var rows = service.recentCharges(1L, 5);
@@ -83,6 +85,8 @@ class RecentActivityServiceTest {
         assertEquals(99, rows.getFirst().endSocPercent());
         assertEquals(ChargeType.DC, rows.getFirst().chargeType());
         assertEquals(new BigDecimal("31.72"), rows.getFirst().energyAddedKwh());
+        assertEquals(95.4, rows.getFirst().efficiencyPercent());
+        assertEquals(48.8, rows.getFirst().avgPowerKw());
     }
 
     @Test

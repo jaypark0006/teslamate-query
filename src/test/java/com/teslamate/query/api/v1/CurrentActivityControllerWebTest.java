@@ -82,7 +82,7 @@ class CurrentActivityControllerWebTest {
         when(recent.recentDrives(1L, 5, "0")).thenReturn(List.of(new RecentDriveDto(
                 10L, List.of(10L),
                 Instant.parse("2026-08-13T07:10:58Z"), Instant.parse("2026-08-13T07:35:44Z"),
-                25, 17.0, 2.86, 20.7, 184.6, 163.9, 45, 39, 40.8)));
+                25, 17.0, 2.86, 20.7, 184.6, 163.9, 45, 39, 40.8, 168.0)));
         client.get().uri("/api/v1/cars/1/recent/drives?limit=5&mergeGapMin=0")
                 .exchange()
                 .expectStatus().isOk()

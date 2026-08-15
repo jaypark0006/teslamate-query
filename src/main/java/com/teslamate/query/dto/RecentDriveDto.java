@@ -16,6 +16,7 @@ public record RecentDriveDto(
         Double endRangeKm,
         Integer startSocPercent,
         Integer endSocPercent,
-        Double avgSpeedKmh
+        Double avgSpeedKmh,
+        Double efficiencyWhKm
 ) {
 }

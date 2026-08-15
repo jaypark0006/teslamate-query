@@ -84,6 +84,20 @@ public class ChargeDao {
                 .list());
     }
 
+    public List<ChargeEntity> findByProcessIds(Collection<Long> processIds, int limit) {
+        if (IdOrder.isEmpty(processIds)) {
+            return List.of();
+        }
+        int cap = Math.min(Math.max(limit, 1), 10_000);
+        return jdbi.withHandle(h -> h.createQuery(
+                        "SELECT * FROM charges WHERE charging_process_id IN (<processIds>) "
+                                + "ORDER BY charging_process_id, date LIMIT :limit")
+                .bindList("processIds", processIds)
+                .bind("limit", cap)
+                .map(ConstructorMapper.of(ChargeEntity.class))
+                .list());
+    }
+
     public Optional<ChargeEntity> findLatestByProcessIds(Collection<Long> processIds) {
         if (IdOrder.isEmpty(processIds)) {
             return Optional.empty();
