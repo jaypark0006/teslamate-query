@@ -37,6 +37,11 @@ public class PositionSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder tpmsPresent(Boolean value) {
+            rawNoParam("tpms_pressure_fl IS NOT NULL", Boolean.TRUE.equals(value));
+            return this;
+        }
+
         public Builder newestFirst() {
             orderBy("date", "DESC");
             return this;

@@ -19,6 +19,7 @@ public record ChargeEntity(
         @ColumnName("charger_phases") Integer chargerPhases,
         @ColumnName("fast_charger_present") Boolean fastChargerPresent,
         @ColumnName("fast_charger_type") String fastChargerType,
+        @ColumnName("conn_charge_cable") String connChargeCable,
         @ColumnName("ideal_battery_range_km") BigDecimal idealBatteryRangeKm,
         @ColumnName("rated_battery_range_km") BigDecimal ratedBatteryRangeKm,
         @ColumnName("outside_temp") BigDecimal outsideTemp,

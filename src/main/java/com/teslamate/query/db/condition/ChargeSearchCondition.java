@@ -32,6 +32,11 @@ public class ChargeSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder newestFirst() {
+            orderBy("date", "DESC");
+            return this;
+        }
+
         public ChargeSearchCondition build() {
             if (sortClause().isEmpty()) {
                 orderBy("date", "ASC");

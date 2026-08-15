@@ -52,6 +52,16 @@ public class DriveSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder completedOnly(Boolean value) {
+            rawNoParam("end_date IS NOT NULL", Boolean.TRUE.equals(value));
+            return this;
+        }
+
+        public Builder newestEndFirst() {
+            orderBy("end_date", "DESC");
+            return this;
+        }
+
         /** Interval overlaps [from, to]: start_date <= to AND (end_date IS NULL OR end_date >= from). */
         public Builder overlapping(Instant from, Instant to) {
             if (to != null) {

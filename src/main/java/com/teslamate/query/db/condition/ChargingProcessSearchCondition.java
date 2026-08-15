@@ -38,6 +38,16 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder completedOnly(Boolean value) {
+            rawNoParam("end_date IS NOT NULL", Boolean.TRUE.equals(value));
+            return this;
+        }
+
+        public Builder newestEndFirst() {
+            orderBy("end_date", "DESC");
+            return this;
+        }
+
         public Builder excludeZeroEnergy(Boolean value) {
             rawNoParam("(charge_energy_added IS NULL OR charge_energy_added > 0)",
                     Boolean.TRUE.equals(value));

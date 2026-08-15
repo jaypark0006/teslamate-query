@@ -59,4 +59,11 @@ class JdbiConditionTest {
         var c = ChargingProcessSearchCondition.builder().excludeZeroEnergy(true).build();
         assertTrue(c.whereClause().contains("charge_energy_added"));
     }
+
+    @Test
+    void completedOnlyOrdersByEndDate() {
+        var c = DriveSearchCondition.builder().carId(1L).completedOnly(true).newestEndFirst().build();
+        assertTrue(c.whereClause().contains("end_date IS NOT NULL"));
+        assertTrue(c.sortClause().contains("end_date DESC"));
+    }
 }

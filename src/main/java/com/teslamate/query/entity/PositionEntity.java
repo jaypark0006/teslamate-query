@@ -23,5 +23,17 @@ public record PositionEntity(
         @ColumnName("battery_level") Integer batteryLevel,
         @ColumnName("usable_battery_level") Integer usableBatteryLevel,
         @ColumnName("outside_temp") BigDecimal outsideTemp,
-        @ColumnName("inside_temp") BigDecimal insideTemp
+        @ColumnName("inside_temp") BigDecimal insideTemp,
+        @ColumnName("fan_status") Integer fanStatus,
+        @ColumnName("driver_temp_setting") BigDecimal driverTempSetting,
+        @ColumnName("passenger_temp_setting") BigDecimal passengerTempSetting,
+        @ColumnName("is_climate_on") Boolean climateOn,
+        @ColumnName("is_rear_defroster_on") Boolean rearDefrosterOn,
+        @ColumnName("is_front_defroster_on") Boolean frontDefrosterOn,
+        @ColumnName("battery_heater") Boolean batteryHeater,
+        @ColumnName("battery_heater_on") Boolean batteryHeaterOn,
+        @ColumnName("tpms_pressure_fl") BigDecimal tpmsPressureFl,
+        @ColumnName("tpms_pressure_fr") BigDecimal tpmsPressureFr,
+        @ColumnName("tpms_pressure_rl") BigDecimal tpmsPressureRl,
+        @ColumnName("tpms_pressure_rr") BigDecimal tpmsPressureRr
 ) {}
