@@ -47,6 +47,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -67,8 +68,9 @@ public class TripViewService {
     private static final Logger log = LoggerFactory.getLogger(TripViewService.class);
 
     static final int DEFAULT_MIN_PARK_MIN = 10;
-    static final int DEFAULT_DRIVE_LIMIT = 80;
-    static final int DEFAULT_CHARGE_LIMIT = 200;
+    /** Safety cap only. Timeline lists every overlapping drive/charge below this. */
+    static final int DEFAULT_DRIVE_LIMIT = 2_000;
+    static final int DEFAULT_CHARGE_LIMIT = 1_000;
     static final int MAX_CHEVRONS = 80;
     static final int AXIS_MIN_VISUAL_MIN = 12;
     static final String COLOR_DRIVE = "#3b82f6";
@@ -154,21 +156,29 @@ public class TripViewService {
         Instant now = clock.instant();
 
         List<DriveEntity> windowDrives = loadOverlappingDrives(carId, from, to);
-        List<DriveEntity> neighborBefore = loadNeighborBefore(carId, from);
         List<ChargingProcessEntity> charges = loadOverlappingCharges(carId, from, to);
+        Instant composeFrom = from;
+        if (windowDrives.size() == DEFAULT_DRIVE_LIMIT && !windowDrives.isEmpty()) {
+            Instant first = windowDrives.getFirst().startDate();
+            if (first != null && first.isAfter(from)) {
+                composeFrom = first;
+                log.info("trip drives capped at {} ; compose from {}", DEFAULT_DRIVE_LIMIT, first);
+            }
+        }
 
+        List<DriveEntity> neighborBefore = loadNeighborBefore(carId, composeFrom);
         Long seedPos = null;
         Long seedDrive = null;
         if (!neighborBefore.isEmpty()) {
             DriveEntity n = neighborBefore.getFirst();
-            if (n.endDate() != null && n.endDate().compareTo(from) <= 0) {
+            if (n.endDate() != null && n.endDate().compareTo(composeFrom) <= 0) {
                 seedPos = n.endPositionId();
                 seedDrive = n.id();
             }
         }
 
         List<ActivitySpan> spans = ActivityTimelineComposer.compose(
-                windowDrives, charges, from, to, now, minPark, seedPos, seedDrive);
+                windowDrives, charges, composeFrom, to, now, minPark, seedPos, seedDrive);
         LocalDate dummyDay = now.atZone(zone).toLocalDate().minusDays(1);
 
         Map<Long, DriveEntity> driveById = windowDrives.stream()
@@ -542,9 +552,12 @@ public class TripViewService {
         DriveSearchCondition cond = DriveSearchCondition.builder()
                 .carId(carId)
                 .overlapping(from, to)
-                .oldestFirst()
                 .build();
-        return driveDao.findByIdsOrdered(driveDao.findIds(cond, DEFAULT_DRIVE_LIMIT, 0));
+        List<DriveEntity> rows = driveDao.findByIdsOrdered(driveDao.findIds(cond, DEFAULT_DRIVE_LIMIT, 0));
+        return rows.stream()
+                .filter(d -> d.startDate() != null)
+                .sorted(Comparator.comparing(DriveEntity::startDate))
+                .toList();
     }
 
     private List<DriveEntity> loadNeighborBefore(long carId, Instant from) {
@@ -559,9 +572,13 @@ public class TripViewService {
         ChargingProcessSearchCondition cond = ChargingProcessSearchCondition.builder()
                 .carId(carId)
                 .overlapping(from, to)
-                .oldestFirst()
                 .build();
-        return chargingProcessDao.findByIdsOrdered(chargingProcessDao.findIds(cond, DEFAULT_CHARGE_LIMIT, 0));
+        List<ChargingProcessEntity> rows =
+                chargingProcessDao.findByIdsOrdered(chargingProcessDao.findIds(cond, DEFAULT_CHARGE_LIMIT, 0));
+        return rows.stream()
+                .filter(c -> c.startDate() != null)
+                .sorted(Comparator.comparing(ChargingProcessEntity::startDate))
+                .toList();
     }
 
     private CarEntity requireCar(long carId) {
