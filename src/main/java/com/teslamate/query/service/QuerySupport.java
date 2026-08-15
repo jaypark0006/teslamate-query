@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 @Component
 public class QuerySupport {
@@ -97,6 +98,18 @@ public class QuerySupport {
             throw new BadRequestException("page too large");
         }
         return (int) off;
+    }
+
+    /** Grafana may send {@code browser}, an IANA zone, or an unsubstituted ${__timezone}. */
+    public ZoneId zone(String raw) {
+        if (raw == null || raw.isBlank() || raw.contains("${") || raw.equalsIgnoreCase("browser")) {
+            return ZoneId.of("Asia/Shanghai");
+        }
+        try {
+            return ZoneId.of(raw.trim());
+        } catch (Exception e) {
+            return ZoneId.of("Asia/Shanghai");
+        }
     }
 
     public Instant parseInstant(String value, String name) {

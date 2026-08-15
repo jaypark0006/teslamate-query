@@ -39,6 +39,9 @@ class QuerySupportTest {
         assertEquals(10, support.minParkMin((String) null));
         assertEquals(10, support.minParkMin("${min_park}"));
         assertEquals(15, support.minParkMin("15 min"));
+        assertEquals("Asia/Shanghai", support.zone(null).getId());
+        assertEquals("Asia/Shanghai", support.zone("browser").getId());
+        assertEquals("UTC", support.zone("UTC").getId());
     }
 
     @Test

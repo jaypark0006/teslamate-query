@@ -93,11 +93,12 @@ public class MapController {
             @RequestParam String from,
             @RequestParam String to,
             @RequestParam(required = false) String minParkMin,
+            @RequestParam(required = false) String timezone,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
         return tripViewService.timeline(carId, from, to, support.minParkMin(minParkMin),
-                support.units(lengthUnit, tempUnit));
+                support.units(lengthUnit, tempUnit), support.zone(timezone));
     }
 
     @GetMapping("/series/battery")

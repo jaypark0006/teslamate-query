@@ -19,5 +19,7 @@ public record TimelineItemDto(
         Integer startSocPercent,
         Integer endSocPercent,
         Double energyKwh,
-        String chargeType
+        String chargeType,
+        String day,
+        Integer dayBand
 ) {}

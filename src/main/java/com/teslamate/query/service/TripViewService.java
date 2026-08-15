@@ -25,6 +25,7 @@ import com.teslamate.query.entity.PositionPathPoint;
 import com.teslamate.query.exception.NotFoundException;
 import com.teslamate.query.service.trip.ActivitySpan;
 import com.teslamate.query.service.trip.ActivityTimelineComposer;
+import com.teslamate.query.service.trip.DaySplit;
 import com.teslamate.query.service.trip.PathGeometry;
 import com.teslamate.query.service.trip.PlaceLabel;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -38,6 +39,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -105,32 +107,33 @@ public class TripViewService {
     }
 
     public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
-                                          DisplayUnits units) {
-        return build(carId, fromStr, toStr, minParkMin, units, false).timeline;
+                                          DisplayUnits units, ZoneId zone) {
+        return build(carId, fromStr, toStr, minParkMin, units, false, zone).timeline;
     }
 
     public List<MapPointDto> points(long carId, String fromStr, String toStr, Integer minParkMin,
                                     String kinds, DisplayUnits units) {
-        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, true);
+        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, true, null);
         Set<String> want = parseKinds(kinds);
         return snap.points.stream().filter(p -> want.contains(p.kind())).toList();
     }
 
     public MapTracksDto geoJson(long carId, String fromStr, String toStr, Integer minParkMin,
                                 DisplayUnits units) {
-        return build(carId, fromStr, toStr, minParkMin, units, true).geoJson;
+        return build(carId, fromStr, toStr, minParkMin, units, true, null).geoJson;
     }
 
     private Snapshot build(long carId, String fromStr, String toStr, Integer minParkMin, DisplayUnits units,
-                           boolean includePath) {
+                           boolean includePath, ZoneId zone) {
         int minPark = minParkMin == null ? DEFAULT_MIN_PARK_MIN : Math.max(minParkMin, 0);
+        ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         String unitKey = units == null ? "km-C" : units.length() + "-" + units.temperature();
-        String key = carId + "|" + fromStr + "|" + toStr + "|" + minPark + "|" + unitKey + "|" + includePath;
-        return windowCache.get(key, k -> buildUncached(carId, fromStr, toStr, minPark, units, includePath));
+        String key = carId + "|" + fromStr + "|" + toStr + "|" + minPark + "|" + unitKey + "|" + includePath + "|" + z.getId();
+        return windowCache.get(key, k -> buildUncached(carId, fromStr, toStr, minPark, units, includePath, z));
     }
 
     private Snapshot buildUncached(long carId, String fromStr, String toStr, int minPark, DisplayUnits units,
-                                   boolean includePath) {
+                                   boolean includePath, ZoneId zone) {
         long started = System.nanoTime();
         requireCar(carId);
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
@@ -155,6 +158,7 @@ public class TripViewService {
 
         List<ActivitySpan> spans = ActivityTimelineComposer.compose(
                 windowDrives, charges, from, to, now, minPark, seedPos, seedDrive);
+        List<ActivitySpan> daySpans = DaySplit.splitByLocalDays(spans, zone);
 
         Map<Long, DriveEntity> driveById = windowDrives.stream()
                 .collect(Collectors.toMap(DriveEntity::id, Function.identity(), (a, b) -> a));
@@ -205,42 +209,45 @@ public class TripViewService {
                 : Map.of();
 
         List<TimelineItemDto> timeline = new ArrayList<>();
+        for (int i = 0; i < daySpans.size(); i++) {
+            ActivitySpan span = daySpans.get(i);
+            boolean last = i == daySpans.size() - 1;
+            boolean ongoingPark = last && span.kind() == TimelineKind.PARK
+                    && liveWindow(to, now) && openEnded(span.end(), now);
+            timeline.add(toItem(i + 1, span, driveById, chargeById, sampleByProcess,
+                    posById, addrById, geoById, u, zone, ongoingPark, List.of()));
+        }
+
         List<MapPointDto> points = new ArrayList<>();
         List<MapTracksDto.Feature> features = new ArrayList<>();
         int totalPts = 0;
         int chevronIdx = 0;
         int chevronBudget = MAX_CHEVRONS;
-
-        for (int i = 0; i < spans.size(); i++) {
-            ActivitySpan span = spans.get(i);
-            int seq = i + 1;
-            switch (span.kind()) {
-                case DRIVE -> {
-                    DriveEntity d = span.sourceId() == null ? null : driveById.get(span.sourceId());
-                    List<PositionPathPoint> path = d == null ? List.of() : byDrive.getOrDefault(d.id(), List.of());
-                    if (includePath && path.size() < 2 && d != null) {
-                        path = endpointsAsPath(d, posById);
+        if (includePath) {
+            for (int i = 0; i < spans.size(); i++) {
+                ActivitySpan span = spans.get(i);
+                switch (span.kind()) {
+                    case DRIVE -> {
+                        DriveEntity d = span.sourceId() == null ? null : driveById.get(span.sourceId());
+                        List<PositionPathPoint> path = d == null ? List.of() : byDrive.getOrDefault(d.id(), List.of());
+                        if (path.size() < 2 && d != null) {
+                            path = endpointsAsPath(d, posById);
+                        }
+                        TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
+                                posById, addrById, geoById, u, zone, false, path);
+                        totalPts += addDrivePoints(points, features, item, path, from, chevronIdx, chevronBudget);
+                        if (path.size() >= 2) {
+                            chevronIdx += Math.max(1, path.size() / 8);
+                            chevronBudget = Math.max(0, chevronBudget - Math.max(1, path.size() / 8));
+                        }
                     }
-                    TimelineItemDto item = toDriveItem(seq, span, d, path, posById, addrById, geoById, u);
-                    timeline.add(item);
-                    totalPts += addDrivePoints(points, features, item, path, from, chevronIdx, chevronBudget);
-                    if (path.size() >= 2) {
-                        chevronIdx += Math.max(1, path.size() / 8);
-                        chevronBudget = Math.max(0, chevronBudget - Math.max(1, path.size() / 8));
+                    case CHARGE, PARK -> {
+                        boolean ongoing = i == spans.size() - 1 && span.kind() == TimelineKind.PARK
+                                && liveWindow(to, now) && openEnded(span.end(), now);
+                        TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
+                                posById, addrById, geoById, u, zone, ongoing, List.of());
+                        addStopPoint(points, features, item, span.kind() == TimelineKind.CHARGE ? "charge" : "park");
                     }
-                }
-                case CHARGE -> {
-                    ChargingProcessEntity c = span.sourceId() == null ? null : chargeById.get(span.sourceId());
-                    ChargeEntity sample = c == null ? null : sampleByProcess.get(c.id());
-                    TimelineItemDto item = toChargeItem(seq, span, c, sample, posById, addrById, geoById);
-                    timeline.add(item);
-                    addStopPoint(points, features, item, "charge");
-                }
-                case PARK -> {
-                    boolean ongoing = i == spans.size() - 1 && liveWindow(to, now) && openEnded(span.end(), now);
-                    TimelineItemDto item = toParkItem(seq, span, posById, ongoing);
-                    timeline.add(item);
-                    addStopPoint(points, features, item, "park");
                 }
             }
         }
@@ -286,12 +293,41 @@ public class TripViewService {
                 .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
     }
 
+    private TimelineItemDto toItem(
+            int seq,
+            ActivitySpan span,
+            Map<Long, DriveEntity> driveById,
+            Map<Long, ChargingProcessEntity> chargeById,
+            Map<Long, ChargeEntity> sampleByProcess,
+            Map<Long, PositionEntity> posById,
+            Map<Long, AddressEntity> addrById,
+            Map<Long, GeofenceEntity> geoById,
+            DisplayUnits units,
+            ZoneId zone,
+            boolean ongoingPark,
+            List<PositionPathPoint> path
+    ) {
+        return switch (span.kind()) {
+            case DRIVE -> {
+                DriveEntity d = span.sourceId() == null ? null : driveById.get(span.sourceId());
+                yield toDriveItem(seq, span, d, path, posById, addrById, geoById, units, zone);
+            }
+            case CHARGE -> {
+                ChargingProcessEntity c = span.sourceId() == null ? null : chargeById.get(span.sourceId());
+                ChargeEntity sample = c == null ? null : sampleByProcess.get(c.id());
+                yield toChargeItem(seq, span, c, sample, posById, addrById, geoById, zone);
+            }
+            case PARK -> toParkItem(seq, span, posById, ongoingPark, zone);
+        };
+    }
+
     private TimelineItemDto toDriveItem(
             int seq, ActivitySpan span, DriveEntity d, List<PositionPathPoint> path,
             Map<Long, PositionEntity> posById,
             Map<Long, AddressEntity> addrById,
             Map<Long, GeofenceEntity> geoById,
-            DisplayUnits units
+            DisplayUnits units,
+            ZoneId zone
     ) {
         String fromPlace = d == null ? null : PlaceLabel.of(
                 d.startGeofenceId() == null ? null : geoById.get(d.startGeofenceId()),
@@ -318,14 +354,16 @@ public class TripViewService {
         return new TimelineItemDto(
                 seq, TimelineKind.DRIVE, span.sourceId(), span.start(), span.end(),
                 round1(span.durationMin()), title, detail, COLOR_DRIVE,
-                latLon[0], latLon[1], distance, startSoc, endSoc, null, null);
+                latLon[0], latLon[1], distance, startSoc, endSoc, null, null,
+                DaySplit.dayLabel(span.start(), zone), DaySplit.dayBand(span.start(), zone));
     }
 
     private TimelineItemDto toChargeItem(
             int seq, ActivitySpan span, ChargingProcessEntity c, ChargeEntity sample,
             Map<Long, PositionEntity> posById,
             Map<Long, AddressEntity> addrById,
-            Map<Long, GeofenceEntity> geoById
+            Map<Long, GeofenceEntity> geoById,
+            ZoneId zone
     ) {
         String chargeType = TripMapService.chargeType(sample);
         boolean dc = "dc".equals(chargeType);
@@ -345,17 +383,20 @@ public class TripViewService {
         return new TimelineItemDto(
                 seq, TimelineKind.CHARGE, span.sourceId(), span.start(), span.end(),
                 round1(span.durationMin()), title, detail, dc ? COLOR_CHARGE_DC : COLOR_CHARGE,
-                latLon[0], latLon[1], null, startSoc, endSoc, energy, chargeType == null ? null : chargeType.toUpperCase(Locale.ROOT));
+                latLon[0], latLon[1], null, startSoc, endSoc, energy,
+                chargeType == null ? null : chargeType.toUpperCase(Locale.ROOT),
+                DaySplit.dayLabel(span.start(), zone), DaySplit.dayBand(span.start(), zone));
     }
 
     private TimelineItemDto toParkItem(int seq, ActivitySpan span, Map<Long, PositionEntity> posById,
-                                       boolean ongoing) {
+                                       boolean ongoing, ZoneId zone) {
         Double[] latLon = latLon(span.locationPositionId(), posById);
         String durationLabel = parkDurationLabel(span.durationMin(), ongoing);
         return new TimelineItemDto(
                 seq, TimelineKind.PARK, null, span.start(), span.end(),
                 ongoing ? null : round1(span.durationMin()), "Parked", durationLabel, COLOR_PARK,
-                latLon[0], latLon[1], null, null, null, null, null);
+                latLon[0], latLon[1], null, null, null, null, null,
+                DaySplit.dayLabel(span.start(), zone), DaySplit.dayBand(span.start(), zone));
     }
 
     private int addDrivePoints(

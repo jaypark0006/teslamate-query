@@ -579,6 +579,68 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "day"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Day"
+              },
+              {
+                "id": "custom.width",
+                "value": 88
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dayBand"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "applyToRow": true,
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": true
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#1b1f27",
+                      "value": 0
+                    },
+                    {
+                      "color": "#1a2430",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "time"
             },
             "properties": [
@@ -764,6 +826,16 @@
               "type": "number"
             },
             {
+              "selector": "day",
+              "text": "day",
+              "type": "string"
+            },
+            {
+              "selector": "dayBand",
+              "text": "dayBand",
+              "type": "number"
+            },
+            {
               "selector": "start",
               "text": "time",
               "type": "timestamp"
@@ -810,7 +882,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/timeline?from=${__from:date:iso}&to=${__to:date:iso}&minParkMin=${min_park}",
+          "url": "/api/v1/cars/${car_id}/timeline?from=${__from:date:iso}&to=${__to:date:iso}&minParkMin=${min_park}&timezone=${__timezone}",
           "url_options": {
             "data": "",
             "method": "GET"
@@ -827,12 +899,13 @@
             },
             "indexByName": {
               "seq": 0,
-              "time": 1,
-              "timeEnd": 2,
-              "kind": 3,
-              "title": 4,
-              "detail": 5,
-              "durationMin": 6
+              "day": 1,
+              "time": 2,
+              "timeEnd": 3,
+              "kind": 4,
+              "title": 5,
+              "detail": 6,
+              "durationMin": 7
             },
             "renameByName": {}
           }
@@ -891,7 +964,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 10,
         "w": 24,
         "x": 0,
         "y": 20
@@ -904,9 +977,10 @@
           "placement": "bottom",
           "showLegend": true
         },
-        "mergeValues": true,
-        "rowHeight": 0.85,
-        "showValue": "auto",
+        "mergeValues": false,
+        "perPage": 14,
+        "rowHeight": 0.7,
+        "showValue": "always",
         "tooltip": {
           "mode": "single",
           "sort": "none"
@@ -925,6 +999,45 @@
         }
       ],
       "title": "Activity axis",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "time"
+              },
+              {
+                "destinationType": "time",
+                "targetField": "timeEnd"
+              }
+            ]
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "time",
+                "timeEnd",
+                "kind",
+                "day"
+              ]
+            }
+          }
+        },
+        {
+          "id": "partitionByValues",
+          "options": {
+            "fields": [
+              "day"
+            ],
+            "keepFields": true
+          }
+        }
+      ],
       "type": "state-timeline"
     }
   ],
