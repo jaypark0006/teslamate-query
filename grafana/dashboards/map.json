@@ -192,7 +192,7 @@
       },
       "gridPos": {
         "h": 18,
-        "w": 16,
+        "w": 14,
         "x": 0,
         "y": 2
       },
@@ -614,7 +614,10 @@
             "cellOptions": {
               "type": "auto"
             },
-            "inspect": false
+            "inspect": false,
+            "minWidth": 36,
+            "filterable": false,
+            "wrapText": false
           },
           "mappings": []
         },
@@ -647,7 +650,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 88
+                "value": 72
               }
             ]
           },
@@ -709,11 +712,11 @@
               },
               {
                 "id": "custom.width",
-                "value": 118
+                "value": 72
               },
               {
                 "id": "unit",
-                "value": "time:MM-DD HH:mm"
+                "value": "time:HH:mm"
               }
             ]
           },
@@ -729,7 +732,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 64
+                "value": 48
               },
               {
                 "id": "unit",
@@ -749,7 +752,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 78
+                "value": 56
               },
               {
                 "id": "custom.cellOptions",
@@ -806,6 +809,10 @@
                 "value": "What"
               },
               {
+                "id": "custom.minWidth",
+                "value": 64
+              },
+              {
                 "id": "links",
                 "value": [
                   {
@@ -825,6 +832,10 @@
               {
                 "id": "displayName",
                 "value": "Detail"
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 72
               }
             ]
           },
@@ -852,8 +863,8 @@
       },
       "gridPos": {
         "h": 18,
-        "w": 8,
-        "x": 16,
+        "w": 10,
+        "x": 14,
         "y": 2
       },
       "id": 3,
@@ -956,17 +967,17 @@
             "excludeByName": {
               "id": true,
               "clockStart": true,
-              "clockEnd": true
+              "clockEnd": true,
+              "seq": true,
+              "durationMin": true
             },
             "indexByName": {
-              "seq": 0,
-              "day": 1,
-              "time": 2,
-              "timeEnd": 3,
-              "kind": 4,
-              "title": 5,
-              "detail": 6,
-              "durationMin": 7
+              "day": 0,
+              "time": 1,
+              "timeEnd": 2,
+              "kind": 3,
+              "title": 4,
+              "detail": 5
             },
             "renameByName": {}
           }
