@@ -895,7 +895,9 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "id": true
+              "id": true,
+              "clockStart": true,
+              "clockEnd": true
             },
             "indexByName": {
               "seq": 0,
@@ -915,8 +917,8 @@
     },
     {
       "datasource": {
-        "type": "datasource",
-        "uid": "-- Dashboard --"
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${ds}"
       },
       "fieldConfig": {
         "defaults": {
@@ -989,15 +991,49 @@
       "pluginVersion": "13.0.1",
       "targets": [
         {
+          "columns": [
+            {
+              "selector": "clockStart",
+              "text": "time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "clockEnd",
+              "text": "timeEnd",
+              "type": "timestamp"
+            },
+            {
+              "selector": "kind",
+              "text": "kind",
+              "type": "string"
+            },
+            {
+              "selector": "day",
+              "text": "day",
+              "type": "string"
+            }
+          ],
           "datasource": {
-            "type": "datasource",
-            "uid": "-- Dashboard --"
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${ds}"
           },
-          "panelId": 3,
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
           "refId": "A",
-          "withTransforms": false
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/cars/${car_id}/timeline?from=${__from:date:iso}&to=${__to:date:iso}&minParkMin=${min_park}&timezone=${__timezone}",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
         }
       ],
+      "timeFrom": "now/d-1d",
+      "timeShift": "1d/d",
+      "hideTimeOverride": true,
       "title": "Activity axis",
       "transformations": [
         {
@@ -1013,19 +1049,6 @@
                 "targetField": "timeEnd"
               }
             ]
-          }
-        },
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "time",
-                "timeEnd",
-                "kind",
-                "day"
-              ]
-            }
           }
         },
         {

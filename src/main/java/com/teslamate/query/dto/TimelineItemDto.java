@@ -21,5 +21,7 @@ public record TimelineItemDto(
         Double energyKwh,
         String chargeType,
         String day,
-        Integer dayBand
+        Integer dayBand,
+        Instant clockStart,
+        Instant clockEnd
 ) {}
