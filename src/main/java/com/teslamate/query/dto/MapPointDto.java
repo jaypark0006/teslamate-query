@@ -18,5 +18,7 @@ public record MapPointDto(
         Double elapsedMin,
         String color,
         String label,
-        String durationLabel
+        String durationLabel,
+        Double durationMin,
+        Double energyKwh
 ) {}

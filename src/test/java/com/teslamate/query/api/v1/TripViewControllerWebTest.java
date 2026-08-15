@@ -69,7 +69,7 @@ class TripViewControllerWebTest {
         when(tripViewService.points(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
                 eq(10), eq("drive"), any())).thenReturn(List.of(
                 new MapPointDto(Instant.parse("2026-08-16T02:00:00Z"), 29.5, 106.4,
-                        "drive", 9L, 1, 90.0, 120.0, "#3b82f6", "Home → Work", null)));
+                        "drive", 9L, 1, 90.0, 120.0, "#3b82f6", "Home → Work", null, null, null)));
         client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/map/points")
                         .queryParam("from", "2026-08-16T00:00:00Z")
                         .queryParam("to", "2026-08-16T12:00:00Z")

@@ -27,6 +27,7 @@ import com.teslamate.query.service.trip.ActivitySpan;
 import com.teslamate.query.service.trip.ActivityTimelineComposer;
 import com.teslamate.query.service.trip.DaySplit;
 import com.teslamate.query.service.trip.PathGeometry;
+import com.teslamate.query.service.trip.MapStopMerge;
 import com.teslamate.query.service.trip.PathSimplify;
 import com.teslamate.query.service.trip.PlaceLabel;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -253,6 +254,7 @@ public class TripViewService {
                     }
                 }
             }
+            points = MapStopMerge.mergeStops(points);
         }
 
         int parkCount = (int) timeline.stream().filter(t -> t.kind() == TimelineKind.PARK).count();
@@ -459,6 +461,8 @@ public class TripViewService {
                     round1(elapsed),
                     COLOR_DRIVE,
                     item.title(),
+                    null,
+                    null,
                     null));
             coords.add(List.of(p.longitude(), p.latitude()));
             if (h != null && arrowsLeft > 0 && i > 0 && i < path.size() - 1 && i % arrowEvery == 0) {
@@ -498,10 +502,15 @@ public class TripViewService {
         if (item.latitude() == null || item.longitude() == null) {
             return;
         }
+        boolean ongoingPark = "park".equals(kind) && item.durationMin() == null
+                && "-".equals(item.detail());
+        String mapLabel = "charge".equals(kind)
+                ? MapStopMerge.chargeLabel(1, item.chargeType(), item.energyKwh(), item.durationMin())
+                : MapStopMerge.parkLabel(1, item.durationMin(), ongoingPark);
         points.add(new MapPointDto(
                 item.start(), item.latitude(), item.longitude(),
                 kind, item.id(), item.seq(), null, null, item.color(), item.title(),
-                item.detail()));
+                mapLabel, item.durationMin(), item.energyKwh()));
         Map<String, Object> props = new HashMap<>();
         props.put("seq", item.seq());
         props.put("startDate", iso(item.start()));
