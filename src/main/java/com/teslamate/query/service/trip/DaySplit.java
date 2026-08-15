@@ -5,25 +5,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
 
-/** Split activity spans at local midnight so a 3-day park becomes one piece per day. */
+/** Local-day labels and a 24h clock mapping for the Grafana axis. */
 public final class DaySplit {
 
     private DaySplit() {}
-
-    public static List<ActivitySpan> splitByLocalDays(List<ActivitySpan> spans, ZoneId zone) {
-        if (spans == null || spans.isEmpty()) {
-            return List.of();
-        }
-        ZoneId z = zone == null ? ZoneId.of("UTC") : zone;
-        List<ActivitySpan> out = new ArrayList<>();
-        for (ActivitySpan span : spans) {
-            out.addAll(splitOne(span, z));
-        }
-        return List.copyOf(out);
-    }
 
     public static String dayLabel(Instant instant, ZoneId zone) {
         return localDate(instant, zone).toString();
@@ -41,12 +27,13 @@ public final class DaySplit {
     public static Instant[] clockRange(Instant start, Instant end, ZoneId zone, LocalDate dummyDay, int minVisualMin) {
         ZoneId z = zone == null ? ZoneId.of("UTC") : zone;
         LocalDate dummy = dummyDay == null ? LocalDate.EPOCH : dummyDay;
+        LocalDate startDate = start.atZone(z).toLocalDate();
         LocalTime startTod = start.atZone(z).toLocalTime();
         Instant clockStart = dummy.atTime(startTod).atZone(z).toInstant();
         Instant clockEnd;
         LocalDate endDate = end.atZone(z).toLocalDate();
         LocalTime endTod = end.atZone(z).toLocalTime();
-        if (endTod.equals(LocalTime.MIDNIGHT) && endDate.isAfter(start.atZone(z).toLocalDate())) {
+        if (endDate.isAfter(startDate)) {
             clockEnd = dummy.plusDays(1).atStartOfDay(z).toInstant();
         } else {
             clockEnd = dummy.atTime(endTod).atZone(z).toInstant();
@@ -63,32 +50,9 @@ public final class DaySplit {
         return new Instant[]{clockStart, clockEnd};
     }
 
-    private static List<ActivitySpan> splitOne(ActivitySpan span, ZoneId zone) {
-        if (span == null || span.start() == null || span.end() == null || !span.end().isAfter(span.start())) {
-            return span == null ? List.of() : List.of(span);
-        }
-        List<ActivitySpan> parts = new ArrayList<>();
-        Instant cursor = span.start();
-        Instant end = span.end();
-        while (cursor.isBefore(end)) {
-            Instant nextMidnight = cursor.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant();
-            Instant stop = nextMidnight.isBefore(end) ? nextMidnight : end;
-            double mins = Duration.between(cursor, stop).toMillis() / 60_000.0;
-            parts.add(new ActivitySpan(
-                    span.kind(), span.sourceId(), cursor, stop, round1(mins),
-                    span.locationPositionId(), span.afterDriveId()));
-            cursor = stop;
-        }
-        return parts;
-    }
-
     private static LocalDate localDate(Instant instant, ZoneId zone) {
         ZoneId z = zone == null ? ZoneId.of("UTC") : zone;
         Instant t = instant == null ? Instant.EPOCH : instant;
         return t.atZone(z).toLocalDate();
-    }
-
-    private static double round1(double v) {
-        return Math.round(v * 10.0) / 10.0;
     }
 }

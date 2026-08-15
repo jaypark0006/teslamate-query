@@ -160,7 +160,6 @@ public class TripViewService {
 
         List<ActivitySpan> spans = ActivityTimelineComposer.compose(
                 windowDrives, charges, from, to, now, minPark, seedPos, seedDrive);
-        List<ActivitySpan> daySpans = DaySplit.splitByLocalDays(spans, zone);
         LocalDate dummyDay = now.atZone(zone).toLocalDate().minusDays(1);
 
         Map<Long, DriveEntity> driveById = windowDrives.stream()
@@ -212,9 +211,9 @@ public class TripViewService {
                 : Map.of();
 
         List<TimelineItemDto> timeline = new ArrayList<>();
-        for (int i = 0; i < daySpans.size(); i++) {
-            ActivitySpan span = daySpans.get(i);
-            boolean last = i == daySpans.size() - 1;
+        for (int i = 0; i < spans.size(); i++) {
+            ActivitySpan span = spans.get(i);
+            boolean last = i == spans.size() - 1;
             boolean ongoingPark = last && span.kind() == TimelineKind.PARK
                     && liveWindow(to, now) && openEnded(span.end(), now);
             timeline.add(toItem(i + 1, span, driveById, chargeById, sampleByProcess,
