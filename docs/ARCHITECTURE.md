@@ -10,7 +10,7 @@ Controller → Service → Dao (Entity)
 - 车辆 / 设置 / 围栏 / 地址  
 - 行程、充电会话、采样、按 drive 的 positions  
 - states / updates（简单表）  
-- map/tracks、series/battery  
+- map/tracks、map/trip、cars/{id}/map/points、cars/{id}/timeline、series/battery  
 
 ## 范围外
 

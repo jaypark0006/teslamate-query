@@ -1,0 +1,630 @@
+package com.teslamate.query.service;
+
+import com.teslamate.query.dao.AddressDao;
+import com.teslamate.query.dao.CarDao;
+import com.teslamate.query.dao.ChargeDao;
+import com.teslamate.query.dao.ChargingProcessDao;
+import com.teslamate.query.dao.DriveDao;
+import com.teslamate.query.dao.GeofenceDao;
+import com.teslamate.query.dao.PositionDao;
+import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
+import com.teslamate.query.db.condition.DriveSearchCondition;
+import com.teslamate.query.domain.units.DisplayUnits;
+import com.teslamate.query.dto.MapPointDto;
+import com.teslamate.query.dto.MapTracksDto;
+import com.teslamate.query.dto.TimelineItemDto;
+import com.teslamate.query.dto.TimelineKind;
+import com.teslamate.query.entity.AddressEntity;
+import com.teslamate.query.entity.CarEntity;
+import com.teslamate.query.entity.ChargeEntity;
+import com.teslamate.query.entity.ChargingProcessEntity;
+import com.teslamate.query.entity.DriveEntity;
+import com.teslamate.query.entity.GeofenceEntity;
+import com.teslamate.query.entity.PositionEntity;
+import com.teslamate.query.entity.PositionPathPoint;
+import com.teslamate.query.exception.NotFoundException;
+import com.teslamate.query.service.trip.ActivitySpan;
+import com.teslamate.query.service.trip.ActivityTimelineComposer;
+import com.teslamate.query.service.trip.PathGeometry;
+import com.teslamate.query.service.trip.PathSampler;
+import com.teslamate.query.service.trip.PlaceLabel;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Time-window trip view: chronological DRIVE/CHARGE/PARK log plus map rows / GeoJSON.
+ */
+@Service
+public class TripViewService {
+
+    private static final Logger log = LoggerFactory.getLogger(TripViewService.class);
+
+    static final int DEFAULT_MIN_PARK_MIN = 10;
+    static final int DEFAULT_DRIVE_LIMIT = 80;
+    static final int DEFAULT_CHARGE_LIMIT = 200;
+    static final int MAX_PATH_POINTS = 2_000;
+    static final int MAX_CHEVRONS = 80;
+    static final String COLOR_DRIVE = "#3b82f6";
+    static final String COLOR_CHARGE = "#22c55e";
+    static final String COLOR_CHARGE_DC = "#f59e0b";
+    static final String COLOR_PARK = "#1d4ed8";
+
+    private final CarDao carDao;
+    private final DriveDao driveDao;
+    private final ChargingProcessDao chargingProcessDao;
+    private final ChargeDao chargeDao;
+    private final PositionDao positionDao;
+    private final AddressDao addressDao;
+    private final GeofenceDao geofenceDao;
+    private final QuerySupport support;
+    private final Clock clock;
+    private final Cache<String, Snapshot> windowCache = Caffeine.newBuilder()
+            .maximumSize(64)
+            .expireAfterWrite(20, TimeUnit.SECONDS)
+            .build();
+
+    public TripViewService(
+            CarDao carDao,
+            DriveDao driveDao,
+            ChargingProcessDao chargingProcessDao,
+            ChargeDao chargeDao,
+            PositionDao positionDao,
+            AddressDao addressDao,
+            GeofenceDao geofenceDao,
+            QuerySupport support,
+            Clock clock
+    ) {
+        this.carDao = carDao;
+        this.driveDao = driveDao;
+        this.chargingProcessDao = chargingProcessDao;
+        this.chargeDao = chargeDao;
+        this.positionDao = positionDao;
+        this.addressDao = addressDao;
+        this.geofenceDao = geofenceDao;
+        this.support = support;
+        this.clock = clock;
+    }
+
+    public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
+                                          DisplayUnits units) {
+        return build(carId, fromStr, toStr, minParkMin, units, false).timeline;
+    }
+
+    public List<MapPointDto> points(long carId, String fromStr, String toStr, Integer minParkMin,
+                                    String kinds, DisplayUnits units) {
+        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, true);
+        Set<String> want = parseKinds(kinds);
+        return snap.points.stream().filter(p -> want.contains(p.kind())).toList();
+    }
+
+    public MapTracksDto geoJson(long carId, String fromStr, String toStr, Integer minParkMin,
+                                DisplayUnits units) {
+        return build(carId, fromStr, toStr, minParkMin, units, true).geoJson;
+    }
+
+    private Snapshot build(long carId, String fromStr, String toStr, Integer minParkMin, DisplayUnits units,
+                           boolean includePath) {
+        int minPark = minParkMin == null ? DEFAULT_MIN_PARK_MIN : Math.max(minParkMin, 0);
+        String unitKey = units == null ? "km-C" : units.length() + "-" + units.temperature();
+        String key = carId + "|" + fromStr + "|" + toStr + "|" + minPark + "|" + unitKey + "|" + includePath;
+        return windowCache.get(key, k -> buildUncached(carId, fromStr, toStr, minPark, units, includePath));
+    }
+
+    private Snapshot buildUncached(long carId, String fromStr, String toStr, int minPark, DisplayUnits units,
+                                   boolean includePath) {
+        long started = System.nanoTime();
+        requireCar(carId);
+        DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
+        Instant[] range = support.requireRange(fromStr, toStr);
+        Instant from = range[0];
+        Instant to = range[1];
+        Instant now = clock.instant();
+
+        List<DriveEntity> windowDrives = loadOverlappingDrives(carId, from, to);
+        List<DriveEntity> neighborBefore = loadNeighborBefore(carId, from);
+        List<ChargingProcessEntity> charges = loadOverlappingCharges(carId, from, to);
+
+        Long seedPos = null;
+        Long seedDrive = null;
+        if (!neighborBefore.isEmpty()) {
+            DriveEntity n = neighborBefore.getFirst();
+            if (n.endDate() != null && n.endDate().compareTo(from) <= 0) {
+                seedPos = n.endPositionId();
+                seedDrive = n.id();
+            }
+        }
+
+        List<ActivitySpan> spans = ActivityTimelineComposer.compose(
+                windowDrives, charges, from, to, now, minPark, seedPos, seedDrive);
+
+        Map<Long, DriveEntity> driveById = windowDrives.stream()
+                .collect(Collectors.toMap(DriveEntity::id, Function.identity(), (a, b) -> a));
+        Map<Long, ChargingProcessEntity> chargeById = charges.stream()
+                .collect(Collectors.toMap(ChargingProcessEntity::id, Function.identity(), (a, b) -> a));
+        Map<Long, ChargeEntity> sampleByProcess = chargeDao.findLatestPerProcess(
+                        charges.stream().map(ChargingProcessEntity::id).toList())
+                .stream()
+                .collect(Collectors.toMap(ChargeEntity::chargingProcessId, Function.identity(), (a, b) -> a));
+
+        List<Long> posIds = Stream.concat(
+                        Stream.concat(
+                                spans.stream().map(ActivitySpan::locationPositionId),
+                                windowDrives.stream().flatMap(d -> Stream.of(d.startPositionId(), d.endPositionId()))),
+                        charges.stream().map(ChargingProcessEntity::positionId))
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, PositionEntity> posById = posIds.isEmpty()
+                ? Map.of()
+                : positionDao.findByIds(posIds).stream()
+                .collect(Collectors.toMap(PositionEntity::id, Function.identity(), (a, b) -> a));
+
+        List<Long> addressIds = Stream.concat(
+                        windowDrives.stream().flatMap(d -> Stream.of(d.startAddressId(), d.endAddressId())),
+                        charges.stream().map(ChargingProcessEntity::addressId))
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, AddressEntity> addrById = addressIds.isEmpty()
+                ? Map.of()
+                : addressDao.findByIds(addressIds).stream()
+                .collect(Collectors.toMap(AddressEntity::id, Function.identity(), (a, b) -> a));
+
+        List<Long> geofenceIds = Stream.concat(
+                        windowDrives.stream().flatMap(d -> Stream.of(d.startGeofenceId(), d.endGeofenceId())),
+                        charges.stream().map(ChargingProcessEntity::geofenceId))
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, GeofenceEntity> geoById = geofenceIds.isEmpty()
+                ? Map.of()
+                : geofenceDao.findByIds(geofenceIds).stream()
+                .collect(Collectors.toMap(GeofenceEntity::id, Function.identity(), (a, b) -> a));
+
+        int driveCount = (int) spans.stream().filter(s -> s.kind() == TimelineKind.DRIVE).count();
+        int perDriveCap = Math.max(24, Math.min(80, MAX_PATH_POINTS / Math.max(driveCount, 1)));
+        Map<Long, List<PositionPathPoint>> byDrive = includePath
+                ? loadSampledPaths(windowDrives, perDriveCap)
+                : Map.of();
+
+        List<TimelineItemDto> timeline = new ArrayList<>();
+        List<MapPointDto> points = new ArrayList<>();
+        List<MapTracksDto.Feature> features = new ArrayList<>();
+        int totalPts = 0;
+        int chevronIdx = 0;
+        int chevronBudget = MAX_CHEVRONS;
+
+        for (int i = 0; i < spans.size(); i++) {
+            ActivitySpan span = spans.get(i);
+            int seq = i + 1;
+            switch (span.kind()) {
+                case DRIVE -> {
+                    DriveEntity d = span.sourceId() == null ? null : driveById.get(span.sourceId());
+                    List<PositionPathPoint> raw = d == null ? List.of() : byDrive.getOrDefault(d.id(), List.of());
+                    List<PositionPathPoint> path = PathGeometry.decimate(raw, perDriveCap);
+                    if (includePath && path.size() < 2 && d != null) {
+                        path = endpointsAsPath(d, posById);
+                    }
+                    TimelineItemDto item = toDriveItem(seq, span, d, path, posById, addrById, geoById, u);
+                    timeline.add(item);
+                    totalPts += addDrivePoints(points, features, item, path, from, chevronIdx, chevronBudget);
+                    if (path.size() >= 2) {
+                        chevronIdx += Math.max(1, path.size() / 8);
+                        chevronBudget = Math.max(0, chevronBudget - Math.max(1, path.size() / 8));
+                    }
+                }
+                case CHARGE -> {
+                    ChargingProcessEntity c = span.sourceId() == null ? null : chargeById.get(span.sourceId());
+                    ChargeEntity sample = c == null ? null : sampleByProcess.get(c.id());
+                    TimelineItemDto item = toChargeItem(seq, span, c, sample, posById, addrById, geoById);
+                    timeline.add(item);
+                    addStopPoint(points, features, item, "charge");
+                }
+                case PARK -> {
+                    boolean ongoing = i == spans.size() - 1 && liveWindow(to, now) && openEnded(span.end(), now);
+                    TimelineItemDto item = toParkItem(seq, span, posById, ongoing);
+                    timeline.add(item);
+                    addStopPoint(points, features, item, "park");
+                }
+            }
+        }
+
+        int parkCount = (int) timeline.stream().filter(t -> t.kind() == TimelineKind.PARK).count();
+        int chargeCount = (int) timeline.stream().filter(t -> t.kind() == TimelineKind.CHARGE).count();
+        int driveN = (int) timeline.stream().filter(t -> t.kind() == TimelineKind.DRIVE).count();
+        MapTracksDto geo = new MapTracksDto("FeatureCollection", features,
+                new MapTracksDto.Meta(carId, from, to, driveN, chargeCount, parkCount, totalPts));
+        log.info("trip {} car={} drives={} charges={} spans={} pathPts={} {}ms",
+                includePath ? "map" : "timeline",
+                carId, windowDrives.size(), charges.size(), spans.size(), totalPts,
+                (System.nanoTime() - started) / 1_000_000);
+        return new Snapshot(timeline, points, geo);
+    }
+
+    private static List<PositionPathPoint> endpointsAsPath(DriveEntity d, Map<Long, PositionEntity> posById) {
+        List<PositionPathPoint> out = new ArrayList<>(2);
+        addEndpoint(out, d.id(), d.startPositionId(), posById);
+        addEndpoint(out, d.id(), d.endPositionId(), posById);
+        return out;
+    }
+
+    private static void addEndpoint(List<PositionPathPoint> out, Long driveId, Long positionId,
+                                    Map<Long, PositionEntity> posById) {
+        if (positionId == null) {
+            return;
+        }
+        PositionEntity p = posById.get(positionId);
+        if (p == null || p.longitude() == null || p.latitude() == null) {
+            return;
+        }
+        out.add(new PositionPathPoint(driveId, p.date(), p.longitude(), p.latitude()));
+    }
+
+    private Map<Long, List<PositionPathPoint>> loadSampledPaths(List<DriveEntity> drives, int perDrive) {
+        if (drives.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> driveIds = drives.stream().map(DriveEntity::id).toList();
+        List<Long> sampleIds = new ArrayList<>();
+        for (DriveEntity d : drives) {
+            Long start = d.startPositionId();
+            Long end = d.endPositionId();
+            if (start == null && end == null) {
+                continue;
+            }
+            if (start == null) {
+                start = end;
+            }
+            if (end == null) {
+                end = positionDao.findLatestByDriveId(d.id()).map(PositionEntity::id).orElse(start);
+            }
+            sampleIds.addAll(PathSampler.sampleIds(start, end, perDrive));
+        }
+        if (sampleIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> unique = sampleIds.stream().distinct().toList();
+        return positionDao.findPathPointsByIds(unique, driveIds).stream()
+                .filter(p -> p.driveId() != null)
+                .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
+    }
+
+    private TimelineItemDto toDriveItem(
+            int seq, ActivitySpan span, DriveEntity d, List<PositionPathPoint> path,
+            Map<Long, PositionEntity> posById,
+            Map<Long, AddressEntity> addrById,
+            Map<Long, GeofenceEntity> geoById,
+            DisplayUnits units
+    ) {
+        String fromPlace = d == null ? null : PlaceLabel.of(
+                d.startGeofenceId() == null ? null : geoById.get(d.startGeofenceId()),
+                d.startAddressId() == null ? null : addrById.get(d.startAddressId()));
+        String toPlace = d == null ? null : PlaceLabel.of(
+                d.endGeofenceId() == null ? null : geoById.get(d.endGeofenceId()),
+                d.endAddressId() == null ? null : addrById.get(d.endAddressId()));
+        String title = joinPlaces(fromPlace, toPlace);
+        if (title == null) {
+            title = "Drive";
+        }
+        Double distance = d == null ? null : UnitConverter.length(d.distance(), units);
+        Integer startSoc = soc(d == null ? null : d.startPositionId(), posById);
+        Integer endSoc = soc(d == null ? null : d.endPositionId(), posById);
+        String detail = join(
+                distance == null ? null : round1(distance) + " km",
+                formatDuration(span.durationMin()),
+                socRange(startSoc, endSoc));
+        Double[] latLon = latLon(span.locationPositionId(), posById);
+        if (latLon[0] == null && !path.isEmpty()) {
+            PositionPathPoint last = path.getLast();
+            latLon = new Double[]{last.latitude().doubleValue(), last.longitude().doubleValue()};
+        }
+        return new TimelineItemDto(
+                seq, TimelineKind.DRIVE, span.sourceId(), span.start(), span.end(),
+                round1(span.durationMin()), title, detail, COLOR_DRIVE,
+                latLon[0], latLon[1], distance, startSoc, endSoc, null, null);
+    }
+
+    private TimelineItemDto toChargeItem(
+            int seq, ActivitySpan span, ChargingProcessEntity c, ChargeEntity sample,
+            Map<Long, PositionEntity> posById,
+            Map<Long, AddressEntity> addrById,
+            Map<Long, GeofenceEntity> geoById
+    ) {
+        String chargeType = TripMapService.chargeType(sample);
+        boolean dc = "dc".equals(chargeType);
+        String place = c == null ? null : PlaceLabel.of(
+                c.geofenceId() == null ? null : geoById.get(c.geofenceId()),
+                c.addressId() == null ? null : addrById.get(c.addressId()));
+        String title = (dc ? "DC charge" : "AC charge") + (place == null ? "" : " · " + place);
+        Integer startSoc = c == null ? null : c.startBatteryLevel();
+        Integer endSoc = c == null ? null : c.endBatteryLevel();
+        Double energy = c == null || c.chargeEnergyAdded() == null ? null : c.chargeEnergyAdded().doubleValue();
+        String detail = join(
+                energy == null ? null : round1(energy) + " kWh",
+                socRange(startSoc, endSoc),
+                formatDuration(span.durationMin()));
+        Long posId = c != null && c.positionId() != null ? c.positionId() : span.locationPositionId();
+        Double[] latLon = latLon(posId, posById);
+        return new TimelineItemDto(
+                seq, TimelineKind.CHARGE, span.sourceId(), span.start(), span.end(),
+                round1(span.durationMin()), title, detail, dc ? COLOR_CHARGE_DC : COLOR_CHARGE,
+                latLon[0], latLon[1], null, startSoc, endSoc, energy, chargeType == null ? null : chargeType.toUpperCase(Locale.ROOT));
+    }
+
+    private TimelineItemDto toParkItem(int seq, ActivitySpan span, Map<Long, PositionEntity> posById,
+                                       boolean ongoing) {
+        Double[] latLon = latLon(span.locationPositionId(), posById);
+        String durationLabel = parkDurationLabel(span.durationMin(), ongoing);
+        return new TimelineItemDto(
+                seq, TimelineKind.PARK, null, span.start(), span.end(),
+                ongoing ? null : round1(span.durationMin()), "Parked", durationLabel, COLOR_PARK,
+                latLon[0], latLon[1], null, null, null, null, null);
+    }
+
+    private int addDrivePoints(
+            List<MapPointDto> points,
+            List<MapTracksDto.Feature> features,
+            TimelineItemDto item,
+            List<PositionPathPoint> path,
+            Instant windowFrom,
+            int chevronStart,
+            int chevronBudget
+    ) {
+        List<List<BigDecimal>> coords = new ArrayList<>();
+        Double heading = null;
+        int arrowEvery = Math.max(4, path.size() / 8);
+        int arrowsLeft = chevronBudget;
+        int localArrow = 0;
+        for (int i = 0; i < path.size(); i++) {
+            PositionPathPoint p = path.get(i);
+            PositionPathPoint next = i + 1 < path.size() ? path.get(i + 1) : null;
+            Double h = next == null
+                    ? heading
+                    : PathGeometry.bearingDeg(p.longitude(), p.latitude(), next.longitude(), next.latitude());
+            if (h != null) {
+                heading = h;
+            }
+            double elapsed = p.date() == null || windowFrom == null
+                    ? 0
+                    : Duration.between(windowFrom, p.date()).toMillis() / 60_000.0;
+            points.add(new MapPointDto(
+                    p.date(),
+                    p.latitude().doubleValue(),
+                    p.longitude().doubleValue(),
+                    "drive",
+                    item.id(),
+                    item.seq(),
+                    heading,
+                    round1(elapsed),
+                    COLOR_DRIVE,
+                    item.title(),
+                    null));
+            coords.add(List.of(p.longitude(), p.latitude()));
+            if (h != null && arrowsLeft > 0 && i > 0 && i < path.size() - 1 && i % arrowEvery == 0) {
+                List<List<BigDecimal>> chevron = PathGeometry.chevron(p.longitude(), p.latitude(), h, 18.0);
+                if (chevron.size() == 3) {
+                    Map<String, Object> props = new HashMap<>();
+                    props.put("seq", item.seq());
+                    props.put("driveId", item.id());
+                    props.put("color", COLOR_DRIVE);
+                    features.add(MapTracksDto.arrowLine(chevronStart + localArrow, chevron, props));
+                    localArrow++;
+                    arrowsLeft--;
+                }
+            }
+        }
+        if (coords.size() >= 2) {
+            Map<String, Object> props = new HashMap<>();
+            props.put("seq", item.seq());
+            props.put("startDate", iso(item.start()));
+            props.put("endDate", iso(item.end()));
+            props.put("distance", item.distanceKm());
+            props.put("durationMin", item.durationMin());
+            props.put("title", item.title());
+            props.put("detail", item.detail());
+            props.put("color", COLOR_DRIVE);
+            features.add(MapTracksDto.driveLine(item.id() == null ? item.seq() : item.id(), coords, props));
+        }
+        return coords.size();
+    }
+
+    private void addStopPoint(
+            List<MapPointDto> points,
+            List<MapTracksDto.Feature> features,
+            TimelineItemDto item,
+            String kind
+    ) {
+        if (item.latitude() == null || item.longitude() == null) {
+            return;
+        }
+        points.add(new MapPointDto(
+                item.start(), item.latitude(), item.longitude(),
+                kind, item.id(), item.seq(), null, null, item.color(), item.title(),
+                item.detail()));
+        Map<String, Object> props = new HashMap<>();
+        props.put("seq", item.seq());
+        props.put("startDate", iso(item.start()));
+        props.put("endDate", iso(item.end()));
+        props.put("durationMin", item.durationMin());
+        props.put("durationLabel", item.detail());
+        props.put("title", item.title());
+        props.put("detail", item.detail());
+        props.put("color", item.color());
+        BigDecimal lon = BigDecimal.valueOf(item.longitude());
+        BigDecimal lat = BigDecimal.valueOf(item.latitude());
+        if ("charge".equals(kind)) {
+            props.put("chargeEnergyAdded", item.energyKwh());
+            props.put("chargeType", item.chargeType());
+            features.add(MapTracksDto.chargePoint(item.id() == null ? item.seq() : item.id(), lon, lat, props));
+        } else {
+            features.add(MapTracksDto.parkPoint(item.seq(), lon, lat, props));
+        }
+    }
+
+    private List<DriveEntity> loadOverlappingDrives(long carId, Instant from, Instant to) {
+        DriveSearchCondition cond = DriveSearchCondition.builder()
+                .carId(carId)
+                .overlapping(from, to)
+                .oldestFirst()
+                .build();
+        return driveDao.findByIdsOrdered(driveDao.findIds(cond, DEFAULT_DRIVE_LIMIT, 0));
+    }
+
+    private List<DriveEntity> loadNeighborBefore(long carId, Instant from) {
+        DriveSearchCondition cond = DriveSearchCondition.builder()
+                .carId(carId)
+                .startDateTo(from)
+                .build();
+        return driveDao.findByIdsOrdered(driveDao.findIds(cond, 1, 0));
+    }
+
+    private List<ChargingProcessEntity> loadOverlappingCharges(long carId, Instant from, Instant to) {
+        ChargingProcessSearchCondition cond = ChargingProcessSearchCondition.builder()
+                .carId(carId)
+                .overlapping(from, to)
+                .oldestFirst()
+                .build();
+        return chargingProcessDao.findByIdsOrdered(chargingProcessDao.findIds(cond, DEFAULT_CHARGE_LIMIT, 0));
+    }
+
+    private CarEntity requireCar(long carId) {
+        return carDao.findById(carId).orElseThrow(() -> new NotFoundException("Car not found: " + carId));
+    }
+
+    static Set<String> parseKinds(String raw) {
+        if (raw == null || raw.isBlank() || raw.contains("${")) {
+            return Set.of("drive", "charge", "park");
+        }
+        Set<String> out = new java.util.HashSet<>();
+        for (String part : raw.split(",")) {
+            String k = part.trim().toLowerCase(Locale.ROOT);
+            if (k.equals("drive") || k.equals("charge") || k.equals("park")) {
+                out.add(k);
+            }
+        }
+        return out.isEmpty() ? Set.of("drive", "charge", "park") : Set.copyOf(out);
+    }
+
+    private static Integer soc(Long positionId, Map<Long, PositionEntity> posById) {
+        if (positionId == null) {
+            return null;
+        }
+        PositionEntity p = posById.get(positionId);
+        return p == null ? null : p.batteryLevel();
+    }
+
+    private static Double[] latLon(Long positionId, Map<Long, PositionEntity> posById) {
+        if (positionId == null) {
+            return new Double[]{null, null};
+        }
+        PositionEntity p = posById.get(positionId);
+        if (p == null || p.latitude() == null || p.longitude() == null) {
+            return new Double[]{null, null};
+        }
+        return new Double[]{p.latitude().doubleValue(), p.longitude().doubleValue()};
+    }
+
+    private static String joinPlaces(String from, String to) {
+        if (from == null && to == null) {
+            return null;
+        }
+        if (from == null) {
+            return "→ " + to;
+        }
+        if (to == null || to.equals(from)) {
+            return from;
+        }
+        return from + " → " + to;
+    }
+
+    private static String socRange(Integer start, Integer end) {
+        if (start == null && end == null) {
+            return null;
+        }
+        if (start == null) {
+            return end + "%";
+        }
+        if (end == null) {
+            return start + "%";
+        }
+        return start + "% → " + end + "%";
+    }
+
+    static boolean liveWindow(Instant windowTo, Instant now) {
+        return windowTo != null && now != null && !windowTo.isBefore(now.minusSeconds(120));
+    }
+
+    static boolean openEnded(Instant end, Instant now) {
+        return end != null && now != null && !end.isBefore(now.minusSeconds(90));
+    }
+
+    static String parkDurationLabel(double minutes, boolean ongoing) {
+        return ongoing ? "-" : formatDuration(minutes);
+    }
+
+    private static String formatDuration(double minutes) {
+        long m = Math.round(minutes);
+        if (m < 60) {
+            return m + " min";
+        }
+        long h = m / 60;
+        long rem = m % 60;
+        return rem == 0 ? h + "h" : h + "h " + rem + "m";
+    }
+
+    private static String join(String... parts) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : parts) {
+            if (p == null || p.isBlank()) {
+                continue;
+            }
+            if (!sb.isEmpty()) {
+                sb.append(" · ");
+            }
+            sb.append(p);
+        }
+        return sb.isEmpty() ? null : sb.toString();
+    }
+
+    private static Double round1(Double v) {
+        if (v == null) {
+            return null;
+        }
+        return BigDecimal.valueOf(v).setScale(1, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private static double round1(double v) {
+        return Math.round(v * 10.0) / 10.0;
+    }
+
+    private static String iso(Instant t) {
+        return t == null ? null : t.toString();
+    }
+
+    private record Snapshot(
+            List<TimelineItemDto> timeline,
+            List<MapPointDto> points,
+            MapTracksDto geoJson
+    ) {}
+}

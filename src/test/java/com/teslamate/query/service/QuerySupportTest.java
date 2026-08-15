@@ -36,6 +36,9 @@ class QuerySupportTest {
         assertEquals(0, support.mergeGapMin("Off"));
         assertEquals(0, support.mergeGapMin("${merge_gap}"));
         assertEquals(15, support.mergeGapMin("15 min"));
+        assertEquals(10, support.minParkMin((String) null));
+        assertEquals(10, support.minParkMin("${min_park}"));
+        assertEquals(15, support.minParkMin("15 min"));
     }
 
     @Test

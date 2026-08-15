@@ -93,7 +93,10 @@ GET /api/v1/charges?chargingProcessId=364
 - `GET /charging-processes/{chargingProcessId}/charges`
 - `GET /cars/{carId}/latest` — multi-table snapshot
 - `GET /map/tracks?carId&from&to` — GeoJSON composition
-- `GET /map/trip?carId&from&to` — drive lines + charge/park points (overlap window; parks derived in Service)
+- `GET /map/trip?carId&from&to` — drive lines + charge/park points + direction chevrons (overlap window)
+- `GET /cars/{carId}/map` — same GeoJSON, car-scoped
+- `GET /cars/{carId}/map/points?from&to&kinds=` — flat lat/lon rows for Grafana Geomap Route (arrows) + Markers
+- `GET /cars/{carId}/timeline?from&to&minParkMin=` — chronological DRIVE / CHARGE / PARK log
 - `GET /series/battery?carId&from&to` — SOC series from positions
 
 ## Health

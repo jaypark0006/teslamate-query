@@ -65,6 +65,11 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
             return this;
         }
 
+        public Builder oldestFirst() {
+            orderBy("start_date", "ASC");
+            return this;
+        }
+
         public ChargingProcessSearchCondition build() {
             if (sortClause().isEmpty()) {
                 orderBy("start_date", "DESC");

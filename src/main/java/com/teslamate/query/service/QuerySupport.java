@@ -48,6 +48,22 @@ public class QuerySupport {
         return Math.min(mergeGapMin, 180);
     }
 
+    /** Grafana custom var: 10, "10 min", or unsubstituted ${min_park}. */
+    public int minParkMin(String raw) {
+        if (raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")) {
+            return 10;
+        }
+        String s = raw.trim();
+        int i = 0;
+        while (i < s.length() && Character.isDigit(s.charAt(i))) {
+            i++;
+        }
+        if (i == 0) {
+            return 10;
+        }
+        return Math.min(Math.max(Integer.parseInt(s.substring(0, i)), 0), 24 * 60);
+    }
+
     /** Grafana may send 0, "Off", "5 min", or an unsubstituted ${merge_gap}. */
     public int mergeGapMin(String raw) {
         if (raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")) {

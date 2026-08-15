@@ -1,10 +1,13 @@
 package com.teslamate.query.api.v1;
 
+import com.teslamate.query.dto.MapPointDto;
 import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.PositionDto;
+import com.teslamate.query.dto.TimelineItemDto;
 import com.teslamate.query.service.MapTracksService;
 import com.teslamate.query.service.QuerySupport;
 import com.teslamate.query.service.TripMapService;
+import com.teslamate.query.service.TripViewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,11 +25,14 @@ public class MapController {
 
     private final MapTracksService mapTracksService;
     private final TripMapService tripMapService;
+    private final TripViewService tripViewService;
     private final QuerySupport support;
 
-    public MapController(MapTracksService mapTracksService, TripMapService tripMapService, QuerySupport support) {
+    public MapController(MapTracksService mapTracksService, TripMapService tripMapService,
+                         TripViewService tripViewService, QuerySupport support) {
         this.mapTracksService = mapTracksService;
         this.tripMapService = tripMapService;
+        this.tripViewService = tripViewService;
         this.support = support;
     }
 
@@ -63,6 +69,35 @@ public class MapController {
     ) {
         return tripMapService.trip(carId, from, to, minParkMin, microDriveThresholdMin,
                 maxDrives, maxChargingProcesses, support.units(lengthUnit, tempUnit));
+    }
+
+    @GetMapping("/map/points")
+    @Operation(summary = "Flat trip points for Grafana Geomap (same data as /cars/{carId}/map/points)")
+    public List<MapPointDto> points(
+            @RequestParam long carId,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(required = false) String minParkMin,
+            @RequestParam(required = false) String kinds,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return tripViewService.points(carId, from, to, support.minParkMin(minParkMin), kinds,
+                support.units(lengthUnit, tempUnit));
+    }
+
+    @GetMapping("/map/timeline")
+    @Operation(summary = "DRIVE / CHARGE / PARK log (same data as /cars/{carId}/timeline)")
+    public List<TimelineItemDto> timeline(
+            @RequestParam long carId,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(required = false) String minParkMin,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return tripViewService.timeline(carId, from, to, support.minParkMin(minParkMin),
+                support.units(lengthUnit, tempUnit));
     }
 
     @GetMapping("/series/battery")

@@ -50,4 +50,10 @@ public record MapTracksDto(
         props.put("parkIndex", parkIndex);
         return new Feature("Feature", new Geometry("Point", List.of(lon, lat)), props);
     }
+
+    public static Feature arrowLine(int arrowIndex, List<List<BigDecimal>> lonLat, Map<String, Object> props) {
+        props.put("kind", "arrow");
+        props.put("arrowIndex", arrowIndex);
+        return new Feature("Feature", new Geometry("LineString", lonLat), props);
+    }
 }

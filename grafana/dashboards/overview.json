@@ -19,7 +19,20 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "compass",
+      "includeVars": true,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Map",
+      "tooltip": "Drive / charge / park path + timeline",
+      "type": "link",
+      "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map"
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
