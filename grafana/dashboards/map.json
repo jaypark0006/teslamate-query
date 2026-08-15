@@ -669,12 +669,8 @@
                 }
               },
               {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": true,
-                  "tooltip": true,
-                  "viz": true
-                }
+                "id": "custom.hidden",
+                "value": true
               },
               {
                 "id": "color",
@@ -970,8 +966,7 @@
               "clockEnd": true,
               "seq": true,
               "durationMin": true,
-              "day": true,
-              "dayBand": true
+              "day": true
             },
             "indexByName": {
               "time": 0,
