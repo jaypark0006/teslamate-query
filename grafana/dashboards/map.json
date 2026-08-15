@@ -993,12 +993,21 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "custom": {
-            "fillOpacity": 75,
+            "fillOpacity": 80,
             "lineWidth": 0,
             "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": 0
+              }
+            ]
           },
           "mappings": [
             {
@@ -1045,14 +1054,15 @@
       "options": {
         "alignValue": "left",
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
-        "mergeValues": false,
-        "perPage": 14,
-        "rowHeight": 0.7,
-        "showValue": "always",
+        "mergeValues": true,
+        "perPage": 20,
+        "rowHeight": 0.8,
+        "showValue": "auto",
         "tooltip": {
           "mode": "single",
           "sort": "none"
@@ -1101,10 +1111,10 @@
           }
         }
       ],
-      "timeFrom": "now/d-1d",
-      "timeShift": "1d/d",
-      "hideTimeOverride": true,
+      "timeFrom": "now-36h",
+      "hideTimeOverride": false,
       "title": "Activity axis",
+      "description": "One row per date. The x-axis is local clock time (about the last 36 hours), not the dashboard’s 30-day picker — otherwise a 20-minute drive is one pixel.",
       "transformations": [
         {
           "id": "convertFieldType",
@@ -1127,7 +1137,19 @@
             "fields": [
               "day"
             ],
-            "keepFields": true
+            "keepFields": false
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "time",
+                "timeEnd",
+                "kind"
+              ]
+            }
           }
         }
       ],
