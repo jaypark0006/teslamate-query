@@ -255,7 +255,9 @@
               "options": "Drive"
             },
             "location": {
-              "mode": "auto"
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
             },
             "name": "Drives",
             "opacity": 1,
@@ -308,7 +310,9 @@
               "options": "Park"
             },
             "location": {
-              "mode": "auto"
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
             },
             "name": "Parks",
             "opacity": 1,
@@ -356,11 +360,63 @@
               "options": "Charge"
             },
             "location": {
-              "mode": "auto"
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
             },
             "name": "Charges",
             "opacity": 1,
             "tooltip": true,
+            "type": "markers"
+          },
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "#3b82f6"
+                },
+                "opacity": 0,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 1,
+                  "max": 2,
+                  "min": 1
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "Drive"
+            },
+            "location": {
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
+            },
+            "name": "Extent",
+            "opacity": 0,
+            "tooltip": false,
             "type": "markers"
           }
         ],
@@ -368,13 +424,16 @@
           "mode": "details"
         },
         "view": {
-          "allLayers": true,
+          "allLayers": false,
           "id": "fit",
-          "lat": 0,
-          "lon": 0,
-          "padding": 0.12,
+          "lastOnly": false,
+          "layer": "Extent",
+          "lat": 29.55,
+          "lon": 106.5,
+          "maxZoom": 17,
+          "padding": 0.08,
           "shared": false,
-          "zoom": 5
+          "zoom": 12
         }
       },
       "pluginVersion": "13.0.1",
