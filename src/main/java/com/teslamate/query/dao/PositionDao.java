@@ -116,54 +116,15 @@ public class PositionDao {
                 .findOne());
     }
 
-    /**
-     * Path points by primary key. Filter {@code driveIds} so sampled ids from another car are dropped.
-     */
-    public List<PositionPathPoint> findPathPointsByIds(Collection<Long> ids, Collection<Long> driveIds) {
-        if (IdOrder.isEmpty(ids) || IdOrder.isEmpty(driveIds)) {
+    public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds) {
+        if (IdOrder.isEmpty(driveIds)) {
             return List.of();
         }
         return jdbi.withHandle(h -> h.createQuery(
                         "SELECT drive_id, date, longitude, latitude FROM positions "
-                                + "WHERE id IN (<ids>) AND drive_id IN (<driveIds>) "
-                                + "AND longitude IS NOT NULL AND latitude IS NOT NULL "
+                                + "WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL "
                                 + "ORDER BY drive_id, date")
-                .bindList("ids", ids)
                 .bindList("driveIds", driveIds)
-                .map(ConstructorMapper.of(PositionPathPoint.class))
-                .list());
-    }
-
-    public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds) {
-        return findPathPointsByDriveIds(driveIds, 1);
-    }
-
-    /**
-     * Path points for map lines. {@code bucketSeconds > 1} keeps one point per time bucket per drive.
-     */
-    public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds, int bucketSeconds) {
-        if (IdOrder.isEmpty(driveIds)) {
-            return List.of();
-        }
-        int bucket = Math.max(bucketSeconds, 1);
-        if (bucket == 1) {
-            return jdbi.withHandle(h -> h.createQuery(
-                            "SELECT drive_id, date, longitude, latitude FROM positions "
-                                    + "WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL "
-                                    + "ORDER BY drive_id, date")
-                    .bindList("driveIds", driveIds)
-                    .map(ConstructorMapper.of(PositionPathPoint.class))
-                    .list());
-        }
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT drive_id, date, longitude, latitude FROM ("
-                                + " SELECT drive_id, date, longitude, latitude, ROW_NUMBER() OVER ("
-                                + "   PARTITION BY drive_id, FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec) ORDER BY date"
-                                + " ) AS rn FROM positions "
-                                + " WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL"
-                                + ") t WHERE rn = 1 ORDER BY drive_id, date")
-                .bindList("driveIds", driveIds)
-                .bind("bucketSec", bucket)
                 .map(ConstructorMapper.of(PositionPathPoint.class))
                 .list());
     }

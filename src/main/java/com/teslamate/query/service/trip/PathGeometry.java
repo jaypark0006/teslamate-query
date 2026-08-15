@@ -1,49 +1,15 @@
 package com.teslamate.query.service.trip;
 
-import com.teslamate.query.entity.PositionPathPoint;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
 import java.util.List;
 
-/** Path downsample, heading, and small GeoJSON chevrons. */
+/** Heading and small GeoJSON chevrons. */
 public final class PathGeometry {
 
     private static final double EARTH_M = 6_378_137.0;
 
     private PathGeometry() {}
-
-    public static List<PositionPathPoint> decimate(List<PositionPathPoint> points, int maxPoints) {
-        if (points == null || points.isEmpty()) {
-            return List.of();
-        }
-        int max = Math.max(maxPoints, 2);
-        int n = points.size();
-        if (n <= max) {
-            return List.copyOf(points);
-        }
-        List<PositionPathPoint> out = new ArrayList<>(max);
-        double step = (n - 1) / (double) (max - 1);
-        int last = -1;
-        for (int i = 0; i < max; i++) {
-            int idx = (int) Math.round(i * step);
-            if (idx <= last) {
-                idx = last + 1;
-            }
-            if (idx >= n) {
-                idx = n - 1;
-            }
-            if (idx != last) {
-                out.add(points.get(idx));
-                last = idx;
-            }
-        }
-        if (last != n - 1) {
-            out.add(points.get(n - 1));
-        }
-        return out;
-    }
 
     /** Compass degrees 0–360, north = 0, clockwise. Null if the segment is degenerate. */
     public static Double bearingDeg(BigDecimal lon1, BigDecimal lat1, BigDecimal lon2, BigDecimal lat2) {
@@ -79,11 +45,6 @@ public final class PathGeometry {
         double[] left = offset(lon, lat, back + 28.0, armMeters);
         double[] right = offset(lon, lat, back - 28.0, armMeters);
         return List.of(coord(left[0], left[1]), coord(lon, lat), coord(right[0], right[1]));
-    }
-
-    public static int pathBucketSeconds(long spanSec) {
-        long bucket = Math.max(spanSec, 1) / 2_000;
-        return (int) Math.max(15, Math.min(180, bucket));
     }
 
     private static double[] offset(double lon, double lat, double bearingDeg, double meters) {

@@ -26,7 +26,6 @@ import com.teslamate.query.exception.NotFoundException;
 import com.teslamate.query.service.trip.ActivitySpan;
 import com.teslamate.query.service.trip.ActivityTimelineComposer;
 import com.teslamate.query.service.trip.PathGeometry;
-import com.teslamate.query.service.trip.PathSampler;
 import com.teslamate.query.service.trip.PlaceLabel;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -63,7 +62,6 @@ public class TripViewService {
     static final int DEFAULT_MIN_PARK_MIN = 10;
     static final int DEFAULT_DRIVE_LIMIT = 80;
     static final int DEFAULT_CHARGE_LIMIT = 200;
-    static final int MAX_PATH_POINTS = 2_000;
     static final int MAX_CHEVRONS = 80;
     static final String COLOR_DRIVE = "#3b82f6";
     static final String COLOR_CHARGE = "#22c55e";
@@ -202,10 +200,8 @@ public class TripViewService {
                 : geofenceDao.findByIds(geofenceIds).stream()
                 .collect(Collectors.toMap(GeofenceEntity::id, Function.identity(), (a, b) -> a));
 
-        int driveCount = (int) spans.stream().filter(s -> s.kind() == TimelineKind.DRIVE).count();
-        int perDriveCap = Math.max(24, Math.min(80, MAX_PATH_POINTS / Math.max(driveCount, 1)));
         Map<Long, List<PositionPathPoint>> byDrive = includePath
-                ? loadSampledPaths(windowDrives, perDriveCap)
+                ? loadPaths(windowDrives)
                 : Map.of();
 
         List<TimelineItemDto> timeline = new ArrayList<>();
@@ -221,8 +217,7 @@ public class TripViewService {
             switch (span.kind()) {
                 case DRIVE -> {
                     DriveEntity d = span.sourceId() == null ? null : driveById.get(span.sourceId());
-                    List<PositionPathPoint> raw = d == null ? List.of() : byDrive.getOrDefault(d.id(), List.of());
-                    List<PositionPathPoint> path = PathGeometry.decimate(raw, perDriveCap);
+                    List<PositionPathPoint> path = d == null ? List.of() : byDrive.getOrDefault(d.id(), List.of());
                     if (includePath && path.size() < 2 && d != null) {
                         path = endpointsAsPath(d, posById);
                     }
@@ -281,31 +276,12 @@ public class TripViewService {
         out.add(new PositionPathPoint(driveId, p.date(), p.longitude(), p.latitude()));
     }
 
-    private Map<Long, List<PositionPathPoint>> loadSampledPaths(List<DriveEntity> drives, int perDrive) {
+    private Map<Long, List<PositionPathPoint>> loadPaths(List<DriveEntity> drives) {
         if (drives.isEmpty()) {
             return Map.of();
         }
         List<Long> driveIds = drives.stream().map(DriveEntity::id).toList();
-        List<Long> sampleIds = new ArrayList<>();
-        for (DriveEntity d : drives) {
-            Long start = d.startPositionId();
-            Long end = d.endPositionId();
-            if (start == null && end == null) {
-                continue;
-            }
-            if (start == null) {
-                start = end;
-            }
-            if (end == null) {
-                end = positionDao.findLatestByDriveId(d.id()).map(PositionEntity::id).orElse(start);
-            }
-            sampleIds.addAll(PathSampler.sampleIds(start, end, perDrive));
-        }
-        if (sampleIds.isEmpty()) {
-            return Map.of();
-        }
-        List<Long> unique = sampleIds.stream().distinct().toList();
-        return positionDao.findPathPointsByIds(unique, driveIds).stream()
+        return positionDao.findPathPointsByDriveIds(driveIds).stream()
                 .filter(p -> p.driveId() != null)
                 .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
     }

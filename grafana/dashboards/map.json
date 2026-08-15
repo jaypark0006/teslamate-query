@@ -52,7 +52,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "Timezone **${__timezone}**. Blue line + **arrows** = drive direction. **Green** = charge. Blue **P** + duration = park (`-` = still parked). Parks shorter than **${min_park} min** are omitted. A week of drives is sampled (not 1 Hz). API times are UTC.",
+        "content": "Timezone **${__timezone}**. Blue line + **arrows** = drive direction. **Green** = charge. Blue **P** + duration = park (`-` = still parked). Parks shorter than **${min_park} min** are omitted. API times are UTC.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
