@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Time-range trip map: drive path with arrows, charge (green) and park (gray) stops, plus a DRIVE / CHARGE / PARK timeline. Import-overwrite after API deploy.",
+  "description": "Time-range trip map: drive path with arrows, charge (green) and park (gray) stops, a DRIVE / CHARGE / PARK log, and a day × hour grid. Import-overwrite after API deploy.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -994,128 +994,96 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "fixed",
-            "fixedColor": "#94a3b8"
+            "mode": "thresholds"
           },
           "custom": {
-            "fillOpacity": 90,
-            "gradientMode": "none",
-            "lineWidth": 1
-          },
-          "unit": "h",
-          "decimals": 1
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "driveHours"
+            "fillOpacity": 100,
+            "hideFrom": {
+              "legend": true,
+              "tooltip": false,
+              "viz": false
             },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Drive"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#3b82f6",
-                  "mode": "fixed"
-                }
-              }
-            ]
+            "lineWidth": 0
           },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "chargeHours"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Charge"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#22c55e",
-                  "mode": "fixed"
+          "mappings": [
+            {
+              "options": {
+                "1": {
+                  "color": "#94a3b8",
+                  "index": 0,
+                  "text": "Park"
+                },
+                "2": {
+                  "color": "#3b82f6",
+                  "index": 1,
+                  "text": "Drive"
+                },
+                "3": {
+                  "color": "#22c55e",
+                  "index": 2,
+                  "text": "Charge"
                 }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "parkHours"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Park"
               },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#94a3b8",
-                  "mode": "fixed"
-                }
+                "color": "transparent",
+                "value": 0
               }
             ]
           }
-        ]
+        },
+        "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 14,
         "w": 24,
         "x": 0,
         "y": 20
       },
       "id": 4,
       "options": {
-        "barRadius": 1,
-        "barWidth": 0.75,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
+        "alignValue": "center",
+        "colWidth": 0.92,
         "legend": {
-          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
-        "orientation": "vertical",
+        "rowHeight": 0.94,
         "showValue": "never",
-        "stacking": "normal",
         "tooltip": {
-          "mode": "multi",
+          "mode": "single",
           "sort": "none"
-        },
-        "xTickLabelRotation": -45,
-        "xTickLabelSpacing": 0
+        }
       },
       "pluginVersion": "13.0.1",
       "targets": [
         {
           "columns": [
             {
-              "selector": "day",
-              "text": "day",
+              "selector": "time",
+              "text": "time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "slot",
+              "text": "slot",
               "type": "string"
             },
             {
-              "selector": "driveHours",
-              "text": "driveHours",
+              "selector": "kindCode",
+              "text": "kindCode",
               "type": "number"
             },
             {
-              "selector": "chargeHours",
-              "text": "chargeHours",
-              "type": "number"
-            },
-            {
-              "selector": "parkHours",
-              "text": "parkHours",
-              "type": "number"
+              "selector": "kind",
+              "text": "kind",
+              "type": "string"
             }
           ],
           "datasource": {
@@ -1129,16 +1097,39 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/timeline/daily?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}",
+          "url": "/api/v1/cars/${car_id}/timeline/grid?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}",
           "url_options": {
             "data": "",
             "method": "GET"
           }
         }
       ],
-      "title": "Time per day",
-      "description": "Hours of drive / charge / park on each local day in the dashboard time range. Overnight parks count on the day they started.",
-      "type": "barchart"
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "slot",
+            "emptyValue": "null",
+            "rowField": "time",
+            "valueField": "kindCode"
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "time"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "title": "Time of day",
+      "description": "One column per local day in the dashboard range. Each column is 00:00–24:00; gray = park, blue = drive, green = charge (15-minute slots). Overnight parks fill every day they cover.",
+      "type": "status-history"
     }
   ],
   "preload": false,

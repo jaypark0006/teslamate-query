@@ -1,6 +1,7 @@
 package com.teslamate.query.api.v1;
 
 import com.teslamate.query.dto.DailyOccupancyDto;
+import com.teslamate.query.dto.DayGridCellDto;
 import com.teslamate.query.dto.MapPointDto;
 import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.TimelineItemDto;
@@ -58,6 +59,21 @@ public class TripViewController {
             @RequestParam(required = false) String tempUnit
     ) {
         return tripViewService.dailyOccupancy(carId, from, to, support.minParkMin(minParkMin),
+                support.units(lengthUnit, tempUnit), support.zone(timezone));
+    }
+
+    @GetMapping("/timeline/grid")
+    @Operation(summary = "Day × 15-min slots of DRIVE / CHARGE / PARK (overnight parks fill every local day)")
+    public List<DayGridCellDto> grid(
+            @PathVariable long carId,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(required = false) String minParkMin,
+            @RequestParam(required = false) String timezone,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return tripViewService.grid(carId, from, to, support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone));
     }
 

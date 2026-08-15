@@ -1,5 +1,6 @@
 package com.teslamate.query.api.v1;
 
+import com.teslamate.query.dto.DayGridCellDto;
 import com.teslamate.query.dto.MapPointDto;
 import com.teslamate.query.dto.TimelineItemDto;
 import com.teslamate.query.dto.TimelineKind;
@@ -81,5 +82,26 @@ class TripViewControllerWebTest {
                 .jsonPath("$[0].kind").isEqualTo("drive")
                 .jsonPath("$[0].latitude").isEqualTo(29.5)
                 .jsonPath("$[0].heading").isEqualTo(90.0);
+    }
+
+    @Test
+    void gridOk() {
+        when(support.minParkMin(null)).thenReturn(10);
+        when(support.zone(null)).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
+        when(support.units(null, null)).thenReturn(null);
+        when(tripViewService.grid(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
+                eq(10), any(), any())).thenReturn(List.of(
+                new DayGridCellDto(Instant.parse("2026-08-15T16:00:00Z"), "2026-08-16",
+                        8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE")));
+        client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/timeline/grid")
+                        .queryParam("from", "2026-08-16T00:00:00Z")
+                        .queryParam("to", "2026-08-16T12:00:00Z")
+                        .build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$[0].kind").isEqualTo("DRIVE")
+                .jsonPath("$[0].slot").isEqualTo("08:00")
+                .jsonPath("$[0].kindCode").isEqualTo(2);
     }
 }

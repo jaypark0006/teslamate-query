@@ -11,6 +11,7 @@ import com.teslamate.query.db.condition.ChargingProcessSearchCondition;
 import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.DailyOccupancyDto;
+import com.teslamate.query.dto.DayGridCellDto;
 import com.teslamate.query.dto.MapPointDto;
 import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.TimelineItemDto;
@@ -27,6 +28,7 @@ import com.teslamate.query.exception.NotFoundException;
 import com.teslamate.query.service.trip.ActivitySpan;
 import com.teslamate.query.service.trip.ActivityTimelineComposer;
 import com.teslamate.query.service.trip.DailyOccupancy;
+import com.teslamate.query.service.trip.DayGrid;
 import com.teslamate.query.service.trip.DaySplit;
 import com.teslamate.query.service.trip.PathGeometry;
 import com.teslamate.query.service.trip.MapStopMerge;
@@ -122,6 +124,12 @@ public class TripViewService {
     public List<DailyOccupancyDto> dailyOccupancy(long carId, String fromStr, String toStr, Integer minParkMin,
                                                   DisplayUnits units, ZoneId zone) {
         return DailyOccupancy.from(timeline(carId, fromStr, toStr, minParkMin, units, zone));
+    }
+
+    public List<DayGridCellDto> grid(long carId, String fromStr, String toStr, Integer minParkMin,
+                                     DisplayUnits units, ZoneId zone) {
+        ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
+        return DayGrid.paintFromTimeline(timeline(carId, fromStr, toStr, minParkMin, units, z), z);
     }
 
     public List<MapPointDto> points(long carId, String fromStr, String toStr, Integer minParkMin,
