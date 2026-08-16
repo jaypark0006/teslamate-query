@@ -31,7 +31,7 @@ public class CommuteController {
     @GetMapping
     @Operation(summary = "Same clock-window outing each local day, sampled by elapsed minutes from that day's start")
     public List<CommuteSampleDto> compare(
-            @PathVariable long carId,
+            @PathVariable String carId,
             @RequestParam String from,
             @RequestParam String to,
             @Parameter(description = "Local start clock, inclusive (HH:mm). Default 05:30")

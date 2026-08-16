@@ -38,6 +38,19 @@ public class CarDao {
                 .findOne());
     }
 
+    public Optional<CarEntity> findByVin(String vin) {
+        if (vin == null || vin.isBlank()) {
+            return Optional.empty();
+        }
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM cars
+                WHERE vin = :vin
+                """)
+                .bind("vin", vin.trim())
+                .map(ConstructorMapper.of(CarEntity.class))
+                .findOne());
+    }
+
     public List<CarEntity> findByIds(Collection<Long> ids) {
         if (IdOrder.isEmpty(ids)) {
             return List.of();

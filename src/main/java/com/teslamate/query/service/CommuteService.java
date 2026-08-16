@@ -7,6 +7,7 @@ import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.dto.CommuteSampleDto;
 import com.teslamate.query.entity.DriveEntity;
 import com.teslamate.query.entity.PositionCommutePoint;
+import com.teslamate.query.exception.BadRequestException;
 import com.teslamate.query.exception.NotFoundException;
 import com.teslamate.query.service.trip.CommuteCompare;
 import org.slf4j.Logger;
@@ -39,9 +40,9 @@ public class CommuteService {
     }
 
     public List<CommuteSampleDto> compare(
-            long carId, Instant from, Instant to, int startAfterMin, int startBeforeMin,
+            String carKey, Instant from, Instant to, int startAfterMin, int startBeforeMin,
             int stepSec, Integer elapsedMin, ZoneId zone) {
-        carDao.findById(carId).orElseThrow(() -> new NotFoundException("Car not found: " + carId));
+        long carId = requireCarId(carKey);
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         int step = Math.min(Math.max(stepSec, 15), 180);
         DriveSearchCondition cond = DriveSearchCondition.builder()
@@ -76,5 +77,22 @@ public class CommuteService {
         log.info("commute car={} days={} clock={}-{} elapsed={} step={}s samples={}",
                 carId, picked.size(), startAfterMin, startBeforeMin, elapsedMin, step, out.size());
         return out;
+    }
+
+    /** Grafana may send the numeric id or the VIN as {@code car_id}. */
+    long requireCarId(String raw) {
+        if (raw == null || raw.isBlank() || raw.contains("${")) {
+            throw new BadRequestException("carId is required");
+        }
+        String s = raw.trim();
+        if (s.chars().allMatch(Character::isDigit)) {
+            long id = Long.parseLong(s);
+            return carDao.findById(id)
+                    .orElseThrow(() -> new NotFoundException("Car not found: " + id))
+                    .id();
+        }
+        return carDao.findByVin(s)
+                .orElseThrow(() -> new NotFoundException("Car not found: " + s))
+                .id();
     }
 }

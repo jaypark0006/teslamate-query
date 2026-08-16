@@ -49,6 +49,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> badRequest(RuntimeException ex, ServerHttpRequest req) {
+        log.warn("400 {} {}", path(req), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse("BAD_REQUEST", ex.getMessage(), Instant.now(), path(req)));
     }
@@ -98,6 +99,7 @@ public class GlobalExceptionHandler {
         if (raw.contains("${") || raw.contains("$car")) {
             message += " (Grafana did not substitute this variable — add a dashboard variable with that name)";
         }
+        log.warn("400 {} {}", path(req), message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse("BAD_REQUEST", message, Instant.now(), path(req)));
     }
