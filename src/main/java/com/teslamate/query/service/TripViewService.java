@@ -78,7 +78,7 @@ public class TripViewService {
     static final String COLOR_DRIVE = "#3b82f6";
     static final String COLOR_CHARGE = "#22c55e";
     static final String COLOR_CHARGE_DC = "#f59e0b";
-    static final String COLOR_PARK = "#1d4ed8";
+    static final String COLOR_PARK = "#94a3b8";
 
     private final CarDao carDao;
     private final DriveDao driveDao;

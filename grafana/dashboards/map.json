@@ -52,7 +52,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "Timezone **${__timezone}**. Blue line + **arrows** = drive direction. **Green** = charge. Blue **P** + duration = park (`-` = still parked). API times are UTC.",
+        "content": "Timezone **${__timezone}**. Blue line + arrows = drive. Gray **P** = park. Green **C** = charge. Light duration text (`-` = still parked). API times are UTC.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -68,7 +68,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-BlPu"
+            "mode": "fixed",
+            "fixedColor": "#3b82f6"
           },
           "mappings": [],
           "thresholds": {
@@ -91,7 +92,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "continuous-BlPu"
+                  "mode": "fixed",
+                  "fixedColor": "#3b82f6"
                 }
               }
             ]
@@ -217,7 +219,6 @@
               "style": {
                 "arrow": 1,
                 "color": {
-                  "field": "elapsedMin",
                   "fixed": "#3b82f6"
                 },
                 "lineWidth": 5,
@@ -269,7 +270,7 @@
               "showLegend": false,
               "style": {
                 "color": {
-                  "fixed": "#1d4ed8"
+                  "fixed": "#94a3b8"
                 },
                 "opacity": 1,
                 "rotation": {
@@ -279,29 +280,17 @@
                   "mode": "mod"
                 },
                 "size": {
-                  "fixed": 7,
-                  "max": 9,
-                  "min": 5
+                  "fixed": 11,
+                  "max": 13,
+                  "min": 9
                 },
                 "symbol": {
-                  "fixed": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M6 3h8.5c3.5 0 6.2 2.3 6.2 6s-2.8 6-6.2 6H10v6H6V3zm4 3.2v5.6h4.2c1.9 0 3.2-1.2 3.2-2.8s-1.3-2.8-3.2-2.8H10z'/%3E%3C/svg%3E",
+                  "fixed": "data:image/svg+xml,%3Csvg%20xmlns=%22http%3A//www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%3E%3Cpath%20fill-rule=%22evenodd%22%20d=%22M12%201a11%2011%200%201%200%200%2022%2011%2011%200%200%200%200-22zM8.7%206.4h6.1c2.55%200%204.35%201.7%204.35%204.15S17.35%2014.7%2014.8%2014.7h-3.2V17.6H8.7V6.4zm2.75%202.15v3.45h3.15c1.2%200%202.05-.75%202.05-1.725%200-.975-.85-1.725-2.05-1.725h-3.15z%22/%3E%3C/svg%3E",
                   "mode": "fixed"
                 },
                 "symbolAlign": {
                   "horizontal": "center",
                   "vertical": "center"
-                },
-                "text": {
-                  "field": "durationLabel",
-                  "fixed": "",
-                  "mode": "field"
-                },
-                "textConfig": {
-                  "fontSize": 10,
-                  "offsetX": 11,
-                  "offsetY": 9,
-                  "textAlign": "left",
-                  "textBaseline": "top"
                 }
               }
             },
@@ -326,7 +315,7 @@
                 "color": {
                   "fixed": "#22c55e"
                 },
-                "opacity": 0.95,
+                "opacity": 1,
                 "rotation": {
                   "fixed": 0,
                   "max": 360,
@@ -334,29 +323,17 @@
                   "mode": "mod"
                 },
                 "size": {
-                  "fixed": 6,
-                  "max": 8,
-                  "min": 4
+                  "fixed": 11,
+                  "max": 13,
+                  "min": 9
                 },
                 "symbol": {
-                  "fixed": "img/icons/marker/circle.svg",
+                  "fixed": "data:image/svg+xml,%3Csvg%20xmlns=%22http%3A//www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%3E%3Cpath%20fill-rule=%22evenodd%22%20d=%22M12%201a11%2011%200%201%200%200%2022%2011%2011%200%200%200%200-22zm5.05%206.85-1.85%201.55a4.15%204.15%200%201%200%200%206.2l1.85%201.55a6.55%206.55%200%201%201%200-9.3z%22/%3E%3C/svg%3E",
                   "mode": "fixed"
                 },
                 "symbolAlign": {
                   "horizontal": "center",
                   "vertical": "center"
-                },
-                "text": {
-                  "field": "durationLabel",
-                  "fixed": "",
-                  "mode": "field"
-                },
-                "textConfig": {
-                  "fontSize": 10,
-                  "offsetX": 11,
-                  "offsetY": -12,
-                  "textAlign": "left",
-                  "textBaseline": "bottom"
                 }
               }
             },
@@ -372,6 +349,116 @@
             "name": "Charges",
             "opacity": 1,
             "tooltip": true,
+            "type": "markers"
+          },
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "#e2e8f0"
+                },
+                "opacity": 1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 1,
+                  "max": 1,
+                  "min": 1
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "field": "durationLabel",
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 14,
+                  "offsetY": 10,
+                  "textAlign": "left",
+                  "textBaseline": "top"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "Park"
+            },
+            "location": {
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
+            },
+            "name": "Park labels",
+            "opacity": 1,
+            "tooltip": false,
+            "type": "markers"
+          },
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "#fde68a"
+                },
+                "opacity": 1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 1,
+                  "max": 1,
+                  "min": 1
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "field": "durationLabel",
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 14,
+                  "offsetY": -12,
+                  "textAlign": "left",
+                  "textBaseline": "bottom"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "Charge"
+            },
+            "location": {
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
+            },
+            "name": "Charge labels",
+            "opacity": 1,
+            "tooltip": false,
             "type": "markers"
           },
           {
