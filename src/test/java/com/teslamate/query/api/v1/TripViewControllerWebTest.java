@@ -105,4 +105,18 @@ class TripViewControllerWebTest {
                 .jsonPath("$[0].slot").isEqualTo("08:00")
                 .jsonPath("$[0].kindCode").isEqualTo(2);
     }
+
+    @Test
+    void focusUnsetIsEmpty() {
+        when(support.minParkMin(null)).thenReturn(10);
+        when(support.zone(null)).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
+        when(support.dayStartHour(null)).thenReturn(0);
+        when(support.units(null, null)).thenReturn(null);
+        when(tripViewService.focus(eq(1L), eq(null), eq(null), eq(null),
+                eq(10), any(), any(), eq(0))).thenReturn(List.of());
+        client.get().uri("/api/v1/cars/1/map/focus")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody().json("[]");
+    }
 }

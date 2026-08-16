@@ -100,6 +100,11 @@ public class QuerySupport {
         return (int) off;
     }
 
+    public boolean unset(String raw) {
+        return raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")
+                || raw.equalsIgnoreCase("all") || raw.equalsIgnoreCase("none") || raw.equals("-");
+    }
+
     /** Local hour the day-block starts (0–23). Grafana sends 4 for 04:00–04:00. */
     public int dayStartHour(String raw) {
         if (raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")) {

@@ -52,7 +52,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "Timezone **${__timezone}**. Blue line + arrows = drive. Gray **P** = park. Green **C** = charge. Light duration text (`-` = still parked). API times are UTC.",
+        "content": "Timezone **${__timezone}**. Blue line + arrows = drive. Gray **P** = park. Green **C** = charge. Click a Time-of-day cell to draw that trip in yellow. API times are UTC.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -463,6 +463,100 @@
           },
           {
             "config": {
+              "style": {
+                "arrow": 1,
+                "color": {
+                  "fixed": "#facc15"
+                },
+                "lineWidth": 8,
+                "opacity": 1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 6,
+                  "max": 10,
+                  "min": 3
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "Focus"
+            },
+            "location": {
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
+            },
+            "name": "Focus trip",
+            "opacity": 1,
+            "tooltip": true,
+            "type": "route"
+          },
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "#facc15"
+                },
+                "opacity": 1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 13,
+                  "max": 15,
+                  "min": 11
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "Focus"
+            },
+            "location": {
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
+            },
+            "name": "Focus stop",
+            "opacity": 1,
+            "tooltip": true,
+            "type": "markers"
+          },
+          {
+            "config": {
               "showLegend": false,
               "style": {
                 "color": {
@@ -680,6 +774,56 @@
           "source": "url",
           "type": "json",
           "url": "/api/v1/cars/${car_id}/map/points?from=${__from:date:iso}&to=${__to:date:iso}&kinds=charge",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "time",
+              "text": "time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "latitude",
+              "text": "latitude",
+              "type": "number"
+            },
+            {
+              "selector": "longitude",
+              "text": "longitude",
+              "type": "number"
+            },
+            {
+              "selector": "heading",
+              "text": "heading",
+              "type": "number"
+            },
+            {
+              "selector": "label",
+              "text": "label",
+              "type": "string"
+            },
+            {
+              "selector": "durationLabel",
+              "text": "durationLabel",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${ds}"
+          },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "Focus",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/cars/${car_id}/map/focus?day=${focus_day}&slot=${focus_slot}&kind=${focus_kind}&timezone=${__timezone}&dayStartHour=4",
           "url_options": {
             "data": "",
             "method": "GET"
@@ -1078,6 +1222,13 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Highlight this trip on the map",
+              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.numeric}"
+            }
+          ],
           "custom": {
             "fillOpacity": 100,
             "hideFrom": {
@@ -1140,7 +1291,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "★"
+              "options": " "
             },
             "properties": [
               {
@@ -1237,10 +1388,44 @@
             ],
             "fields": {}
           }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "00 04:00": "04:00",
+              "01 05:00": "05:00",
+              "02 06:00": "06:00",
+              "03 07:00": "07:00",
+              "04 08:00": "08:00",
+              "05 09:00": "09:00",
+              "06 10:00": "10:00",
+              "07 11:00": "11:00",
+              "08 12:00": "12:00",
+              "09 13:00": "13:00",
+              "10 14:00": "14:00",
+              "11 15:00": "15:00",
+              "12 16:00": "16:00",
+              "13 17:00": "17:00",
+              "14 18:00": "18:00",
+              "15 19:00": "19:00",
+              "16 20:00": "20:00",
+              "17 21:00": "21:00",
+              "18 22:00": "22:00",
+              "19 23:00": "23:00",
+              "20 00:00": "00:00",
+              "21 01:00": "01:00",
+              "22 02:00": "02:00",
+              "23 03:00": "03:00",
+              "24 ★": " "
+            }
+          }
         }
       ],
       "title": "Time of day",
-      "description": "One column per local day (04:00–04:00 in the dashboard timezone). Gray = park, blue = drive, green = charge. Amber mark = Sat/Sun. Overnight parks fill every day they cover.",
+      "description": "One column per local day (04:00–04:00). Gray = park, blue = drive, green = charge. Amber = weekend. Click a cell to highlight that trip on the map.",
       "type": "status-history"
     }
   ],
@@ -1325,6 +1510,45 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 2,
+        "label": "Focus day",
+        "name": "focus_day",
+        "options": [],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 2,
+        "label": "Focus slot",
+        "name": "focus_slot",
+        "options": [],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 2,
+        "label": "Focus kind",
+        "name": "focus_kind",
+        "options": [],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
       }
     ]
   },

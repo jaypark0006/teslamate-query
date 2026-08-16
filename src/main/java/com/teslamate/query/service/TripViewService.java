@@ -47,6 +47,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -130,6 +131,60 @@ public class TripViewService {
                                      DisplayUnits units, ZoneId zone, int dayStartHour) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         return DayGrid.paintFromTimeline(timeline(carId, fromStr, toStr, minParkMin, units, z), z, dayStartHour);
+    }
+
+    /**
+     * Points for the trip that occupies {@code slot} on {@code day}.
+     * Empty day/slot (Grafana unset vars) returns no rows.
+     */
+    public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
+                                   Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
+        if (support.unset(dayStr) || support.unset(slotStr)) {
+            return List.of();
+        }
+        Integer clockH = DayGrid.parseClockHour(slotStr);
+        if (clockH == null) {
+            return List.of();
+        }
+        ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
+        Instant dayInstant;
+        try {
+            dayInstant = support.parseInstant(dayStr, "day");
+        } catch (RuntimeException e) {
+            try {
+                dayInstant = Instant.ofEpochMilli(Long.parseLong(dayStr.trim()));
+            } catch (RuntimeException e2) {
+                return List.of();
+            }
+        }
+        LocalDate day = dayInstant.atZone(z).toLocalDate();
+        int startH = Math.floorMod(dayStartHour, 24);
+        ZonedDateTime slotStart = day.atTime(clockH, 0).atZone(z);
+        if (clockH < startH) {
+            slotStart = slotStart.plusDays(1);
+        }
+        Instant from = slotStart.toInstant();
+        Instant to = slotStart.plusHours(1).toInstant();
+        int want = focusKindCode(kindStr);
+        List<TimelineItemDto> hit = timeline(carId, from.minusSeconds(90).toString(), to.plusSeconds(90).toString(),
+                minParkMin, units, z).stream()
+                .filter(i -> overlapsWindow(i, from, to))
+                .filter(i -> want == 0 || kindCode(i.kind()) == want)
+                .toList();
+        if (hit.isEmpty()) {
+            return List.of();
+        }
+        Instant expFrom = hit.stream().map(TimelineItemDto::start).filter(java.util.Objects::nonNull)
+                .min(Instant::compareTo).orElse(from);
+        Instant expTo = hit.stream().map(TimelineItemDto::end).filter(java.util.Objects::nonNull)
+                .max(Instant::compareTo).orElse(to);
+        String kinds = switch (want) {
+            case DayGridCellDto.DRIVE -> "drive";
+            case DayGridCellDto.CHARGE -> "charge";
+            case DayGridCellDto.PARK -> "park";
+            default -> "drive,charge,park";
+        };
+        return points(carId, expFrom.toString(), expTo.toString(), minParkMin, kinds, units);
     }
 
     public List<MapPointDto> points(long carId, String fromStr, String toStr, Integer minParkMin,
@@ -591,6 +646,43 @@ public class TripViewService {
 
     private CarEntity requireCar(long carId) {
         return carDao.findById(carId).orElseThrow(() -> new NotFoundException("Car not found: " + carId));
+    }
+
+    static int focusKindCode(String raw) {
+        if (raw == null || raw.isBlank() || raw.contains("${")) {
+            return 0;
+        }
+        String s = raw.trim();
+        return switch (s.toUpperCase(Locale.ROOT)) {
+            case "1", "PARK" -> DayGridCellDto.PARK;
+            case "2", "DRIVE" -> DayGridCellDto.DRIVE;
+            case "3", "CHARGE" -> DayGridCellDto.CHARGE;
+            default -> {
+                try {
+                    int n = Integer.parseInt(s);
+                    yield n >= 1 && n <= 3 ? n : 0;
+                } catch (NumberFormatException e) {
+                    yield 0;
+                }
+            }
+        };
+    }
+
+    private static int kindCode(TimelineKind kind) {
+        if (kind == TimelineKind.DRIVE) {
+            return DayGridCellDto.DRIVE;
+        }
+        if (kind == TimelineKind.CHARGE) {
+            return DayGridCellDto.CHARGE;
+        }
+        return DayGridCellDto.PARK;
+    }
+
+    private static boolean overlapsWindow(TimelineItemDto item, Instant from, Instant to) {
+        if (item == null || item.start() == null || item.end() == null) {
+            return false;
+        }
+        return item.start().isBefore(to) && item.end().isAfter(from);
     }
 
     static Set<String> parseKinds(String raw) {

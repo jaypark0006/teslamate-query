@@ -12,6 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TripViewServiceTest {
 
     @Test
+    void focusKindCodeReadsGridClick() {
+        assertEquals(0, TripViewService.focusKindCode(null));
+        assertEquals(2, TripViewService.focusKindCode("2"));
+        assertEquals(2, TripViewService.focusKindCode("DRIVE"));
+        assertEquals(3, TripViewService.focusKindCode("charge"));
+    }
+
+    @Test
     void parseKindsDefaultAndFilter() {
         assertEquals(Set.of("drive", "charge", "park"), TripViewService.parseKinds(null));
         assertEquals(Set.of("drive", "charge", "park"), TripViewService.parseKinds("${kinds}"));

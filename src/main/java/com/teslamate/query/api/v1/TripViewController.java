@@ -108,4 +108,22 @@ public class TripViewController {
         return tripViewService.points(carId, from, to, support.minParkMin(minParkMin), kinds,
                 support.units(lengthUnit, tempUnit));
     }
+
+    @GetMapping("/map/focus")
+    @Operation(summary = "Map points for the trip that occupies a Time-of-day cell")
+    public List<MapPointDto> focus(
+            @PathVariable long carId,
+            @RequestParam(required = false) String day,
+            @RequestParam(required = false) String slot,
+            @RequestParam(required = false) String kind,
+            @RequestParam(required = false) String minParkMin,
+            @RequestParam(required = false) String timezone,
+            @RequestParam(required = false) String dayStartHour,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return tripViewService.focus(carId, day, slot, kind, support.minParkMin(minParkMin),
+                support.units(lengthUnit, tempUnit), support.zone(timezone),
+                support.dayStartHour(dayStartHour));
+    }
 }

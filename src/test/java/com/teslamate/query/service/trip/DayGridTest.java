@@ -28,7 +28,7 @@ class DayGridTest {
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && c.hour() >= 22));
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-11") && c.hour() < 8));
         assertTrue(cells.stream().allMatch(c -> c.kindCode() == DayGridCellDto.PARK));
-        assertTrue(cells.stream().anyMatch(c -> "22:00".equals(c.slot())));
+        assertTrue(cells.stream().anyMatch(c -> "22 22:00".equals(c.slot())));
     }
 
     @Test
@@ -48,7 +48,7 @@ class DayGridTest {
                 c.kindCode() == DayGridCellDto.DRIVE && c.hour() < 1);
         assertTrue(sawDrive);
         assertEquals(DayGridCellDto.DRIVE,
-                cells.stream().filter(c -> "00:00".equals(c.slot())).findFirst().orElseThrow().kindCode());
+                cells.stream().filter(c -> "00 00:00".equals(c.slot())).findFirst().orElseThrow().kindCode());
     }
 
     @Test
@@ -60,7 +60,7 @@ class DayGridTest {
                 Instant.parse("2026-08-10T20:00:00Z"),
                 120, null, null);
         List<DayGridCellDto> cells = DayGrid.paint(List.of(park), SH, 4);
-        assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && "·02:00".equals(c.slot())));
+        assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && "22 02:00".equals(c.slot())));
         assertTrue(cells.stream().noneMatch(c -> c.day().equals("2026-08-11")));
     }
 
@@ -87,5 +87,23 @@ class DayGridTest {
         List<DayGridCellDto> cells = DayGrid.paintFromTimeline(List.of(item), SH);
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && c.hour() >= 22));
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-11") && c.hour() < 8));
+    }
+
+    @Test
+    void fourAmSlotKeysSortWithFourOClockFirst() {
+        List<String> keys = new java.util.ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            keys.add(DayGrid.slotKey(4, i));
+        }
+        List<String> sorted = new java.util.ArrayList<>(keys);
+        sorted.sort(String::compareTo);
+        assertEquals(keys, sorted);
+        assertEquals("00 04:00", keys.getFirst());
+        assertEquals("06 10:00", keys.get(6));
+        assertEquals("20 00:00", keys.get(20));
+        assertEquals("23 03:00", keys.get(23));
+        assertEquals(10, DayGrid.parseClockHour("06 10:00"));
+        assertEquals(0, DayGrid.parseClockHour("00:00"));
+        assertEquals(null, DayGrid.parseClockHour("24 ★"));
     }
 }

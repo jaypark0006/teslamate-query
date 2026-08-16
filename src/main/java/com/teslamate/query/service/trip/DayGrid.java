@@ -27,7 +27,8 @@ public final class DayGrid {
 
     static final int SLOT_MIN = 60;
     static final int SLOTS_PER_DAY = 24 * 60 / SLOT_MIN;
-    static final String WEEKEND_SLOT = "★";
+    /** Sorts after {@code 00 04:00}…{@code 23 03:00} even if Grafana strips colons. */
+    static final String WEEKEND_SLOT = "24 ★";
 
     private DayGrid() {}
 
@@ -99,14 +100,9 @@ public final class DayGrid {
         for (int[] c : cells.values()) {
             LocalDate day = LocalDate.of(c[1], c[2], c[3]);
             Instant midnight = day.atStartOfDay(z).toInstant();
+            String slot = slotKey(startH, c[4]);
             int clockMin = (startH * 60 + c[4] * SLOT_MIN) % (24 * 60);
-            int clockH = clockMin / 60;
-            int clockM = clockMin % 60;
-            String slot = String.format("%02d:%02d", clockH, clockM);
-            if (startH != 0 && clockH < startH) {
-                slot = "·" + slot;
-            }
-            double hour = clockH + clockM / 60.0;
+            double hour = clockMin / 60.0;
             String kind = switch (c[0]) {
                 case DayGridCellDto.DRIVE -> "DRIVE";
                 case DayGridCellDto.CHARGE -> "CHARGE";
@@ -129,6 +125,33 @@ public final class DayGrid {
         }
         out.sort(Comparator.comparing(DayGridCellDto::day).thenComparing(DayGridCellDto::slot));
         return out;
+    }
+
+    /** {@code 00 04:00} … {@code 23 03:00} so 04:00 stays first after a string sort. */
+    static String slotKey(int dayStartHour, int slotIndex) {
+        int startH = Math.floorMod(dayStartHour, 24);
+        int idx = Math.floorMod(slotIndex, SLOTS_PER_DAY);
+        int clockMin = (startH * 60 + idx * SLOT_MIN) % (24 * 60);
+        return String.format("%02d %02d:%02d", idx, clockMin / 60, clockMin % 60);
+    }
+
+    /** Clock hour from {@code 22:00}, {@code 06 10:00}, or {@code ·00:00}. */
+    public static Integer parseClockHour(String slot) {
+        if (slot == null || slot.isBlank() || slot.contains("★")) {
+            return null;
+        }
+        String s = slot.trim();
+        int colon = s.lastIndexOf(':');
+        if (colon < 2) {
+            return null;
+        }
+        String hh = s.substring(colon - 2, colon).replace("·", "").trim();
+        try {
+            int h = Integer.parseInt(hh);
+            return (h >= 0 && h <= 23) ? h : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static int code(TimelineKind kind) {
