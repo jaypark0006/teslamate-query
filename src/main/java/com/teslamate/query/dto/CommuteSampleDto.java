@@ -10,6 +10,7 @@ public record CommuteSampleDto(
         String day,
         Long driveId,
         double elapsedMin,
+        Instant elapsedAxis,
         Instant start,
         String startLocal,
         Double latitude,

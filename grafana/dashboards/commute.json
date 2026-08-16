@@ -180,7 +180,7 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 8,
             "gradientMode": "none",
             "hideFrom": { "legend": false, "tooltip": false, "viz": false },
             "insertNulls": false,
@@ -195,26 +195,24 @@
           },
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] },
-          "unit": "lengthkm"
+          "unit": "lengthkm",
+          "decimals": 1
         },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "elapsedMin" }, "properties": [{ "id": "displayName", "value": "min since start" }, { "id": "unit", "value": "none" }, { "id": "decimals", "value": 0 }] },
-          { "matcher": { "id": "byName", "options": "kmFromStart" }, "properties": [{ "id": "displayName", "value": "km covered" }, { "id": "unit", "value": "lengthkm" }, { "id": "decimals", "value": 1 }] }
+          { "matcher": { "id": "byName", "options": "time" }, "properties": [{ "id": "displayName", "value": "min since start" }, { "id": "unit", "value": "time:HH:mm" }] }
         ]
       },
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 21 },
       "id": 4,
       "options": {
         "legend": { "calcs": ["max"], "displayMode": "list", "placement": "right", "showLegend": true },
-        "seriesMapping": "auto",
-        "tooltip": { "mode": "multi" },
-        "xField": "elapsedMin"
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "none" }
       },
       "pluginVersion": "13.0.1",
       "targets": [
         {
           "columns": [
-            { "selector": "elapsedMin", "text": "elapsedMin", "type": "number" },
+            { "selector": "elapsedAxis", "text": "time", "type": "timestamp" },
             { "selector": "kmFromStart", "text": "kmFromStart", "type": "number" },
             { "selector": "startLocal", "text": "startLocal", "type": "string" }
           ],
@@ -236,8 +234,8 @@
           "options": { "fields": ["startLocal"], "keepFields": true }
         }
       ],
-      "title": "One line per day — km covered vs minutes since start (higher at 10 min = farther)",
-      "type": "xychart"
+      "title": "One line per day — km covered vs minutes since start (00:10 on the axis = 10 min in)",
+      "type": "timeseries"
     },
     {
       "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },

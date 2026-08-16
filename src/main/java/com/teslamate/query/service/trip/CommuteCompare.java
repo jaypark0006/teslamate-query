@@ -113,7 +113,7 @@ public final class CommuteCompare {
         for (long sec = 0; sec <= spanSec; sec += step) {
             int idx = lastAtOrBeforeTime(raw, t0, sec);
             double km = along[idx];
-            CommuteSampleDto row = toDto(drive, day, startLocal, raw.get(idx), km, sec / 60.0, t0);
+            CommuteSampleDto row = toDto(drive, day, startLocal, raw.get(idx), km, sec / 60.0, t0, zone);
             if (out.isEmpty() && (row.speed() == null || row.speed() <= 3) && sec == 0) {
                 continue;
             }
@@ -167,7 +167,7 @@ public final class CommuteCompare {
 
     static CommuteSampleDto toDto(
             DriveEntity drive, String day, String startLocal, PositionCommutePoint p,
-            double km, double elapsedMin, Instant t0) {
+            double km, double elapsedMin, Instant t0, ZoneId zone) {
         Integer speed = p.speed();
         String bin = Math.round(elapsedMin) + "min";
         String kmTxt = String.format(java.util.Locale.US, "%.1f km", km);
@@ -175,8 +175,12 @@ public final class CommuteCompare {
                 + (speed == null ? "" : " · " + speed + " km/h");
         Double lat = p.latitude() == null ? null : p.latitude().doubleValue();
         Double lon = p.longitude() == null ? null : p.longitude().doubleValue();
+        Instant elapsedAxis = java.time.LocalDate.of(2020, 1, 1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .plusSeconds(Math.round(elapsedMin * 60.0));
         return new CommuteSampleDto(
-                day, drive.id(), elapsedMin, t0, startLocal,
+                day, drive.id(), elapsedMin, elapsedAxis, t0, startLocal,
                 lat, lon, speed, km, bin, label);
     }
 
