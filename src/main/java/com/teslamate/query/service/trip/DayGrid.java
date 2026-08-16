@@ -100,9 +100,7 @@ public final class DayGrid {
                 }
                 String key = day + "#" + slot;
                 Painted cell = cells.get(key);
-                if (cell == null || preferred(code, cell.code)) {
-                    cells.put(key, new Painted(code, day, slot, span.sourceId()));
-                }
+                cells.put(key, Painted.merge(cell, code, day, slot, span.sourceId()));
                 cursor = slotEnd;
             }
         }
@@ -119,9 +117,10 @@ public final class DayGrid {
                 case DayGridCellDto.PARK -> "PARK";
                 default -> "";
             };
-            String label = c.code == 0 ? null : DayGridCellDto.cellLabel(c.code, c.sourceId);
+            String label = c.code == 0 ? null : DayGridCellDto.cellLabel(c.code, c.driveId, c.chargeId);
+            Long sourceId = c.chargeId != null ? c.chargeId : c.driveId;
             out.add(new DayGridCellDto(x, c.day.toString(), hour, slot, c.code, kind,
-                    c.sourceId, label));
+                    sourceId, label));
         }
         for (LocalDate day : days) {
             DayOfWeek w = day.getDayOfWeek();
@@ -178,7 +177,7 @@ public final class DayGrid {
         for (LocalDate day = first; !day.isAfter(last); day = day.plusDays(1)) {
             days.add(day);
             for (int slot = 0; slot < SLOTS_PER_DAY; slot++) {
-                cells.putIfAbsent(day + "#" + slot, new Painted(0, day, slot, null));
+                cells.putIfAbsent(day + "#" + slot, new Painted(0, day, slot, null, null));
             }
         }
     }
@@ -237,10 +236,31 @@ public final class DayGrid {
         return DayGridCellDto.PARK;
     }
 
-    /** Charge covers drive covers park when two things share an hour slot. */
-    private static boolean preferred(int incoming, int existing) {
-        return incoming > existing;
+    /**
+     * Display color: charge if any charge in the hour, else drive, else park.
+     * Drive and charge ids are both kept so click can highlight each.
+     */
+    private record Painted(int code, LocalDate day, int slot, Long driveId, Long chargeId) {
+        static Painted merge(Painted existing, int incoming, LocalDate day, int slot, Long sourceId) {
+            Long driveId = existing == null ? null : existing.driveId;
+            Long chargeId = existing == null ? null : existing.chargeId;
+            if (incoming == DayGridCellDto.DRIVE && sourceId != null) {
+                driveId = sourceId;
+            }
+            if (incoming == DayGridCellDto.CHARGE && sourceId != null) {
+                chargeId = sourceId;
+            }
+            int code;
+            if (chargeId != null) {
+                code = DayGridCellDto.CHARGE;
+            } else if (driveId != null) {
+                code = DayGridCellDto.DRIVE;
+            } else if (existing == null) {
+                code = incoming;
+            } else {
+                code = Math.max(existing.code, incoming);
+            }
+            return new Painted(code, day, slot, driveId, chargeId);
+        }
     }
-
-    private record Painted(int code, LocalDate day, int slot, Long sourceId) {}
 }

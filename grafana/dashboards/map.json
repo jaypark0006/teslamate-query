@@ -1225,8 +1225,13 @@
           "links": [
             {
               "targetBlank": false,
-              "title": "Highlight ${__value.raw} on the map",
-              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.raw}"
+              "title": "Highlight charge",
+              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=Charge"
+            },
+            {
+              "targetBlank": false,
+              "title": "Highlight drive",
+              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=Drive"
             },
             {
               "targetBlank": true,
@@ -1442,7 +1447,7 @@
         }
       ],
       "title": "Time of day",
-      "description": "Each column is 04:00–04:00 local. Y-axis is always 04→23 then ·00–·03 (next morning). Hover for Drive #id / Charge #id.",
+      "description": "Each column is 04:00–04:00 local. If an hour has both charge and drive, the cell is green (charge) and the tooltip lists both ids. Click Highlight charge or Highlight drive separately.",
       "type": "status-history"
     }
   ],

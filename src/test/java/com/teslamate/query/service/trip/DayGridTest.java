@@ -54,6 +54,25 @@ class DayGridTest {
     }
 
     @Test
+    void chargeAndDriveInSameHourKeepChargeColorAndBothIds() {
+        ActivitySpan drive = new ActivitySpan(
+                TimelineKind.DRIVE, 12L,
+                Instant.parse("2026-08-10T16:00:00Z"),
+                Instant.parse("2026-08-10T16:25:00Z"),
+                25, null, null);
+        ActivitySpan charge = new ActivitySpan(
+                TimelineKind.CHARGE, 9L,
+                Instant.parse("2026-08-10T16:25:00Z"),
+                Instant.parse("2026-08-10T16:50:00Z"),
+                25, null, null);
+        List<DayGridCellDto> cells = DayGrid.paint(List.of(drive, charge), ZoneId.of("UTC"));
+        DayGridCellDto cell = cells.stream().filter(c -> "16".equals(c.slot())).findFirst().orElseThrow();
+        assertEquals(DayGridCellDto.CHARGE, cell.kindCode());
+        assertEquals(9L, cell.sourceId());
+        assertEquals("Charge #9 · Drive #12", cell.label());
+    }
+
+    @Test
     void fourAmDayKeepsPredawnOnPreviousColumn() {
         // 02:00–04:00 Aug 11 CST belongs to the Aug 10 04:00–04:00 block
         ActivitySpan park = new ActivitySpan(

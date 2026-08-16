@@ -23,11 +23,24 @@ public record DayGridCellDto(
     public static final int WEEKEND = 4;
 
     public static String cellLabel(int kindCode, Long sourceId) {
-        return switch (kindCode) {
-            case DRIVE -> sourceId == null ? "Drive" : "Drive #" + sourceId;
-            case CHARGE -> sourceId == null ? "Charge" : "Charge #" + sourceId;
-            case WEEKEND -> "Weekend";
-            default -> "Park";
-        };
+        return cellLabel(kindCode, kindCode == DRIVE ? sourceId : null, kindCode == CHARGE ? sourceId : null);
+    }
+
+    public static String cellLabel(int kindCode, Long driveId, Long chargeId) {
+        if (kindCode == WEEKEND) {
+            return "Weekend";
+        }
+        boolean charge = chargeId != null;
+        boolean drive = driveId != null;
+        if (charge && drive) {
+            return "Charge #" + chargeId + " · Drive #" + driveId;
+        }
+        if (charge) {
+            return "Charge #" + chargeId;
+        }
+        if (drive) {
+            return "Drive #" + driveId;
+        }
+        return kindCode == PARK ? "Park" : null;
     }
 }
