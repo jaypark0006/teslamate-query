@@ -12,7 +12,8 @@
 | API_KEYS | dev-api-key | Comma-separated API keys |
 | AUTH_ENABLED | false | Set true when exposing beyond compose/LAN |
 | SERVER_PORT | 8080 | HTTP port |
-| DB_POOL_SIZE | 10 | Hikari pool size |
+| DB_POOL_SIZE | 4 | Hikari pool size (keep small on a 2 GB host) |
+| JAVA_TOOL_OPTIONS | `-Xms64m -Xmx256m -XX:+UseSerialGC` | Heap cap. Override only if this process is the only JVM |
 | HTTP_IDLE_TIMEOUT | 180s | Netty idle timeout (keep long Grafana map queries open) |
 
 ## Read-only DB user
@@ -40,6 +41,10 @@ services:
     depends_on:
       - database
 ```
+
+## Memory (2 GB host)
+
+The API defaults to a **256 MB** heap and **4** DB connections. Grafana map queries never load raw 1 Hz tracks for windows longer than 7 days. If this JVM shares the box with Postgres and Grafana, do not raise `-Xmx` without leaving ~1 GB for the database.
 
 ## Security notes
 

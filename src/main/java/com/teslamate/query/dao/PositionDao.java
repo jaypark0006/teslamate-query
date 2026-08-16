@@ -129,12 +129,14 @@ public class PositionDao {
             return List.of();
         }
         int bucket = Math.max(bucketSeconds, 0);
+        int lim = bucket <= 1 ? 8_000 : 2_500;
         if (bucket <= 1) {
             return jdbi.withHandle(h -> h.createQuery(
                             "SELECT drive_id, date, longitude, latitude FROM positions "
                                     + "WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL "
-                                    + "ORDER BY drive_id, date")
+                                    + "ORDER BY drive_id, date LIMIT :lim")
                     .bindList("driveIds", driveIds)
+                    .bind("lim", lim)
                     .map(ConstructorMapper.of(PositionPathPoint.class))
                     .list());
         }
@@ -147,9 +149,10 @@ public class PositionDao {
                                 + " FROM positions"
                                 + " WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL"
                                 + ") t WHERE rn = 1 OR first_rn = 1 OR last_rn = 1"
-                                + " ORDER BY drive_id, date")
+                                + " ORDER BY drive_id, date LIMIT :lim")
                 .bindList("driveIds", driveIds)
                 .bind("bucketSec", bucket)
+                .bind("lim", lim)
                 .map(ConstructorMapper.of(PositionPathPoint.class))
                 .list());
     }

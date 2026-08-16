@@ -15,8 +15,9 @@ import java.util.List;
 public final class PathSimplify {
 
     static final double DEFAULT_EPSILON_M = 12.0;
-    /** Safety cap for a whole map window after per-drive simplify. */
-    static final int MAX_WINDOW_POINTS = 16_000;
+    /** Safety cap for a whole map window after per-drive simplify. Fits a 256m heap. */
+    static final int MAX_WINDOW_POINTS = 8_000;
+    public static final int PATH_BATCH = 8;
 
     private PathSimplify() {}
 
@@ -41,22 +42,34 @@ public final class PathSimplify {
         return 500.0;
     }
 
-    /** 0 = every GPS point. Wider windows sample in SQL before DP. */
+    /**
+     * Wide windows / many drives: start+end only, no {@code positions} scan.
+     * That is the cheap query on a 2 GB host.
+     */
+    public static boolean endpointsOnly(long windowSec, int driveCount) {
+        return driveCount >= 80 || Math.max(windowSec, 0) > 7 * 86_400L;
+    }
+
+    /** Seconds per SQL sample. Never 1 Hz for a multi-drive map. */
     public static int sampleBucketSeconds(long windowSec) {
+        return sampleBucketSeconds(windowSec, 8);
+    }
+
+    public static int sampleBucketSeconds(long windowSec, int driveCount) {
+        if (endpointsOnly(windowSec, driveCount)) {
+            return Integer.MAX_VALUE;
+        }
+        if (driveCount <= 1 && windowSec <= 2 * 86_400L) {
+            return 2;
+        }
         long days = Math.max(windowSec, 0) / 86_400L;
         if (days <= 2) {
-            return 0;
-        }
-        if (days <= 7) {
             return 5;
         }
-        if (days <= 30) {
+        if (days <= 7) {
             return 15;
         }
-        if (days <= 90) {
-            return 60;
-        }
-        return 180;
+        return 60;
     }
 
     public static int maxPointsPerDrive(long windowSec, int driveCount) {

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PathSimplifyTest {
@@ -55,10 +56,11 @@ class PathSimplifyTest {
         assertEquals(8.0, PathSimplify.epsilonMeters(86_400));
         assertEquals(25.0, PathSimplify.epsilonMeters(7 * 86_400));
         assertEquals(80.0, PathSimplify.epsilonMeters(30 * 86_400));
-        assertEquals(250.0, PathSimplify.epsilonMeters(60 * 86_400));
-        assertEquals(0, PathSimplify.sampleBucketSeconds(86_400));
-        assertEquals(60, PathSimplify.sampleBucketSeconds(60 * 86_400));
-        assertEquals(16, PathSimplify.maxPointsPerDrive(60 * 86_400, 641));
+        assertEquals(5, PathSimplify.sampleBucketSeconds(86_400, 8));
+        assertEquals(2, PathSimplify.sampleBucketSeconds(86_400, 1));
+        assertTrue(PathSimplify.endpointsOnly(60 * 86_400, 641));
+        assertFalse(PathSimplify.endpointsOnly(86_400, 8));
+        assertEquals(12, PathSimplify.maxPointsPerDrive(60 * 86_400, 641));
     }
 
     @Test

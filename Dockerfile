@@ -7,6 +7,7 @@ RUN apk add --no-cache maven && mvn -q -DskipTests package
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 ENV TZ=UTC
+ENV JAVA_TOOL_OPTIONS="-Xms64m -Xmx256m -XX:+UseSerialGC"
 RUN apk add --no-cache wget
 COPY --from=build /app/target/teslamate-query-*.jar app.jar
 EXPOSE 8080

@@ -91,8 +91,9 @@ public class TripViewService {
     private final QuerySupport support;
     private final Clock clock;
     private final Cache<String, Snapshot> windowCache = Caffeine.newBuilder()
-            .maximumSize(64)
-            .expireAfterWrite(20, TimeUnit.SECONDS)
+            .maximumWeight(12_000)
+            .weigher((String k, Snapshot s) -> Math.max(1, s.points().size() + s.timeline().size()))
+            .expireAfterWrite(15, TimeUnit.SECONDS)
             .build();
 
     public TripViewService(
@@ -326,26 +327,38 @@ public class TripViewService {
                                     String kinds, DisplayUnits units) {
         Set<String> want = parseKinds(kinds);
         boolean needPath = want.contains("drive");
-        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, needPath, null);
+        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, needPath, false, null);
         return snap.points.stream().filter(p -> want.contains(p.kind())).toList();
     }
 
     public MapTracksDto geoJson(long carId, String fromStr, String toStr, Integer minParkMin,
                                 DisplayUnits units) {
-        return build(carId, fromStr, toStr, minParkMin, units, true, null).geoJson;
+        return build(carId, fromStr, toStr, minParkMin, units, true, true, null).geoJson;
     }
 
     private Snapshot build(long carId, String fromStr, String toStr, Integer minParkMin, DisplayUnits units,
                            boolean includePath, ZoneId zone) {
+        return build(carId, fromStr, toStr, minParkMin, units, includePath, false, zone);
+    }
+
+    private Snapshot build(long carId, String fromStr, String toStr, Integer minParkMin, DisplayUnits units,
+                           boolean includePath, boolean includeGeo, ZoneId zone) {
         int minPark = minParkMin == null ? DEFAULT_MIN_PARK_MIN : Math.max(minParkMin, 0);
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         String unitKey = units == null ? "km-C" : units.length() + "-" + units.temperature();
-        String key = carId + "|" + fromStr + "|" + toStr + "|" + minPark + "|" + unitKey + "|" + includePath + "|" + z.getId();
-        return windowCache.get(key, k -> buildUncached(carId, fromStr, toStr, minPark, units, includePath, z));
+        String key = carId + "|" + fromStr + "|" + toStr + "|" + minPark + "|" + unitKey
+                + "|" + includePath + "|" + includeGeo + "|" + z.getId();
+        return windowCache.get(key, k -> buildUncached(carId, fromStr, toStr, minPark, units,
+                includePath, includeGeo, z));
     }
 
     private Snapshot buildUncached(long carId, String fromStr, String toStr, int minPark, DisplayUnits units,
                                    boolean includePath, ZoneId zone) {
+        return buildUncached(carId, fromStr, toStr, minPark, units, includePath, false, zone);
+    }
+
+    private Snapshot buildUncached(long carId, String fromStr, String toStr, int minPark, DisplayUnits units,
+                                   boolean includePath, boolean includeGeo, ZoneId zone) {
         long started = System.nanoTime();
         requireCar(carId);
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
@@ -457,7 +470,8 @@ public class TripViewService {
                     }
                     TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
                             posById, addrById, geoById, u, zone, false, path, dummyDay);
-                    totalPts += addDrivePoints(points, features, item, path, from, chevronIdx, chevronBudget);
+                    totalPts += addDrivePoints(points, includeGeo ? features : null, item, path,
+                            from, chevronIdx, chevronBudget);
                     if (path.size() >= 2) {
                         chevronIdx += Math.max(1, path.size() / 8);
                         chevronBudget = Math.max(0, chevronBudget - Math.max(1, path.size() / 8));
@@ -468,7 +482,8 @@ public class TripViewService {
                             && liveWindow(to, now) && openEnded(span.end(), now);
                     TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
                             posById, addrById, geoById, u, zone, ongoing, List.of(), dummyDay);
-                    addStopPoint(points, features, item, span.kind() == TimelineKind.CHARGE ? "charge" : "park");
+                    addStopPoint(points, includeGeo ? features : null, item,
+                            span.kind() == TimelineKind.CHARGE ? "charge" : "park");
                 }
             }
         }
@@ -509,22 +524,36 @@ public class TripViewService {
         if (drives.isEmpty()) {
             return Map.of();
         }
-        List<Long> driveIds = drives.stream().map(DriveEntity::id).toList();
+        List<Long> driveIds = drives.stream().map(DriveEntity::id).filter(Objects::nonNull).toList();
         long spanSec = Math.max(1, to.getEpochSecond() - from.getEpochSecond());
-        int bucket = PathSimplify.sampleBucketSeconds(spanSec);
+        if (PathSimplify.endpointsOnly(spanSec, driveIds.size())) {
+            log.info("path endpoints-only drives={} window={}d", driveIds.size(), spanSec / 86_400L);
+            return Map.of();
+        }
+        int bucket = PathSimplify.sampleBucketSeconds(spanSec, driveIds.size());
         int cap = PathSimplify.maxPointsPerDrive(spanSec, driveIds.size());
-        Map<Long, List<PositionPathPoint>> raw = positionDao.findPathPointsByDriveIds(driveIds, bucket).stream()
-                .filter(p -> p.driveId() != null)
-                .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
         double eps = PathSimplify.epsilonMeters(spanSec);
         Map<Long, List<PositionPathPoint>> slim = new LinkedHashMap<>();
         int rawN = 0;
         int slimN = 0;
-        for (Map.Entry<Long, List<PositionPathPoint>> e : raw.entrySet()) {
-            rawN += e.getValue().size();
-            List<PositionPathPoint> keep = PathSimplify.cap(PathSimplify.douglasPeucker(e.getValue(), eps), cap);
-            slimN += keep.size();
-            slim.put(e.getKey(), keep);
+        int batchSize = PathSimplify.PATH_BATCH;
+        for (int i = 0; i < driveIds.size(); i += batchSize) {
+            List<Long> batch = driveIds.subList(i, Math.min(i + batchSize, driveIds.size()));
+            List<PositionPathPoint> rows = positionDao.findPathPointsByDriveIds(batch, bucket);
+            rawN += rows.size();
+            Map<Long, List<PositionPathPoint>> grouped = new LinkedHashMap<>();
+            for (PositionPathPoint p : rows) {
+                if (p.driveId() == null) {
+                    continue;
+                }
+                grouped.computeIfAbsent(p.driveId(), id -> new ArrayList<>()).add(p);
+            }
+            for (Map.Entry<Long, List<PositionPathPoint>> e : grouped.entrySet()) {
+                List<PositionPathPoint> keep = PathSimplify.cap(
+                        PathSimplify.douglasPeucker(e.getValue(), eps), cap);
+                slimN += keep.size();
+                slim.put(e.getKey(), keep);
+            }
         }
         log.info("path simplify window={}d bucket={}s epsilon={}m cap/drive={} {} -> {} pts",
                 spanSec / 86_400L, bucket, eps, cap, rawN, slimN);
@@ -653,7 +682,7 @@ public class TripViewService {
             int chevronStart,
             int chevronBudget
     ) {
-        List<List<BigDecimal>> coords = new ArrayList<>();
+        List<List<BigDecimal>> coords = features == null ? null : new ArrayList<>();
         Double heading = null;
         int arrowEvery = Math.max(4, path.size() / 8);
         int arrowsLeft = chevronBudget;
@@ -684,8 +713,11 @@ public class TripViewService {
                     null,
                     null,
                     null));
-            coords.add(List.of(p.longitude(), p.latitude()));
-            if (h != null && arrowsLeft > 0 && i > 0 && i < path.size() - 1 && i % arrowEvery == 0) {
+            if (coords != null) {
+                coords.add(List.of(p.longitude(), p.latitude()));
+            }
+            if (features != null && h != null && arrowsLeft > 0 && i > 0 && i < path.size() - 1
+                    && i % arrowEvery == 0) {
                 List<List<BigDecimal>> chevron = PathGeometry.chevron(p.longitude(), p.latitude(), h, 18.0);
                 if (chevron.size() == 3) {
                     Map<String, Object> props = new HashMap<>();
@@ -698,19 +730,19 @@ public class TripViewService {
                 }
             }
         }
-        if (coords.size() >= 2) {
+        if (features != null && coords != null && coords.size() >= 2) {
             Map<String, Object> props = new HashMap<>();
             props.put("seq", item.seq());
             props.put("startDate", iso(item.start()));
             props.put("endDate", iso(item.end()));
             props.put("distance", item.distanceKm());
-            props.put("durationMin", item.durationMin());
             props.put("title", item.title());
             props.put("detail", item.detail());
             props.put("color", COLOR_DRIVE);
+            props.put("durationMin", item.durationMin());
             features.add(MapTracksDto.driveLine(item.id() == null ? item.seq() : item.id(), coords, props));
         }
-        return coords.size();
+        return path.size();
     }
 
     private void addStopPoint(
@@ -731,6 +763,9 @@ public class TripViewService {
                 item.start(), item.latitude(), item.longitude(),
                 kind, item.id(), item.seq(), null, null, item.color(), item.title(),
                 mapLabel, item.durationMin(), item.energyKwh()));
+        if (features == null) {
+            return;
+        }
         Map<String, Object> props = new HashMap<>();
         props.put("seq", item.seq());
         props.put("startDate", iso(item.start()));
