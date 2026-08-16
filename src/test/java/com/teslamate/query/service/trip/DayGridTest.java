@@ -28,7 +28,7 @@ class DayGridTest {
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && c.hour() >= 22));
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-11") && c.hour() < 8));
         assertTrue(cells.stream().allMatch(c -> c.kindCode() == DayGridCellDto.PARK));
-        assertTrue(cells.stream().anyMatch(c -> "22 22:00".equals(c.slot())));
+        assertTrue(cells.stream().anyMatch(c -> "22".equals(c.slot())));
     }
 
     @Test
@@ -47,7 +47,7 @@ class DayGridTest {
         boolean sawDrive = cells.stream().anyMatch(c ->
                 c.kindCode() == DayGridCellDto.DRIVE && c.hour() < 1);
         assertTrue(sawDrive);
-        var driveCell = cells.stream().filter(c -> "00 00:00".equals(c.slot())).findFirst().orElseThrow();
+        var driveCell = cells.stream().filter(c -> "00".equals(c.slot())).findFirst().orElseThrow();
         assertEquals(DayGridCellDto.DRIVE, driveCell.kindCode());
         assertEquals(1L, driveCell.sourceId());
         assertEquals("Drive #1", driveCell.label());
@@ -62,7 +62,7 @@ class DayGridTest {
                 Instant.parse("2026-08-10T20:00:00Z"),
                 120, null, null);
         List<DayGridCellDto> cells = DayGrid.paint(List.of(park), SH, 4);
-        assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && "22 02:00".equals(c.slot())));
+        assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && "·02".equals(c.slot())));
         assertTrue(cells.stream().noneMatch(c -> c.day().equals("2026-08-11")));
     }
 
@@ -100,15 +100,37 @@ class DayGridTest {
         List<String> sorted = new java.util.ArrayList<>(keys);
         sorted.sort(String::compareTo);
         assertEquals(keys, sorted);
-        assertEquals("00 04:00", keys.getFirst());
-        assertEquals("06 10:00", keys.get(6));
-        assertEquals("20 00:00", keys.get(20));
-        assertEquals("23 03:00", keys.get(23));
-        assertEquals(10, DayGrid.parseClockHour("06 10:00"));
-        assertEquals(0, DayGrid.parseClockHour("00:00"));
-        assertEquals(null, DayGrid.parseClockHour("24 ★"));
+        assertEquals("04", keys.getFirst());
+        assertEquals("10", keys.get(6));
+        assertEquals("·00", keys.get(20));
+        assertEquals("·03", keys.get(23));
+        assertEquals(10, DayGrid.parseClockHour("10"));
+        assertEquals(0, DayGrid.parseClockHour("·00"));
+        assertEquals(2, DayGrid.parseClockHour("·02"));
+        assertEquals(null, DayGrid.parseClockHour("★"));
         assertEquals(18432L, DayGrid.parseSourceId("Drive #18432"));
         assertEquals(99L, DayGrid.parseSourceId("Charge #99"));
         assertEquals(null, DayGrid.parseSourceId("Park"));
+    }
+
+    @Test
+    void last24hDoesNotDropTheEveningColumn() {
+        Instant from = Instant.parse("2026-08-12T14:15:28Z");
+        Instant to = Instant.parse("2026-08-13T14:15:28Z");
+        ActivitySpan park = new ActivitySpan(
+                TimelineKind.PARK, null, from.minusSeconds(3600), to.minusSeconds(60),
+                24 * 60, null, null);
+        List<DayGridCellDto> cells = DayGrid.paint(List.of(park), SH, 4, from, to);
+        assertTrue(cells.stream().allMatch(c -> !c.time().isBefore(from) && c.time().isBefore(to)));
+        List<String> slots = cells.stream()
+                .map(DayGridCellDto::slot)
+                .filter(s -> !s.contains("★"))
+                .distinct()
+                .sorted()
+                .toList();
+        assertEquals("04", slots.getFirst());
+        assertTrue(slots.contains("·03"));
+        assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-12")));
+        assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-13")));
     }
 }

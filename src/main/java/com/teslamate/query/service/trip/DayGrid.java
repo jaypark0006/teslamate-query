@@ -28,7 +28,7 @@ public final class DayGrid {
     static final int SLOT_MIN = 60;
     static final int SLOTS_PER_DAY = 24 * 60 / SLOT_MIN;
     /** Sorts after {@code 00 04:00}…{@code 23 03:00} even if Grafana strips colons. */
-    static final String WEEKEND_SLOT = "24 ★";
+    static final String WEEKEND_SLOT = "★";
 
     private DayGrid() {}
 
@@ -37,6 +37,11 @@ public final class DayGrid {
     }
 
     public static List<DayGridCellDto> paintFromTimeline(List<TimelineItemDto> items, ZoneId zone, int dayStartHour) {
+        return paintFromTimeline(items, zone, dayStartHour, null, null);
+    }
+
+    public static List<DayGridCellDto> paintFromTimeline(List<TimelineItemDto> items, ZoneId zone, int dayStartHour,
+                                                         Instant from, Instant to) {
         if (items == null || items.isEmpty()) {
             return List.of();
         }
@@ -48,7 +53,7 @@ public final class DayGrid {
             double min = item.durationMin() == null ? 0 : item.durationMin();
             spans.add(new ActivitySpan(item.kind(), item.id(), item.start(), item.end(), min, null, null));
         }
-        return paint(spans, zone, dayStartHour);
+        return paint(spans, zone, dayStartHour, from, to);
     }
 
     public static List<DayGridCellDto> paint(List<ActivitySpan> spans, ZoneId zone) {
@@ -56,6 +61,11 @@ public final class DayGrid {
     }
 
     public static List<DayGridCellDto> paint(List<ActivitySpan> spans, ZoneId zone, int dayStartHour) {
+        return paint(spans, zone, dayStartHour, null, null);
+    }
+
+    public static List<DayGridCellDto> paint(List<ActivitySpan> spans, ZoneId zone, int dayStartHour,
+                                             Instant from, Instant to) {
         if (spans == null || spans.isEmpty()) {
             return List.of();
         }
@@ -96,19 +106,22 @@ public final class DayGrid {
                 cursor = slotEnd;
             }
         }
+        fillEmptySlots(cells, days, startH, z, from, to);
         List<DayGridCellDto> out = new ArrayList<>(cells.size() + days.size());
         for (Painted c : cells.values()) {
-            Instant midnight = c.day.atStartOfDay(z).toInstant();
+            Instant x = columnTime(c.day, startH, z, from, to);
             String slot = slotKey(startH, c.slot);
             int clockMin = (startH * 60 + c.slot * SLOT_MIN) % (24 * 60);
             double hour = clockMin / 60.0;
             String kind = switch (c.code) {
                 case DayGridCellDto.DRIVE -> "DRIVE";
                 case DayGridCellDto.CHARGE -> "CHARGE";
-                default -> "PARK";
+                case DayGridCellDto.PARK -> "PARK";
+                default -> "";
             };
-            out.add(new DayGridCellDto(midnight, c.day.toString(), hour, slot, c.code, kind,
-                    c.sourceId, DayGridCellDto.cellLabel(c.code, c.sourceId)));
+            String label = c.code == 0 ? null : DayGridCellDto.cellLabel(c.code, c.sourceId);
+            out.add(new DayGridCellDto(x, c.day.toString(), hour, slot, c.code, kind,
+                    c.sourceId, label));
         }
         for (LocalDate day : days) {
             DayOfWeek w = day.getDayOfWeek();
@@ -116,7 +129,7 @@ public final class DayGrid {
                 continue;
             }
             out.add(new DayGridCellDto(
-                    day.atStartOfDay(z).toInstant(),
+                    columnTime(day, startH, z, from, to),
                     day.toString(),
                     24.0,
                     WEEKEND_SLOT,
@@ -129,12 +142,45 @@ public final class DayGrid {
         return out;
     }
 
-    /** {@code 00 04:00} … {@code 23 03:00} so 04:00 stays first after a string sort. */
+    /**
+     * Clock hour labels that stay in 04:00-first order even after a string sort:
+     * {@code 04}…{@code 23} then {@code ·00}…{@code ·03}. No {@code HH:mm} so Grafana
+     * does not rotate the Y-axis to the dashboard's start hour.
+     */
     static String slotKey(int dayStartHour, int slotIndex) {
         int startH = Math.floorMod(dayStartHour, 24);
         int idx = Math.floorMod(slotIndex, SLOTS_PER_DAY);
-        int clockMin = (startH * 60 + idx * SLOT_MIN) % (24 * 60);
-        return String.format("%02d %02d:%02d", idx, clockMin / 60, clockMin % 60);
+        int clockH = (startH * 60 + idx * SLOT_MIN) / 60 % 24;
+        if (startH != 0 && clockH < startH) {
+            return String.format("·%02d", clockH);
+        }
+        return String.format("%02d", clockH);
+    }
+
+    static Instant columnTime(LocalDate day, int startH, ZoneId z, Instant from, Instant to) {
+        Instant x = day.atStartOfDay(z).plusHours(startH).toInstant();
+        if (from != null && x.isBefore(from)) {
+            x = from;
+        }
+        if (to != null && !x.isBefore(to)) {
+            x = to.minusSeconds(1);
+        }
+        return x;
+    }
+
+    private static void fillEmptySlots(Map<String, Painted> cells, Set<LocalDate> days,
+                                       int startH, ZoneId z, Instant from, Instant to) {
+        if (from == null || to == null || !to.isAfter(from)) {
+            return;
+        }
+        LocalDate first = from.atZone(z).minusHours(startH).toLocalDate();
+        LocalDate last = to.minusNanos(1).atZone(z).minusHours(startH).toLocalDate();
+        for (LocalDate day = first; !day.isAfter(last); day = day.plusDays(1)) {
+            days.add(day);
+            for (int slot = 0; slot < SLOTS_PER_DAY; slot++) {
+                cells.putIfAbsent(day + "#" + slot, new Painted(0, day, slot, null));
+            }
+        }
     }
 
     /** Clock hour from {@code 22:00}, {@code 06 10:00}, or {@code ·00:00}. */
@@ -162,10 +208,17 @@ public final class DayGrid {
         }
         String s = slot.trim();
         int colon = s.lastIndexOf(':');
-        if (colon < 2) {
-            return null;
+        if (colon >= 2) {
+            return parseHour(s.substring(colon - 2, colon).replace("·", "").trim());
         }
-        String hh = s.substring(colon - 2, colon).replace("·", "").trim();
+        s = s.replace("·", "").trim();
+        if (s.length() > 2) {
+            s = s.substring(s.length() - 2);
+        }
+        return parseHour(s);
+    }
+
+    private static Integer parseHour(String hh) {
         try {
             int h = Integer.parseInt(hh);
             return (h >= 0 && h <= 23) ? h : null;
