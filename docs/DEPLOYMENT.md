@@ -44,7 +44,7 @@ services:
 
 ## Memory (2 GB host)
 
-The API defaults to a **256 MB** heap and **4** DB connections. Grafana map queries never load raw 1 Hz tracks for windows longer than 7 days. If this JVM shares the box with Postgres and Grafana, do not raise `-Xmx` without leaving ~1 GB for the database.
+The API defaults to a **256 MB** heap and **4** DB connections. Map paths are sampled in SQL (never 1 Hz for a multi-drive window). If this JVM shares the box with Postgres and Grafana, do not raise `-Xmx` without leaving ~1 GB for the database.
 
 ## Security notes
 

@@ -58,7 +58,9 @@ class PathSimplifyTest {
         assertEquals(80.0, PathSimplify.epsilonMeters(30 * 86_400));
         assertEquals(5, PathSimplify.sampleBucketSeconds(86_400, 8));
         assertEquals(2, PathSimplify.sampleBucketSeconds(86_400, 1));
-        assertTrue(PathSimplify.endpointsOnly(60 * 86_400, 641));
+        assertFalse(PathSimplify.endpointsOnly(30 * 86_400, 200));
+        assertFalse(PathSimplify.endpointsOnly(60 * 86_400, 641));
+        assertTrue(PathSimplify.endpointsOnly(200 * 86_400, 10));
         assertFalse(PathSimplify.endpointsOnly(86_400, 8));
         assertEquals(12, PathSimplify.maxPointsPerDrive(60 * 86_400, 641));
     }

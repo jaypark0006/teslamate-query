@@ -95,7 +95,7 @@ GET /api/v1/charges?chargingProcessId=364
 - `GET /map/tracks?carId&from&to` — GeoJSON composition
 - `GET /map/trip?carId&from&to` — drive lines + charge/park points + direction chevrons (overlap window)
 - `GET /cars/{carId}/map` — same GeoJSON, car-scoped
-- `GET /cars/{carId}/map/points?from&to&kinds=` — flat lat/lon rows for Grafana Geomap. Windows longer than 7 days (or ≥80 drives) use start/end only so a 256m heap does not load 1 Hz GPS. Shorter windows sample in SQL in batches of 8. `kinds=charge|park` skip path load.
+- `GET /cars/{carId}/map/points?from&to&kinds=` — flat lat/lon rows for Grafana Geomap. Paths stay on the road: SQL samples by window (5–60 s) in batches of 8. Start/end-only only for windows longer than 180 days. `kinds=charge|park` skip path load.
 - `GET /cars/{carId}/timeline?from&to&minParkMin=` — chronological DRIVE / CHARGE / PARK log
 - `GET /cars/{carId}/timeline/daily?from&to` — hours of drive/charge/park per local day
 - `GET /cars/{carId}/timeline/grid?from&to&timezone=&dayStartHour=` — day × hour cells; `label` is `Drive #id · <timeline detail>`; `hoverCode` is a unique numeric cell id for Grafana tooltips

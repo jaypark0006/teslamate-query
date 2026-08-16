@@ -43,11 +43,11 @@ public final class PathSimplify {
     }
 
     /**
-     * Wide windows / many drives: start+end only, no {@code positions} scan.
-     * That is the cheap query on a 2 GB host.
+     * Only half-year (or huge) overviews skip the path scan.
+     * A 30-day map still needs the real road shape, just sampled.
      */
     public static boolean endpointsOnly(long windowSec, int driveCount) {
-        return driveCount >= 80 || Math.max(windowSec, 0) > 7 * 86_400L;
+        return Math.max(windowSec, 0) > 180 * 86_400L;
     }
 
     /** Seconds per SQL sample. Never 1 Hz for a multi-drive map. */
