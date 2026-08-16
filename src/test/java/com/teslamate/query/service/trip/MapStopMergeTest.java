@@ -36,12 +36,39 @@ class MapStopMergeTest {
     }
 
     @Test
+    void sameSpotAcAndDcGetTwoLabelLines() {
+        List<MapPointDto> out = MapStopMerge.mergeStops(List.of(
+                charge(29.5182, 106.4603, "DC", 10.0, 20),
+                charge(29.5183, 106.4604, "DC", 12.0, 25),
+                charge(29.5182, 106.4603, "AC", 8.0, 120)));
+        assertEquals(1, out.size());
+        assertEquals("DC ×2 +22 kWh · 45 min\nAC +8 kWh · 2h", out.getFirst().durationLabel());
+        assertEquals(22.0 + 8.0, out.getFirst().energyKwh());
+        assertEquals(20.0 + 25.0 + 120.0, out.getFirst().durationMin());
+    }
+
+    @Test
+    void sameSpotDcOnlyStaysOneLine() {
+        List<MapPointDto> out = MapStopMerge.mergeStops(List.of(
+                charge(29.5182, 106.4603, "DC", 10.0, 20),
+                charge(29.5182, 106.4603, "DC", 5.0, 10)));
+        assertEquals(1, out.size());
+        assertEquals("DC ×2 +15 kWh · 30 min", out.getFirst().durationLabel());
+    }
+
+    @Test
     void drivesAreNotMerged() {
         MapPointDto d1 = drive(29.5, 106.4);
         MapPointDto d2 = drive(29.5001, 106.4001);
         List<MapPointDto> out = MapStopMerge.mergeStops(List.of(d1, d2));
         assertEquals(2, out.size());
         assertTrue(out.stream().allMatch(p -> "drive".equals(p.kind())));
+    }
+
+    private static MapPointDto charge(double lat, double lon, String type, double kwh, double min) {
+        return new MapPointDto(Instant.parse("2026-08-01T00:00:00Z"), lat, lon, "charge",
+                1L, 1, null, null, "#22c55e", type + " charge",
+                MapStopMerge.chargeLabel(1, type, kwh, min), min, kwh);
     }
 
     private static MapPointDto park(double lat, double lon, double min) {

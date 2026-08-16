@@ -77,17 +77,54 @@ public final class MapStopMerge {
         if (group.size() == 1) {
             return withLabel(first, labelFor(first, 1, first.durationMin(), first.energyKwh(), isOngoing(first)));
         }
-        double lat = 0;
-        double lon = 0;
+        if ("charge".equals(first.kind())) {
+            return collapseCharges(group);
+        }
+        return collapseParks(group);
+    }
+
+    private static MapPointDto collapseParks(List<MapPointDto> group) {
+        Totals t = totals(group);
+        String text = parkLabel(group.size(), t.durationMin, t.ongoing);
+        return merged(group, pickLatest(group), text, t);
+    }
+
+    /** One pin per spot; AC and DC each get their own summed line. */
+    private static MapPointDto collapseCharges(List<MapPointDto> group) {
+        List<MapPointDto> dc = new ArrayList<>();
+        List<MapPointDto> ac = new ArrayList<>();
+        for (MapPointDto p : group) {
+            if ("DC".equals(chargeTypeFrom(p))) {
+                dc.add(p);
+            } else {
+                ac.add(p);
+            }
+        }
+        List<String> lines = new ArrayList<>(2);
+        if (!dc.isEmpty()) {
+            lines.add(chargeLine(dc, "DC"));
+        }
+        if (!ac.isEmpty()) {
+            lines.add(chargeLine(ac, "AC"));
+        }
+        MapPointDto latest = pickLatest(group);
+        MapPointDto colorSrc = !dc.isEmpty() ? pickLatest(dc) : latest;
+        Totals t = totals(group);
+        return merged(group, latest, String.join("\n", lines), t, colorSrc.color());
+    }
+
+    private static String chargeLine(List<MapPointDto> xs, String type) {
+        Totals t = totals(xs);
+        return chargeLabel(xs.size(), type, t.energyKwh, t.durationMin);
+    }
+
+    private static Totals totals(List<MapPointDto> group) {
         double dur = 0;
         double energy = 0;
         boolean anyEnergy = false;
         boolean anyDur = false;
         boolean ongoing = false;
-        MapPointDto latest = first;
         for (MapPointDto p : group) {
-            lat += p.latitude();
-            lon += p.longitude();
             if (p.durationMin() != null) {
                 dur += p.durationMin();
                 anyDur = true;
@@ -99,15 +136,33 @@ public final class MapStopMerge {
                 energy += p.energyKwh();
                 anyEnergy = true;
             }
+        }
+        return new Totals(anyDur ? dur : null, anyEnergy ? energy : null, ongoing);
+    }
+
+    private static MapPointDto pickLatest(List<MapPointDto> group) {
+        MapPointDto latest = group.getFirst();
+        for (MapPointDto p : group) {
             if (latest.time() == null || (p.time() != null && p.time().isAfter(latest.time()))) {
                 latest = p;
             }
         }
+        return latest;
+    }
+
+    private static MapPointDto merged(List<MapPointDto> group, MapPointDto latest, String text, Totals t) {
+        return merged(group, latest, text, t, latest.color());
+    }
+
+    private static MapPointDto merged(List<MapPointDto> group, MapPointDto latest, String text, Totals t,
+                                      String color) {
+        double lat = 0;
+        double lon = 0;
+        for (MapPointDto p : group) {
+            lat += p.latitude();
+            lon += p.longitude();
+        }
         int n = group.size();
-        String type = latest.label() != null && (latest.label().startsWith("DC") || "DC".equalsIgnoreCase(latest.label()))
-                ? "DC"
-                : chargeTypeFrom(latest);
-        String text = labelFor(latest, n, anyDur ? dur : null, anyEnergy ? energy : null, ongoing);
         return new MapPointDto(
                 latest.time(),
                 lat / n,
@@ -117,14 +172,20 @@ public final class MapStopMerge {
                 latest.seq(),
                 null,
                 null,
-                latest.color(),
+                color,
                 latest.label(),
                 text,
-                anyDur ? dur : null,
-                anyEnergy ? energy : null);
+                t.durationMin,
+                t.energyKwh);
     }
 
+    private record Totals(Double durationMin, Double energyKwh, boolean ongoing) {}
+
     private static String chargeTypeFrom(MapPointDto p) {
+        String marked = firstToken(p.durationLabel());
+        if ("DC".equals(marked) || "AC".equals(marked)) {
+            return marked;
+        }
         String label = p.label();
         if (label != null && (label.startsWith("DC") || label.contains("DC"))) {
             return "DC";
@@ -133,6 +194,14 @@ public final class MapStopMerge {
             return "AC";
         }
         return p.kind() != null && p.kind().equals("charge") ? "AC" : null;
+    }
+
+    private static String firstToken(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        int space = text.indexOf(' ');
+        return space < 0 ? text : text.substring(0, space);
     }
 
     private static String labelFor(MapPointDto sample, int count, Double dur, Double energy, boolean ongoing) {
