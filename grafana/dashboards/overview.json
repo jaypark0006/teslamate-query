@@ -75,7 +75,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "Times on this dashboard: **${__timezone}** (if it says `browser`, that is your computer local zone). API sends UTC (`…Z`); Grafana converts it here. Local now: **${__to:date:YYYY-MM-DD HH:mm}**.",
+        "content": "Timezone **Asia/Shanghai (UTC+8)**. The picker and all clocks on this page are local. API `from`/`to` stay UTC (`…Z`). Now: **${__to:date:YYYY-MM-DD HH:mm}**.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -3515,7 +3515,7 @@
   "timepicker": {
     "hidden": true
   },
-  "timezone": "browser",
+  "timezone": "Asia/Shanghai",
   "title": "Overview",
   "uid": "7c4e1b92-6a0f-4d3e-9c18-2b5e8a71d046",
   "weekStart": ""
