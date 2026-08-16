@@ -32,6 +32,7 @@ import com.teslamate.query.service.trip.DayGrid;
 import com.teslamate.query.service.trip.DaySplit;
 import com.teslamate.query.service.trip.PathGeometry;
 import com.teslamate.query.service.trip.MapStopMerge;
+import com.teslamate.query.service.trip.PathQueryPlan;
 import com.teslamate.query.service.trip.PathSimplify;
 import com.teslamate.query.service.trip.PlaceLabel;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -524,22 +525,17 @@ public class TripViewService {
         if (drives.isEmpty()) {
             return Map.of();
         }
-        List<Long> driveIds = drives.stream().map(DriveEntity::id).filter(Objects::nonNull).toList();
-        long spanSec = Math.max(1, to.getEpochSecond() - from.getEpochSecond());
-        if (PathSimplify.endpointsOnly(spanSec, driveIds.size())) {
-            log.info("path endpoints-only drives={} window={}d", driveIds.size(), spanSec / 86_400L);
+        PathQueryPlan plan = PathQueryPlan.of(drives);
+        if (plan.queries().isEmpty()) {
+            log.info("path plan skip-all drives={} (short hops use start/end)", drives.size());
             return Map.of();
         }
-        int bucket = PathSimplify.sampleBucketSeconds(spanSec, driveIds.size());
-        int cap = PathSimplify.maxPointsPerDrive(spanSec, driveIds.size());
-        double eps = PathSimplify.epsilonMeters(spanSec);
+        double eps = plan.epsilonM();
         Map<Long, List<PositionPathPoint>> slim = new LinkedHashMap<>();
         int rawN = 0;
         int slimN = 0;
-        int batchSize = PathSimplify.PATH_BATCH;
-        for (int i = 0; i < driveIds.size(); i += batchSize) {
-            List<Long> batch = driveIds.subList(i, Math.min(i + batchSize, driveIds.size()));
-            List<PositionPathPoint> rows = positionDao.findPathPointsByDriveIds(batch, bucket);
+        for (PathQueryPlan.Batch batch : plan.batches()) {
+            List<PositionPathPoint> rows = positionDao.findPathPointsByDriveIds(batch.driveIds(), batch.bucketSec());
             rawN += rows.size();
             Map<Long, List<PositionPathPoint>> grouped = new LinkedHashMap<>();
             for (PositionPathPoint p : rows) {
@@ -549,14 +545,15 @@ public class TripViewService {
                 grouped.computeIfAbsent(p.driveId(), id -> new ArrayList<>()).add(p);
             }
             for (Map.Entry<Long, List<PositionPathPoint>> e : grouped.entrySet()) {
+                int cap = batch.capById().getOrDefault(e.getKey(), 16);
                 List<PositionPathPoint> keep = PathSimplify.cap(
                         PathSimplify.douglasPeucker(e.getValue(), eps), cap);
                 slimN += keep.size();
                 slim.put(e.getKey(), keep);
             }
         }
-        log.info("path simplify window={}d bucket={}s epsilon={}m cap/drive={} {} -> {} pts",
-                spanSec / 86_400L, bucket, eps, cap, rawN, slimN);
+        log.info("path plan drives={} skip={} batches={} epsilon={}m {} -> {} pts",
+                drives.size(), plan.skipped(), plan.batches().size(), eps, rawN, slimN);
         return slim;
     }
 
