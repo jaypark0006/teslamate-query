@@ -29,49 +29,39 @@ class CommuteCompareTest {
     }
 
     @Test
-    void oneDrivePerDayPicksLonger() {
-        DriveEntity shortOne = drive(1, Instant.parse("2026-08-12T21:50:00Z"), 10, 4.0);
-        DriveEntity longOne = drive(2, Instant.parse("2026-08-12T21:55:00Z"), 20, 12.0);
-        List<DriveEntity> picked = CommuteCompare.pickOnePerDay(
-                List.of(shortOne, longOne), 5 * 60, 7 * 60, SH);
-        assertEquals(2L, picked.getFirst().id());
-    }
-
-    @Test
-    void resampleByKmAlignsSameStretch() {
+    void atTenMinutesUsesLastPointBefore() {
         Instant t0 = Instant.parse("2026-08-12T21:48:00Z");
         DriveEntity d = drive(9, t0, 25, 15.0);
-        // ~1.11 km due north
         List<PositionCommutePoint> pts = List.of(
-                pt(9, t0, 106.45, 29.50, 50),
-                pt(9, t0.plusSeconds(180), 106.45, 29.51, 12));
-        List<CommuteSampleDto> samples = CommuteCompare.resampleByKm(d, pts, 0.5, SH);
-        assertTrue(samples.size() >= 3);
-        assertEquals("0.0km", samples.getFirst().kmBin());
-        assertEquals(50, samples.getFirst().speed());
-        assertEquals("08-13 05:48", samples.getFirst().startLocal());
-        CommuteSampleDto last = samples.getLast();
-        assertEquals(12, last.speed());
-        assertTrue(last.kmFromStart() >= 1.0);
-        var trip = CommuteCompare.toTrip(d, SH);
-        assertEquals("08-13 05:48", trip.startLocal());
-        assertEquals(9L, trip.driveId());
+                pt(9, t0, 106.45, 29.50, 40),
+                pt(9, t0.plusSeconds(9 * 60), 106.46, 29.55, 20),
+                pt(9, t0.plusSeconds(11 * 60), 106.47, 29.58, 55));
+        List<CommuteSampleDto> samples = CommuteCompare.resampleByElapsed(d, pts, 60, SH);
+        CommuteSampleDto at10 = samples.stream()
+                .filter(s -> "10min".equals(s.elapsedBin()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(20, at10.speed());
+        assertEquals("08-13 05:48", at10.startLocal());
+        assertTrue(at10.kmFromStart() > 0);
+        assertEquals("08-13 05:48", CommuteCompare.toTrip(d, SH).startLocal());
     }
 
     @Test
-    void twoDaysShareTheSameKmColumns() {
+    void twoDaysShareTheSameMinuteColumns() {
         Instant a0 = Instant.parse("2026-08-12T21:48:00Z");
         Instant b0 = Instant.parse("2026-08-13T21:50:00Z");
-        var a = CommuteCompare.resampleByKm(drive(1, a0, 20, 12), List.of(
+        var a = CommuteCompare.resampleByElapsed(drive(1, a0, 12, 8), List.of(
                 pt(1, a0, 106.45, 29.50, 40),
-                pt(1, a0.plusSeconds(200), 106.45, 29.51, 15)), 0.5, SH);
-        var b = CommuteCompare.resampleByKm(drive(2, b0, 22, 12), List.of(
-                pt(2, b0, 106.45, 29.50, 38),
-                pt(2, b0.plusSeconds(400), 106.45, 29.51, 8)), 0.5, SH);
-        assertEquals(a.stream().map(CommuteSampleDto::kmBin).toList(),
-                b.stream().map(CommuteSampleDto::kmBin).toList());
-        assertEquals(15, a.getLast().speed());
-        assertEquals(8, b.getLast().speed());
+                pt(1, a0.plusSeconds(10 * 60), 106.46, 29.56, 30)), 60, SH);
+        var b = CommuteCompare.resampleByElapsed(drive(2, b0, 12, 8), List.of(
+                pt(2, b0, 106.45, 29.50, 35),
+                pt(2, b0.plusSeconds(10 * 60), 106.455, 29.53, 10)), 60, SH);
+        assertEquals(a.stream().map(CommuteSampleDto::elapsedBin).toList(),
+                b.stream().map(CommuteSampleDto::elapsedBin).toList());
+        double kmA = a.stream().filter(s -> "10min".equals(s.elapsedBin())).findFirst().orElseThrow().kmFromStart();
+        double kmB = b.stream().filter(s -> "10min".equals(s.elapsedBin())).findFirst().orElseThrow().kmFromStart();
+        assertTrue(kmA > kmB, "faster day should have gone farther by minute 10");
     }
 
     private static DriveEntity drive(long id, Instant start, int durationMin, double km) {

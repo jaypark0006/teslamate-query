@@ -3,8 +3,8 @@ package com.teslamate.query.dto;
 import java.time.Instant;
 
 /**
- * One sample along a daily commute, aligned by kilometres from that day's start
- * so the same stretch of road is the same X / heatmap column every day.
+ * One sample along a daily commute, aligned by minutes since that day's start.
+ * {@code kmFromStart} is how far you had gotten at that minute.
  */
 public record CommuteSampleDto(
         String day,
@@ -16,6 +16,6 @@ public record CommuteSampleDto(
         Double longitude,
         Integer speed,
         Double kmFromStart,
-        String kmBin,
+        String elapsedBin,
         String label
 ) {}

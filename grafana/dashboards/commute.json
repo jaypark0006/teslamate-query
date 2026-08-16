@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Same commute, every day. Rows / lines are days. Columns / X are km along that day's own start — the same stretch of road.",
+  "description": "Same commute, every day. Ten trips = ten lines. X is minutes since that day's own start — at 10 min, how far / how fast.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -29,7 +29,7 @@
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "Timezone **Asia/Shanghai**. The picker is local; API `from`/`to` are UTC.\n\n**Start after / before** pick the outing (one drive per day that left in **${start_after}–${start_before}**, ≥8 min / 2 km). Check the table. Then every day is one **row** and one **line**. X / columns are **km from that day's start** — 3.0 km is the same stretch of road, not the same clock. Red = slow.",
+        "content": "Timezone **Asia/Shanghai**. The picker is local; API `from`/`to` are UTC.\n\n**Start after / before** pick which outing (one drive per day that left in **${start_after}–${start_before}**). Check the table first.\n\nThen every day is one **row** and one **line**. The X axis / columns are **minutes since that day's start** — not wall-clock 08:00, not km of road. At **10 min**, a higher line means you had gone farther. A red cell means you were slow at that minute.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -139,7 +139,7 @@
         {
           "columns": [
             { "selector": "startLocal", "text": "startLocal", "type": "string" },
-            { "selector": "kmBin", "text": "kmBin", "type": "string" },
+            { "selector": "elapsedBin", "text": "elapsedBin", "type": "string" },
             { "selector": "speed", "text": "speed", "type": "number" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
@@ -150,7 +150,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepKm=0.5",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepSec=60",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -158,14 +158,14 @@
         {
           "id": "groupingToMatrix",
           "options": {
-            "columnField": "kmBin",
+            "columnField": "elapsedBin",
             "emptyValue": "null",
             "rowField": "startLocal",
             "valueField": "speed"
           }
         }
       ],
-      "title": "Speed on the road (rows = days, columns = km from start). A red column is the same jam every day.",
+      "title": "Speed by minutes since start (rows = days, columns = 0min 1min 2min …). Red at 10min = you were crawling 10 minutes after leaving.",
       "type": "table"
     },
     {
@@ -205,14 +205,14 @@
         "legend": { "calcs": ["min"], "displayMode": "list", "placement": "right", "showLegend": true },
         "seriesMapping": "auto",
         "tooltip": { "mode": "multi" },
-        "xField": "kmFromStart"
+        "xField": "elapsedMin"
       },
       "pluginVersion": "13.0.1",
       "targets": [
         {
           "columns": [
+            { "selector": "elapsedMin", "text": "elapsedMin", "type": "number" },
             { "selector": "kmFromStart", "text": "kmFromStart", "type": "number" },
-            { "selector": "speed", "text": "speed", "type": "number" },
             { "selector": "startLocal", "text": "startLocal", "type": "string" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
@@ -223,7 +223,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepKm=0.5",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepSec=60",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -233,7 +233,7 @@
           "options": { "fields": ["startLocal"], "keepFields": true }
         }
       ],
-      "title": "One line per day — speed vs km from start",
+      "title": "One line per day — km covered vs minutes since start (higher at 10 min = farther)",
       "type": "xychart"
     },
     {
@@ -293,7 +293,7 @@
             { "selector": "longitude", "text": "longitude", "type": "number" },
             { "selector": "speed", "text": "speed", "type": "number" },
             { "selector": "startLocal", "text": "startLocal", "type": "string" },
-            { "selector": "kmBin", "text": "kmBin", "type": "string" },
+            { "selector": "elapsedBin", "text": "elapsedBin", "type": "string" },
             { "selector": "label", "text": "label", "type": "string" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
@@ -304,11 +304,11 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepKm=0.5",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepSec=60",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
-      "title": "All days on the map (color = speed). A red cluster is a habitual slow spot.",
+      "title": "All days on the map (color = speed at that minute)",
       "type": "geomap"
     }
   ],

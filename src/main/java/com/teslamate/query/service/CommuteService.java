@@ -50,15 +50,15 @@ public class CommuteService {
 
     public List<CommuteSampleDto> compare(
             String carKey, Instant from, Instant to, int startAfterMin, int startBeforeMin,
-            double stepKm, ZoneId zone) {
+            int stepSec, ZoneId zone) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        double step = Math.min(Math.max(stepKm, 0.2), 2.0);
+        int step = Math.min(Math.max(stepSec, 30), 180);
         List<DriveEntity> picked = pick(carKey, from, to, startAfterMin, startBeforeMin, z);
         if (picked.isEmpty()) {
             return List.of();
         }
         List<Long> ids = picked.stream().map(DriveEntity::id).toList();
-        List<PositionCommutePoint> rows = positionDao.findCommutePointsByDriveIds(ids, 20);
+        List<PositionCommutePoint> rows = positionDao.findCommutePointsByDriveIds(ids, step);
         Map<Long, List<PositionCommutePoint>> byDrive = new LinkedHashMap<>();
         for (PositionCommutePoint p : rows) {
             if (p.driveId() == null) {
@@ -68,11 +68,11 @@ public class CommuteService {
         }
         List<CommuteSampleDto> out = new ArrayList<>();
         for (DriveEntity d : picked) {
-            out.addAll(CommuteCompare.resampleByKm(
+            out.addAll(CommuteCompare.resampleByElapsed(
                     d, byDrive.getOrDefault(d.id(), List.of()), step, z));
         }
-        out.sort(CommuteCompare.byDayThenKm());
-        log.info("commute car={} days={} clock={}-{} stepKm={} samples={}",
+        out.sort(CommuteCompare.byDayThenElapsed());
+        log.info("commute car={} days={} clock={}-{} stepSec={} samples={}",
                 picked.getFirst().carId(), picked.size(), startAfterMin, startBeforeMin, step, out.size());
         return out;
     }
