@@ -94,7 +94,9 @@ class TripViewControllerWebTest {
         when(tripViewService.grid(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
                 eq(10), any(), any(), eq(0), any(), any(), any(), any(), any(), any())).thenReturn(List.of(
                 new DayGridCellDto(Instant.parse("2026-08-15T16:00:00Z"), "2026-08-16",
-                        8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE", 9L, "Drive #9")));
+                        8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE", 9L, "Drive #9 · 12.0 km · 1h",
+                        "12.0 km · 1h", DayGridCellDto.hoverCode(DayGridCellDto.DRIVE, 9),
+                        DayGridCellDto.colorFor(DayGridCellDto.DRIVE))));
         client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/timeline/grid")
                         .queryParam("from", "2026-08-16T00:00:00Z")
                         .queryParam("to", "2026-08-16T12:00:00Z")
@@ -106,7 +108,8 @@ class TripViewControllerWebTest {
                 .jsonPath("$[0].slot").isEqualTo("08:00")
                 .jsonPath("$[0].kindCode").isEqualTo(2)
                 .jsonPath("$[0].sourceId").isEqualTo(9)
-                .jsonPath("$[0].label").isEqualTo("Drive #9");
+                .jsonPath("$[0].label").isEqualTo("Drive #9 · 12.0 km · 1h")
+                .jsonPath("$[0].detail").isEqualTo("12.0 km · 1h");
     }
 
     @Test
@@ -116,7 +119,7 @@ class TripViewControllerWebTest {
         when(support.dayStartHour(null)).thenReturn(0);
         when(support.units(null, null)).thenReturn(null);
         when(tripViewService.focus(eq(1L), eq(null), eq(null), eq(null), eq(null), eq(null),
-                eq(10), any(), any(), eq(0))).thenReturn(List.of());
+                eq(null), eq(10), any(), any(), eq(0))).thenReturn(List.of());
         client.get().uri("/api/v1/cars/1/map/focus")
                 .exchange()
                 .expectStatus().isOk()

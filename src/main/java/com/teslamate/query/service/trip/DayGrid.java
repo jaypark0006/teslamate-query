@@ -51,7 +51,8 @@ public final class DayGrid {
                 continue;
             }
             double min = item.durationMin() == null ? 0 : item.durationMin();
-            spans.add(new ActivitySpan(item.kind(), item.id(), item.start(), item.end(), min, null, null));
+            spans.add(new ActivitySpan(item.kind(), item.id(), item.start(), item.end(), min, null, null,
+                    item.detail()));
         }
         return paint(spans, zone, dayStartHour, from, to);
     }
@@ -100,7 +101,7 @@ public final class DayGrid {
                 }
                 String key = day + "#" + slot;
                 Painted cell = cells.get(key);
-                cells.put(key, Painted.merge(cell, code, day, slot, span.sourceId()));
+                cells.put(key, Painted.merge(cell, code, day, slot, span.sourceId(), span.detail()));
                 cursor = slotEnd;
             }
         }
@@ -117,10 +118,13 @@ public final class DayGrid {
                 case DayGridCellDto.PARK -> "PARK";
                 default -> "";
             };
-            String label = c.code == 0 ? null : DayGridCellDto.cellLabel(c.code, c.driveId, c.chargeId);
+            String detail = displayDetail(c);
+            String label = cellHoverLabel(c.code, c.driveId, c.chargeId, detail);
             Long sourceId = c.chargeId != null ? c.chargeId : c.driveId;
+            long hover = DayGridCellDto.hoverCode(c.code,
+                    DayGridCellDto.hoverTail(sourceId, c.day.toString(), slot));
             out.add(new DayGridCellDto(x, c.day.toString(), hour, slot, c.code, kind,
-                    sourceId, label));
+                    sourceId, label, detail, hover, DayGridCellDto.colorFor(c.code)));
         }
         for (LocalDate day : days) {
             DayOfWeek w = day.getDayOfWeek();
@@ -135,7 +139,10 @@ public final class DayGrid {
                     DayGridCellDto.WEEKEND,
                     "WEEKEND",
                     null,
-                    DayGridCellDto.cellLabel(DayGridCellDto.WEEKEND, null)));
+                    DayGridCellDto.cellLabel(DayGridCellDto.WEEKEND, null),
+                    null,
+                    DayGridCellDto.hoverCode(DayGridCellDto.WEEKEND, 0),
+                    DayGridCellDto.colorFor(DayGridCellDto.WEEKEND)));
         }
         out.sort(Comparator.comparing(DayGridCellDto::day).thenComparing(DayGridCellDto::slot));
         return out;
@@ -255,7 +262,7 @@ public final class DayGrid {
         for (LocalDate day = first; !day.isAfter(last); day = day.plusDays(1)) {
             days.add(day);
             for (int slot = 0; slot < SLOTS_PER_DAY; slot++) {
-                cells.putIfAbsent(day + "#" + slot, new Painted(0, day, slot, null, null));
+                cells.putIfAbsent(day + "#" + slot, new Painted(0, day, slot, null, null, null, null, null));
             }
         }
     }
@@ -314,19 +321,67 @@ public final class DayGrid {
         return DayGridCellDto.PARK;
     }
 
+    static String cellHoverLabel(int kindCode, Long driveId, Long chargeId, String detail) {
+        String head = kindCode == 0 ? null : DayGridCellDto.cellLabel(kindCode, driveId, chargeId);
+        if (detail == null || detail.isBlank()) {
+            return head;
+        }
+        if (head == null || head.isBlank()) {
+            return detail;
+        }
+        return head + " · " + detail;
+    }
+
+    private static String displayDetail(Painted c) {
+        if (c.chargeId != null && c.driveId != null) {
+            return joinDetail(c.chargeDetail, c.driveDetail);
+        }
+        if (c.chargeId != null) {
+            return c.chargeDetail;
+        }
+        if (c.driveId != null) {
+            return c.driveDetail;
+        }
+        return c.parkDetail;
+    }
+
+    private static String joinDetail(String a, String b) {
+        if (a == null || a.isBlank()) {
+            return b;
+        }
+        if (b == null || b.isBlank()) {
+            return a;
+        }
+        return a + " · " + b;
+    }
+
     /**
      * Display color: charge if any charge in the hour, else drive, else park.
      * Drive and charge ids are both kept so click can highlight each.
      */
-    private record Painted(int code, LocalDate day, int slot, Long driveId, Long chargeId) {
-        static Painted merge(Painted existing, int incoming, LocalDate day, int slot, Long sourceId) {
+    private record Painted(int code, LocalDate day, int slot, Long driveId, Long chargeId,
+                           String driveDetail, String chargeDetail, String parkDetail) {
+        static Painted merge(Painted existing, int incoming, LocalDate day, int slot, Long sourceId,
+                             String detail) {
             Long driveId = existing == null ? null : existing.driveId;
             Long chargeId = existing == null ? null : existing.chargeId;
+            String driveDetail = existing == null ? null : existing.driveDetail;
+            String chargeDetail = existing == null ? null : existing.chargeDetail;
+            String parkDetail = existing == null ? null : existing.parkDetail;
             if (incoming == DayGridCellDto.DRIVE && sourceId != null) {
                 driveId = sourceId;
+                if (detail != null && !detail.isBlank()) {
+                    driveDetail = detail;
+                }
             }
             if (incoming == DayGridCellDto.CHARGE && sourceId != null) {
                 chargeId = sourceId;
+                if (detail != null && !detail.isBlank()) {
+                    chargeDetail = detail;
+                }
+            }
+            if (incoming == DayGridCellDto.PARK && detail != null && !detail.isBlank()) {
+                parkDetail = detail;
             }
             int code;
             if (chargeId != null) {
@@ -338,7 +393,7 @@ public final class DayGrid {
             } else {
                 code = Math.max(existing.code, incoming);
             }
-            return new Painted(code, day, slot, driveId, chargeId);
+            return new Painted(code, day, slot, driveId, chargeId, driveDetail, chargeDetail, parkDetail);
         }
     }
 }

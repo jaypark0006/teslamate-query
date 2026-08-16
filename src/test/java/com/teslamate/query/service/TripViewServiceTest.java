@@ -1,5 +1,6 @@
 package com.teslamate.query.service;
 
+import com.teslamate.query.dto.DayGridCellDto;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -19,6 +20,26 @@ class TripViewServiceTest {
         assertEquals(2, TripViewService.focusKindCode("Drive #18432"));
         assertEquals(3, TripViewService.focusKindCode("charge"));
         assertEquals(3, TripViewService.focusKindCode("Charge #99"));
+        assertEquals(2, TripViewService.focusKindCode(String.valueOf(
+                DayGridCellDto.hoverCode(DayGridCellDto.DRIVE, 5155))));
+        assertEquals(2, TripViewService.focusKindCode(String.valueOf(
+                DayGridCellDto.hoverCode(DayGridCellDto.HIGHLIGHT_DRIVE, 5155))));
+        assertEquals(3, TripViewService.focusKindCode(String.valueOf(
+                DayGridCellDto.hoverCode(DayGridCellDto.CHARGE, 99))));
+    }
+
+    @Test
+    void coerceInstantReadsGrafanaDates() {
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                TripViewService.coerceInstant("2026-08-16T04:12:00Z"));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                TripViewService.coerceInstant("2026-08-16T12:12:00+08:00"));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                TripViewService.coerceInstant("2026-08-16T12:12:00 08:00"));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                TripViewService.coerceInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").getEpochSecond())));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                TripViewService.coerceInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").toEpochMilli())));
     }
 
     @Test

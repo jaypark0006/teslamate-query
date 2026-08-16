@@ -51,6 +51,22 @@ class DayGridTest {
         assertEquals(DayGridCellDto.DRIVE, driveCell.kindCode());
         assertEquals(1L, driveCell.sourceId());
         assertEquals("Drive #1", driveCell.label());
+        assertEquals(DayGridCellDto.hoverCode(DayGridCellDto.DRIVE, 1), driveCell.hoverCode());
+    }
+
+    @Test
+    void timelineDetailShowsOnDriveCellHoverLabel() {
+        var item = new TimelineItemDto(
+                1, TimelineKind.DRIVE, 5155L,
+                Instant.parse("2026-08-13T00:10:00Z"), Instant.parse("2026-08-13T00:11:00Z"),
+                1.0, "Home → Work", "0.0 km · 1 min · 90% → 90%", "#3b82f6",
+                null, null, 0.0, 90, 90, null, null,
+                "2026-08-13", 0, null, null, 0);
+        List<DayGridCellDto> cells = DayGrid.paintFromTimeline(List.of(item), ZoneId.of("UTC"));
+        DayGridCellDto cell = cells.stream().filter(c -> "00".equals(c.slot())).findFirst().orElseThrow();
+        assertEquals("Drive #5155 · 0.0 km · 1 min · 90% → 90%", cell.label());
+        assertEquals("0.0 km · 1 min · 90% → 90%", cell.detail());
+        assertEquals(DayGridCellDto.hoverCode(DayGridCellDto.DRIVE, 5155), cell.hoverCode());
     }
 
     @Test

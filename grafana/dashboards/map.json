@@ -823,7 +823,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/map/focus?day=${focus_day}&slot=${focus_slot}&kind=${focus_kind}&from=${focus_from}&to=${focus_to}&timezone=Asia/Shanghai&dayStartHour=4",
+          "url": "/api/v1/cars/${car_id}/map/focus?day=${focus_day}&slot=${focus_slot}&kind=${focus_kind}&from=${focus_from}&to=${focus_to}&id=${focus_id}&timezone=Asia/Shanghai&dayStartHour=4",
           "url_options": {
             "data": "",
             "method": "GET"
@@ -1007,7 +1007,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=&var-focus_slot="
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   }
                 ]
               },
@@ -1102,7 +1102,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=&var-focus_slot="
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   }
                 ]
               }
@@ -1131,7 +1131,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=&var-focus_slot="
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   },
                   {
                     "title": "Open drive",
@@ -1164,7 +1164,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=&var-focus_slot="
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   },
                   {
                     "title": "Open drive",
@@ -1355,7 +1355,7 @@
             {
               "targetBlank": false,
               "title": "Highlight this ${__value.text}",
-              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.numeric}&var-focus_from=&var-focus_to=&var-focus_id="
+              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.numeric}&var-focus_from=-&var-focus_to=-&var-focus_id=-"
             }
           ],
           "custom": {
@@ -1370,43 +1370,63 @@
           "mappings": [
             {
               "options": {
-                "1": {
+                "from": 10000000,
+                "result": {
                   "color": "#64748b",
                   "index": 0,
                   "text": "Park"
                 },
-                "2": {
+                "to": 19999999
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 20000000,
+                "result": {
                   "color": "#3b82f6",
                   "index": 1,
                   "text": "Drive"
                 },
-                "3": {
+                "to": 29999999
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 30000000,
+                "result": {
                   "color": "#22c55e",
                   "index": 2,
                   "text": "Charge"
                 },
-                "4": {
+                "to": 39999999
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 40000000,
+                "result": {
                   "color": "#d97706",
                   "index": 3,
                   "text": "Weekend"
                 },
-                "11": {
+                "to": 49999999
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 110000000,
+                "result": {
                   "color": "#facc15",
                   "index": 4,
                   "text": "Park"
                 },
-                "12": {
-                  "color": "#facc15",
-                  "index": 5,
-                  "text": "Drive"
-                },
-                "13": {
-                  "color": "#facc15",
-                  "index": 6,
-                  "text": "Charge"
-                }
+                "to": 139999999
               },
-              "type": "value"
+              "type": "range"
             }
           ],
           "thresholds": {
@@ -1418,23 +1438,23 @@
               },
               {
                 "color": "#64748b",
-                "value": 1
+                "value": 10000000
               },
               {
                 "color": "#3b82f6",
-                "value": 2
+                "value": 20000000
               },
               {
                 "color": "#22c55e",
-                "value": 3
+                "value": 30000000
               },
               {
                 "color": "#d97706",
-                "value": 4
+                "value": 40000000
               },
               {
                 "color": "#facc15",
-                "value": 11
+                "value": 110000000
               }
             ]
           }
@@ -1508,6 +1528,11 @@
               "type": "number"
             },
             {
+              "selector": "hoverCode",
+              "text": "hoverCode",
+              "type": "number"
+            },
+            {
               "selector": "kind",
               "text": "kind",
               "type": "string"
@@ -1520,6 +1545,11 @@
             {
               "selector": "label",
               "text": "label",
+              "type": "string"
+            },
+            {
+              "selector": "detail",
+              "text": "detail",
               "type": "string"
             }
           ],
@@ -1539,20 +1569,63 @@
             "data": "",
             "method": "GET"
           }
+        },
+        {
+          "columns": [
+            {
+              "selector": "hoverCode",
+              "text": "hoverCode",
+              "type": "number"
+            },
+            {
+              "selector": "label",
+              "text": "label",
+              "type": "string"
+            },
+            {
+              "selector": "color",
+              "text": "color",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${ds}"
+          },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "Hover",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/cars/${car_id}/timeline/grid?from=${__from:date:iso}&to=${__to:date:iso}&timezone=Asia/Shanghai&dayStartHour=4&highlightFrom=${focus_from}&highlightTo=${focus_to}&highlightKind=${focus_kind}&highlightDay=${focus_day}&highlightSlot=${focus_slot}&highlightId=${focus_id}",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
         }
       ],
       "transformations": [
         {
           "id": "groupingToMatrix",
+          "filter": {
+            "id": "byRefId",
+            "options": "A"
+          },
           "options": {
             "columnField": "slot",
             "emptyValue": "null",
             "rowField": "time",
-            "valueField": "kindCode"
+            "valueField": "hoverCode"
           }
         },
         {
           "id": "convertFieldType",
+          "filter": {
+            "id": "byRefId",
+            "options": "A"
+          },
           "options": {
             "conversions": [
               {
@@ -1565,6 +1638,10 @@
         },
         {
           "id": "organize",
+          "filter": {
+            "id": "byRefId",
+            "options": "A"
+          },
           "options": {
             "excludeByName": {},
             "indexByName": {
@@ -1597,10 +1674,34 @@
             },
             "renameByName": {}
           }
+        },
+        {
+          "id": "configFromData",
+          "options": {
+            "applyTo": {
+              "id": "byType",
+              "options": "number"
+            },
+            "configRefId": "Hover",
+            "mappings": [
+              {
+                "fieldName": "hoverCode",
+                "handlerKey": "mappings.value"
+              },
+              {
+                "fieldName": "label",
+                "handlerKey": "mappings.text"
+              },
+              {
+                "fieldName": "color",
+                "handlerKey": "mappings.color"
+              }
+            ]
+          }
         }
       ],
       "title": "Time of day",
-      "description": "Each column is 04:00–04:00 local. If an hour has both charge and drive, the cell is green (charge) and the tooltip lists both ids. Click Highlight charge or Highlight drive separately.",
+      "description": "Each column is 04:00–04:00 local. Hover a cell for the same Drive/Charge/Park detail as the timeline (km, duration, SOC). Click to highlight that hour on the map.",
       "type": "status-history"
     }
   ],

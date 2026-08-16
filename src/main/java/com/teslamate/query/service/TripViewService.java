@@ -177,21 +177,32 @@ public class TripViewService {
     }
 
     /**
-     * Points for a focused trip. Timeline passes {@code from}/{@code to};
+     * Points for a focused trip. Timeline passes {@code id} (and from/to);
      * the day-grid passes {@code day}+{@code slot}. Unset vars return no rows.
      */
     public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
                                    String fromStr, String toStr,
                                    Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
+        return focus(carId, dayStr, slotStr, kindStr, fromStr, toStr, null,
+                minParkMin, units, zone, dayStartHour);
+    }
+
+    public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
+                                   String fromStr, String toStr, String idStr,
+                                   Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        Instant[] raw = parseFocusBounds(dayStr, slotStr, fromStr, toStr, z, dayStartHour);
+        int want = focusKindCode(kindStr);
+        Instant[] byId = rangeForSourceId(carId, parseFlexibleLong(idStr), want);
+        Instant[] raw = byId != null
+                ? byId
+                : parseFocusBounds(dayStr, slotStr, fromStr, toStr, z, dayStartHour);
         if (raw == null) {
             return List.of();
         }
-        int want = focusKindCode(kindStr);
-        List<TimelineItemDto> nearby = timeline(carId, raw[0].minusSeconds(90).toString(),
-                raw[1].plusSeconds(90).toString(), minParkMin, units, z);
-        Instant[] win = expandFocus(nearby, raw, want);
+        Instant[] win = byId != null ? byId : expandFocus(
+                timeline(carId, raw[0].minusSeconds(90).toString(),
+                        raw[1].plusSeconds(90).toString(), minParkMin, units, z),
+                raw, want);
         String kinds = switch (want) {
             case DayGridCellDto.DRIVE -> "drive";
             case DayGridCellDto.CHARGE -> "charge";
@@ -199,6 +210,36 @@ public class TripViewService {
             default -> "drive,charge,park";
         };
         return points(carId, win[0].toString(), win[1].toString(), minParkMin, kinds, units);
+    }
+
+    private Instant[] rangeForSourceId(long carId, Long id, int want) {
+        if (id == null) {
+            return null;
+        }
+        if (want == DayGridCellDto.CHARGE || want == 0) {
+            Instant[] charge = chargingProcessDao.findById(id)
+                    .filter(c -> Objects.equals(c.carId(), carId))
+                    .map(c -> closedRange(c.startDate(), c.endDate()))
+                    .orElse(null);
+            if (charge != null) {
+                return charge;
+            }
+        }
+        if (want == DayGridCellDto.DRIVE || want == 0) {
+            return driveDao.findById(id)
+                    .filter(d -> Objects.equals(d.carId(), carId))
+                    .map(d -> closedRange(d.startDate(), d.endDate()))
+                    .orElse(null);
+        }
+        return null;
+    }
+
+    private static Instant[] closedRange(Instant start, Instant end) {
+        if (start == null) {
+            return null;
+        }
+        Instant to = end == null || !end.isAfter(start) ? start.plusSeconds(60) : end;
+        return new Instant[]{start, to};
     }
 
     private Instant[] resolveFocusWindow(List<TimelineItemDto> items, String hlDay, String hlSlot,
@@ -744,11 +785,36 @@ public class TripViewService {
     }
 
     private Instant parseFlexibleInstant(String raw) {
+        return coerceInstant(raw);
+    }
+
+    /**
+     * Grafana may send ISO-8601, unix seconds/millis, or an offset whose {@code +}
+     * was decoded as a space in the query string.
+     */
+    static Instant coerceInstant(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String s = raw.trim();
+        if (s.matches(".*T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)? \\d{2}:\\d{2}(:\\d{2})?$")) {
+            s = s.replaceFirst(" (\\d{2}:\\d{2}(?::\\d{2})?)$", "+$1");
+        }
+        if (s.chars().skip(s.startsWith("-") ? 1 : 0).allMatch(Character::isDigit)) {
+            try {
+                long n = Long.parseLong(s);
+                return Math.abs(n) < 1_000_000_000_000L
+                        ? Instant.ofEpochSecond(n)
+                        : Instant.ofEpochMilli(n);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
         try {
-            return support.parseInstant(raw, "time");
+            return Instant.parse(s);
         } catch (RuntimeException e) {
             try {
-                return Instant.ofEpochMilli(Long.parseLong(raw.trim()));
+                return java.time.OffsetDateTime.parse(s).toInstant();
             } catch (RuntimeException e2) {
                 return null;
             }
@@ -771,11 +837,18 @@ public class TripViewService {
             return DayGridCellDto.CHARGE;
         }
         try {
-            int n = Integer.parseInt(s);
-            if (n >= 11 && n <= 13) {
-                return n - 10;
+            long n = Long.parseLong(s);
+            if (n >= DayGridCellDto.HOVER_TAIL) {
+                int base = (int) (n / DayGridCellDto.HOVER_TAIL);
+                if (base >= 11 && base <= 13) {
+                    return base - 10;
+                }
+                return base >= 1 && base <= 3 ? base : 0;
             }
-            return n >= 1 && n <= 3 ? n : 0;
+            if (n >= 11 && n <= 13) {
+                return (int) n - 10;
+            }
+            return n >= 1 && n <= 3 ? (int) n : 0;
         } catch (NumberFormatException e) {
             return 0;
         }

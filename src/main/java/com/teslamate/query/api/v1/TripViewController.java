@@ -126,7 +126,7 @@ public class TripViewController {
     }
 
     @GetMapping("/map/focus")
-    @Operation(summary = "Map points for a focused trip (day+slot from the grid, or from/to from the timeline)")
+    @Operation(summary = "Map points for a focused trip (id from the timeline, day+slot from the grid, or from/to)")
     public List<MapPointDto> focus(
             @PathVariable long carId,
             @RequestParam(required = false) String day,
@@ -134,13 +134,14 @@ public class TripViewController {
             @RequestParam(required = false) String kind,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
+            @RequestParam(required = false) String id,
             @RequestParam(required = false) String minParkMin,
             @RequestParam(required = false) String timezone,
             @RequestParam(required = false) String dayStartHour,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return tripViewService.focus(carId, day, slot, kind, from, to, support.minParkMin(minParkMin),
+        return tripViewService.focus(carId, day, slot, kind, from, to, id, support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone),
                 support.dayStartHour(dayStartHour));
     }

@@ -12,5 +12,18 @@ public record ActivitySpan(
         Instant end,
         double durationMin,
         Long locationPositionId,
-        Long afterDriveId
-) {}
+        Long afterDriveId,
+        String detail
+) {
+    public ActivitySpan(
+            TimelineKind kind,
+            Long sourceId,
+            Instant start,
+            Instant end,
+            double durationMin,
+            Long locationPositionId,
+            Long afterDriveId
+    ) {
+        this(kind, sourceId, start, end, durationMin, locationPositionId, afterDriveId, null);
+    }
+}
