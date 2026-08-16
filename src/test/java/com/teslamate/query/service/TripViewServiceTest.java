@@ -1,9 +1,13 @@
 package com.teslamate.query.service;
 
+import com.teslamate.query.config.QueryProperties;
 import com.teslamate.query.dto.DayGridCellDto;
+import com.teslamate.query.dto.TimelineKind;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.EnumSet;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,43 +17,45 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TripViewServiceTest {
 
     @Test
-    void focusKindCodeReadsGridClick() {
-        assertEquals(0, TripViewService.focusKindCode(null));
-        assertEquals(2, TripViewService.focusKindCode("2"));
-        assertEquals(2, TripViewService.focusKindCode("DRIVE"));
-        assertEquals(2, TripViewService.focusKindCode("Drive #18432"));
-        assertEquals(3, TripViewService.focusKindCode("charge"));
-        assertEquals(3, TripViewService.focusKindCode("Charge #99"));
-        assertEquals(2, TripViewService.focusKindCode(String.valueOf(
+    void timelineKindReadsGrafanaJunk() {
+        assertEquals(Optional.empty(), TimelineKind.parse(null));
+        assertEquals(Optional.of(TimelineKind.DRIVE), TimelineKind.parse("2"));
+        assertEquals(Optional.of(TimelineKind.DRIVE), TimelineKind.parse("DRIVE"));
+        assertEquals(Optional.of(TimelineKind.DRIVE), TimelineKind.parse("Drive #18432"));
+        assertEquals(Optional.of(TimelineKind.CHARGE), TimelineKind.parse("charge"));
+        assertEquals(Optional.of(TimelineKind.CHARGE), TimelineKind.parse("Charge #99"));
+        assertEquals(Optional.of(TimelineKind.DRIVE), TimelineKind.parse(String.valueOf(
                 DayGridCellDto.hoverCode(DayGridCellDto.DRIVE, 5155))));
-        assertEquals(2, TripViewService.focusKindCode(String.valueOf(
+        assertEquals(Optional.of(TimelineKind.DRIVE), TimelineKind.parse(String.valueOf(
                 DayGridCellDto.hoverCode(DayGridCellDto.HIGHLIGHT_DRIVE, 5155))));
-        assertEquals(3, TripViewService.focusKindCode(String.valueOf(
+        assertEquals(Optional.of(TimelineKind.CHARGE), TimelineKind.parse(String.valueOf(
                 DayGridCellDto.hoverCode(DayGridCellDto.CHARGE, 99))));
     }
 
     @Test
-    void coerceInstantReadsGrafanaDates() {
-        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
-                TripViewService.coerceInstant("2026-08-16T04:12:00Z"));
-        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
-                TripViewService.coerceInstant("2026-08-16T12:12:00+08:00"));
-        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
-                TripViewService.coerceInstant("2026-08-16T12:12:00 08:00"));
-        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
-                TripViewService.coerceInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").getEpochSecond())));
-        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
-                TripViewService.coerceInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").toEpochMilli())));
-        assertFalse(TripViewService.plausibleTripInstant(Instant.parse("1970-01-01T00:00:00.008Z")));
-        assertTrue(TripViewService.plausibleTripInstant(Instant.parse("2024-08-16T10:00:00Z")));
+    void layersParseCommaList() {
+        assertEquals(EnumSet.allOf(TimelineKind.class), TimelineKind.parseLayers(null));
+        assertEquals(EnumSet.allOf(TimelineKind.class), TimelineKind.parseLayers("${kinds}"));
+        assertEquals(Set.of(TimelineKind.DRIVE), TimelineKind.parseLayers("drive"));
+        assertEquals(Set.of(TimelineKind.CHARGE, TimelineKind.PARK), TimelineKind.parseLayers("charge,park"));
     }
 
     @Test
-    void parseKindsDefaultAndFilter() {
-        assertEquals(Set.of("drive", "charge", "park"), TripViewService.parseKinds(null));
-        assertEquals(Set.of("drive", "charge", "park"), TripViewService.parseKinds("${kinds}"));
-        assertEquals(Set.of("drive"), TripViewService.parseKinds("drive"));
-        assertEquals(Set.of("charge", "park"), TripViewService.parseKinds("charge,park"));
+    void optionalInstantReadsGrafanaDates() {
+        QuerySupport support = new QuerySupport(new QueryProperties());
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                support.optionalInstant("2026-08-16T04:12:00Z"));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                support.optionalInstant("2026-08-16T12:12:00+08:00"));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                support.optionalInstant("2026-08-16T12:12:00 08:00"));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                support.optionalInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").getEpochSecond())));
+        assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
+                support.optionalInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").toEpochMilli())));
+        assertEquals(null, support.optionalInstant("1970-01-01T00:00:00.008Z"));
+        assertTrue(QuerySupport.plausibleTrip(Instant.parse("2024-08-16T10:00:00Z")));
+        assertFalse(QuerySupport.plausibleTrip(Instant.parse("1970-01-01T00:00:00.008Z")));
     }
 
     @Test

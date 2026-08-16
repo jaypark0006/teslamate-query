@@ -150,7 +150,8 @@ public final class DayGrid {
     }
 
     public static List<DayGridCellDto> applyHighlight(List<DayGridCellDto> cells, Instant windowFrom,
-                                                      Instant windowTo, int wantKind, int dayStartHour, ZoneId zone) {
+                                                      Instant windowTo, TimelineKind wantKind, int dayStartHour,
+                                                      ZoneId zone) {
         if (cells == null || windowFrom == null || windowTo == null) {
             return cells;
         }
@@ -168,29 +169,22 @@ public final class DayGrid {
                 out.add(cell);
                 continue;
             }
-            int code = switch (wantKind) {
-                case DayGridCellDto.DRIVE -> DayGridCellDto.HIGHLIGHT_DRIVE;
-                case DayGridCellDto.CHARGE -> DayGridCellDto.HIGHLIGHT_CHARGE;
-                case DayGridCellDto.PARK -> DayGridCellDto.HIGHLIGHT_PARK;
-                default -> cell.kindCode() + 10;
-            };
+            int code = wantKind == null ? cell.kindCode() + 10 : wantKind.highlightCode();
             out.add(cell.withKindCode(code));
         }
         return out;
     }
 
-    static boolean cellMatchesFocus(DayGridCellDto cell, int wantKind) {
-        if (wantKind == 0) {
+    static boolean cellMatchesFocus(DayGridCellDto cell, TimelineKind wantKind) {
+        if (wantKind == null) {
             return true;
         }
         String label = cell.label() == null ? "" : cell.label();
-        if (wantKind == DayGridCellDto.DRIVE) {
-            return cell.kindCode() == DayGridCellDto.DRIVE || label.contains("Drive");
-        }
-        if (wantKind == DayGridCellDto.CHARGE) {
-            return cell.kindCode() == DayGridCellDto.CHARGE || label.contains("Charge");
-        }
-        return cell.kindCode() == DayGridCellDto.PARK;
+        return switch (wantKind) {
+            case DRIVE -> cell.kindCode() == DayGridCellDto.DRIVE || label.contains("Drive");
+            case CHARGE -> cell.kindCode() == DayGridCellDto.CHARGE || label.contains("Charge");
+            case PARK -> cell.kindCode() == DayGridCellDto.PARK;
+        };
     }
 
     static Instant[] slotWindow(String day, String slot, int startH, ZoneId z) {

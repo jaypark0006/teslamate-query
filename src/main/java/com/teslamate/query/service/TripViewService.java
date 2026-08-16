@@ -16,6 +16,7 @@ import com.teslamate.query.dto.MapPointDto;
 import com.teslamate.query.dto.MapTracksDto;
 import com.teslamate.query.dto.TimelineItemDto;
 import com.teslamate.query.dto.TimelineKind;
+import com.teslamate.query.dto.TripFocus;
 import com.teslamate.query.entity.AddressEntity;
 import com.teslamate.query.entity.CarEntity;
 import com.teslamate.query.entity.ChargeEntity;
@@ -119,33 +120,23 @@ public class TripViewService {
         this.clock = clock;
     }
 
-    public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
+    public List<TimelineItemDto> timeline(long carId, Instant from, Instant to, Integer minParkMin,
                                           DisplayUnits units, ZoneId zone) {
-        return timeline(carId, fromStr, toStr, minParkMin, units, zone, null, null, null, null, null, null, 4);
+        return timeline(carId, from, to, minParkMin, units, zone, TripFocus.NONE, 4);
     }
 
-    public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
-                                          DisplayUnits units, ZoneId zone,
-                                          String hlDay, String hlSlot, String hlKind, String hlFrom, String hlTo,
-                                          int dayStartHour) {
-        return timeline(carId, fromStr, toStr, minParkMin, units, zone,
-                hlDay, hlSlot, hlKind, hlFrom, hlTo, null, dayStartHour);
-    }
-
-    public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
-                                          DisplayUnits units, ZoneId zone,
-                                          String hlDay, String hlSlot, String hlKind, String hlFrom, String hlTo,
-                                          String hlId, int dayStartHour) {
-        List<TimelineItemDto> items = build(carId, fromStr, toStr, minParkMin, units, false, zone).timeline;
-        Instant[] win = resolveFocusWindow(items, hlDay, hlSlot, hlKind, hlFrom, hlTo, hlId, zone, dayStartHour);
-        Long focusId = parseFlexibleLong(hlId);
-        int want = focusKindCode(hlKind);
+    public List<TimelineItemDto> timeline(long carId, Instant from, Instant to, Integer minParkMin,
+                                          DisplayUnits units, ZoneId zone, TripFocus focus, int dayStartHour) {
+        List<TimelineItemDto> items = build(carId, from, to, minParkMin, units, false, zone).timeline;
+        Instant[] win = resolveFocusWindow(items, focus, zone, dayStartHour);
+        Long focusId = focus == null ? null : focus.id();
+        TimelineKind want = focus == null ? null : focus.kind();
         if (win == null && focusId == null) {
             return items;
         }
         List<TimelineItemDto> out = new ArrayList<>(items.size());
         for (TimelineItemDto item : items) {
-            boolean kindOk = want == 0 || kindCode(item.kind()) == want;
+            boolean kindOk = want == null || item.kind() == want;
             boolean on = kindOk && (
                     (focusId != null && focusId.equals(item.id()))
                             || (win != null && overlapsWindow(item, win[0], win[1])));
@@ -154,82 +145,49 @@ public class TripViewService {
         return out;
     }
 
-    public List<DailyOccupancyDto> dailyOccupancy(long carId, String fromStr, String toStr, Integer minParkMin,
+    public List<DailyOccupancyDto> dailyOccupancy(long carId, Instant from, Instant to, Integer minParkMin,
                                                   DisplayUnits units, ZoneId zone) {
-        return DailyOccupancy.from(timeline(carId, fromStr, toStr, minParkMin, units, zone));
+        return DailyOccupancy.from(timeline(carId, from, to, minParkMin, units, zone));
     }
 
-    public List<DayGridCellDto> grid(long carId, String fromStr, String toStr, Integer minParkMin,
+    public List<DayGridCellDto> grid(long carId, Instant from, Instant to, Integer minParkMin,
                                      DisplayUnits units, ZoneId zone, int dayStartHour) {
-        return grid(carId, fromStr, toStr, minParkMin, units, zone, dayStartHour,
-                null, null, null, null, null, null);
+        return grid(carId, from, to, minParkMin, units, zone, dayStartHour, TripFocus.NONE);
     }
 
-    public List<DayGridCellDto> grid(long carId, String fromStr, String toStr, Integer minParkMin,
-                                     DisplayUnits units, ZoneId zone, int dayStartHour,
-                                     String hlDay, String hlSlot, String hlKind, String hlFrom, String hlTo,
-                                     String hlId) {
+    public List<DayGridCellDto> grid(long carId, Instant from, Instant to, Integer minParkMin,
+                                     DisplayUnits units, ZoneId zone, int dayStartHour, TripFocus focus) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        Instant[] range = support.requireRange(fromStr, toStr);
-        List<TimelineItemDto> items = timeline(carId, fromStr, toStr, minParkMin, units, z);
-        List<DayGridCellDto> cells = DayGrid.paintFromTimeline(items, z, dayStartHour, range[0], range[1]);
-        Instant[] win = resolveFocusWindow(items, hlDay, hlSlot, hlKind, hlFrom, hlTo, hlId, z, dayStartHour);
+        List<TimelineItemDto> items = timeline(carId, from, to, minParkMin, units, z);
+        List<DayGridCellDto> cells = DayGrid.paintFromTimeline(items, z, dayStartHour, from, to);
+        Instant[] win = resolveFocusWindow(items, focus, z, dayStartHour);
         return DayGrid.applyHighlight(cells, win == null ? null : win[0],
-                win == null ? null : win[1], focusKindCode(hlKind), dayStartHour, z);
+                win == null ? null : win[1], focus == null ? null : focus.kind(), dayStartHour, z);
     }
 
     /**
-     * Points for a focused trip. Timeline passes {@code id} (and from/to);
-     * the day-grid passes {@code day}+{@code slot}. Unset vars return no rows.
+     * Points for a focused trip. Timeline sets {@code id}; the day-grid sets day+hour.
      */
-    public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
-                                   String fromStr, String toStr,
-                                   Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
-        return focus(carId, dayStr, slotStr, kindStr, fromStr, toStr, null,
-                minParkMin, units, zone, dayStartHour, null);
-    }
-
-    public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
-                                   String fromStr, String toStr, String idStr,
-                                   Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
-        return focus(carId, dayStr, slotStr, kindStr, fromStr, toStr, idStr,
-                minParkMin, units, zone, dayStartHour, null);
-    }
-
-    public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
-                                   String fromStr, String toStr, String idStr,
-                                   Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour,
-                                   String kindsFilter) {
+    public List<MapPointDto> focus(long carId, TripFocus focus, Integer minParkMin, DisplayUnits units,
+                                   ZoneId zone, int dayStartHour, Set<TimelineKind> layers) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        int want = focusKindCode(kindStr);
-        Instant[] byId = rangeForSourceId(carId, parseFlexibleLong(idStr), want);
-        Instant[] raw = byId != null
-                ? byId
-                : parseFocusBounds(dayStr, slotStr, fromStr, toStr, z, dayStartHour);
+        TripFocus sel = focus == null ? TripFocus.NONE : focus;
+        Instant[] byId = rangeForSourceId(carId, sel.id(), sel.kind());
+        Instant[] raw = byId != null ? byId : parseFocusBounds(sel, z, dayStartHour);
         if (raw == null) {
             return List.of();
         }
         Instant[] win = byId != null ? byId : expandFocus(
-                timeline(carId, raw[0].minusSeconds(90).toString(),
-                        raw[1].plusSeconds(90).toString(), minParkMin, units, z),
-                raw, want);
-        String kinds = switch (want) {
-            case DayGridCellDto.DRIVE -> "drive";
-            case DayGridCellDto.CHARGE -> "charge";
-            case DayGridCellDto.PARK -> "park";
-            default -> "drive,charge,park";
-        };
-        if (!support.unset(kindsFilter)) {
-            kinds = kindsFilter;
-        }
-        return points(carId, win[0].toString(), win[1].toString(), minParkMin, kinds, units);
+                timeline(carId, raw[0].minusSeconds(90), raw[1].plusSeconds(90), minParkMin, units, z),
+                raw, sel.kind());
+        return points(carId, win[0], win[1], minParkMin, sel.layersOrDefault(layers), units);
     }
 
-    private Instant[] rangeForSourceId(long carId, Long id, int want) {
+    private Instant[] rangeForSourceId(long carId, Long id, TimelineKind want) {
         if (id == null) {
             return null;
         }
-        if (want == DayGridCellDto.CHARGE || want == 0) {
+        if (want == null || want == TimelineKind.CHARGE) {
             Instant[] charge = chargingProcessDao.findById(id)
                     .filter(c -> Objects.equals(c.carId(), carId))
                     .map(c -> closedRange(c.startDate(), c.endDate()))
@@ -238,7 +196,7 @@ public class TripViewService {
                 return charge;
             }
         }
-        if (want == DayGridCellDto.DRIVE || want == 0) {
+        if (want == null || want == TimelineKind.DRIVE) {
             return driveDao.findById(id)
                     .filter(d -> Objects.equals(d.carId(), carId))
                     .map(d -> closedRange(d.startDate(), d.endDate()))
@@ -255,75 +213,57 @@ public class TripViewService {
         return new Instant[]{start, to};
     }
 
-    private Instant[] resolveFocusWindow(List<TimelineItemDto> items, String hlDay, String hlSlot,
-                                         String hlKind, String hlFrom, String hlTo, String hlId,
+    private Instant[] resolveFocusWindow(List<TimelineItemDto> items, TripFocus focus,
                                          ZoneId zone, int dayStartHour) {
-        Long focusId = parseFlexibleLong(hlId);
-        int want = focusKindCode(hlKind);
-        if (focusId != null && items != null) {
+        TripFocus sel = focus == null ? TripFocus.NONE : focus;
+        if (sel.id() != null && items != null) {
             List<TimelineItemDto> byId = items.stream()
-                    .filter(i -> focusId.equals(i.id()))
-                    .filter(i -> want == 0 || kindCode(i.kind()) == want)
+                    .filter(i -> sel.id().equals(i.id()))
+                    .filter(i -> sel.matches(i.kind()))
                     .toList();
             if (!byId.isEmpty()) {
-                return expandFocus(byId, new Instant[]{byId.getFirst().start(), byId.getFirst().end()}, want);
+                return expandFocus(byId, new Instant[]{byId.getFirst().start(), byId.getFirst().end()}, sel.kind());
             }
         }
-        Instant[] raw = parseFocusBounds(hlDay, hlSlot, hlFrom, hlTo, zone, dayStartHour);
+        Instant[] raw = parseFocusBounds(sel, zone, dayStartHour);
         if (raw == null) {
             return null;
         }
-        return expandFocus(items, raw, want);
+        return expandFocus(items, raw, sel.kind());
     }
 
-    private Long parseFlexibleLong(String raw) {
-        if (support.unset(raw)) {
+    private Instant[] parseFocusBounds(TripFocus focus, ZoneId zone, int dayStartHour) {
+        if (focus == null) {
             return null;
         }
-        try {
-            return Long.parseLong(raw.trim());
-        } catch (NumberFormatException e) {
-            return DayGrid.parseSourceId(raw);
-        }
-    }
-
-    private Instant[] parseFocusBounds(String dayStr, String slotStr, String fromStr, String toStr,
-                                       ZoneId zone, int dayStartHour) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        if (!support.unset(fromStr) && !support.unset(toStr)) {
-            Instant from = parseFlexibleInstant(fromStr);
-            Instant to = parseFlexibleInstant(toStr);
-            if (from != null && to != null && plausibleTripInstant(from) && plausibleTripInstant(to)) {
-                if (!to.isAfter(from)) {
-                    to = from.plusSeconds(60);
-                }
-                return new Instant[]{from, to};
+        Instant from = focus.from();
+        Instant to = focus.to();
+        if (from != null && to != null) {
+            if (!to.isAfter(from)) {
+                to = from.plusSeconds(60);
             }
+            return new Instant[]{from, to};
         }
-        if (support.unset(dayStr) || support.unset(slotStr)) {
+        if (focus.day() == null || focus.clockHour() == null) {
             return null;
         }
-        Integer clockH = DayGrid.parseClockHour(slotStr);
-        Instant dayInstant = parseFlexibleInstant(dayStr);
-        if (clockH == null || dayInstant == null) {
-            return null;
-        }
-        LocalDate day = dayInstant.atZone(z).toLocalDate();
+        int clockH = focus.clockHour();
         int startH = Math.floorMod(dayStartHour, 24);
-        ZonedDateTime slotStart = day.atTime(clockH, 0).atZone(z);
+        ZonedDateTime slotStart = focus.day().atTime(clockH, 0).atZone(z);
         if (clockH < startH) {
             slotStart = slotStart.plusDays(1);
         }
         return new Instant[]{slotStart.toInstant(), slotStart.plusHours(1).toInstant()};
     }
 
-    private Instant[] expandFocus(List<TimelineItemDto> items, Instant[] raw, int want) {
+    private Instant[] expandFocus(List<TimelineItemDto> items, Instant[] raw, TimelineKind want) {
         if (items == null || raw == null) {
             return raw;
         }
         List<TimelineItemDto> hit = items.stream()
                 .filter(i -> overlapsWindow(i, raw[0], raw[1]))
-                .filter(i -> want == 0 || kindCode(i.kind()) == want)
+                .filter(i -> want == null || i.kind() == want)
                 .toList();
         if (hit.isEmpty()) {
             return raw;
@@ -335,48 +275,43 @@ public class TripViewService {
         return new Instant[]{expFrom, expTo};
     }
 
-    public List<MapPointDto> points(long carId, String fromStr, String toStr, Integer minParkMin,
-                                    String kinds, DisplayUnits units) {
-        Set<String> want = parseKinds(kinds);
-        boolean needPath = want.contains("drive");
-        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, needPath, false, null);
-        return snap.points.stream().filter(p -> want.contains(p.kind())).toList();
+    public List<MapPointDto> points(long carId, Instant from, Instant to, Integer minParkMin,
+                                    Set<TimelineKind> layers, DisplayUnits units) {
+        Set<TimelineKind> want = layers == null || layers.isEmpty()
+                ? Set.of(TimelineKind.values())
+                : layers;
+        boolean needPath = want.contains(TimelineKind.DRIVE);
+        Snapshot snap = build(carId, from, to, minParkMin, units, needPath, false, null);
+        Set<String> names = want.stream().map(TimelineKind::layer).collect(Collectors.toSet());
+        return snap.points.stream().filter(p -> names.contains(p.kind())).toList();
     }
 
-    public MapTracksDto geoJson(long carId, String fromStr, String toStr, Integer minParkMin,
+    public MapTracksDto geoJson(long carId, Instant from, Instant to, Integer minParkMin,
                                 DisplayUnits units) {
-        return build(carId, fromStr, toStr, minParkMin, units, true, true, null).geoJson;
+        return build(carId, from, to, minParkMin, units, true, true, null).geoJson;
     }
 
-    private Snapshot build(long carId, String fromStr, String toStr, Integer minParkMin, DisplayUnits units,
+    private Snapshot build(long carId, Instant from, Instant to, Integer minParkMin, DisplayUnits units,
                            boolean includePath, ZoneId zone) {
-        return build(carId, fromStr, toStr, minParkMin, units, includePath, false, zone);
+        return build(carId, from, to, minParkMin, units, includePath, false, zone);
     }
 
-    private Snapshot build(long carId, String fromStr, String toStr, Integer minParkMin, DisplayUnits units,
+    private Snapshot build(long carId, Instant from, Instant to, Integer minParkMin, DisplayUnits units,
                            boolean includePath, boolean includeGeo, ZoneId zone) {
         int minPark = minParkMin == null ? DEFAULT_MIN_PARK_MIN : Math.max(minParkMin, 0);
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         String unitKey = units == null ? "km-C" : units.length() + "-" + units.temperature();
-        String key = carId + "|" + fromStr + "|" + toStr + "|" + minPark + "|" + unitKey
+        String key = carId + "|" + from + "|" + to + "|" + minPark + "|" + unitKey
                 + "|" + includePath + "|" + includeGeo + "|" + z.getId();
-        return windowCache.get(key, k -> buildUncached(carId, fromStr, toStr, minPark, units,
+        return windowCache.get(key, k -> buildUncached(carId, from, to, minPark, units,
                 includePath, includeGeo, z));
     }
 
-    private Snapshot buildUncached(long carId, String fromStr, String toStr, int minPark, DisplayUnits units,
-                                   boolean includePath, ZoneId zone) {
-        return buildUncached(carId, fromStr, toStr, minPark, units, includePath, false, zone);
-    }
-
-    private Snapshot buildUncached(long carId, String fromStr, String toStr, int minPark, DisplayUnits units,
+    private Snapshot buildUncached(long carId, Instant from, Instant to, int minPark, DisplayUnits units,
                                    boolean includePath, boolean includeGeo, ZoneId zone) {
         long started = System.nanoTime();
         requireCar(carId);
         DisplayUnits u = units == null ? DisplayUnits.METRIC : units;
-        Instant[] range = support.requireRange(fromStr, toStr);
-        Instant from = range[0];
-        Instant to = range[1];
         Instant now = clock.instant();
 
         ReadJobs.Pair<List<DriveEntity>, List<ChargingProcessEntity>> loaded = ReadJobs.both(
@@ -840,111 +775,11 @@ public class TripViewService {
         return carDao.findById(carId).orElseThrow(() -> new NotFoundException("Car not found: " + carId));
     }
 
-    private Instant parseFlexibleInstant(String raw) {
-        return coerceInstant(raw);
-    }
-
-    /**
-     * Grafana may send ISO-8601, unix seconds/millis, or an offset whose {@code +}
-     * was decoded as a space in the query string.
-     */
-    static final Instant MIN_PLAUSIBLE_TRIP = Instant.parse("2012-01-01T00:00:00Z");
-
-    static boolean plausibleTripInstant(Instant t) {
-        return t != null && !t.isBefore(MIN_PLAUSIBLE_TRIP);
-    }
-
-    static Instant coerceInstant(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        String s = raw.trim();
-        if (s.matches(".*T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)? \\d{2}:\\d{2}(:\\d{2})?$")) {
-            s = s.replaceFirst(" (\\d{2}:\\d{2}(?::\\d{2})?)$", "+$1");
-        }
-        if (s.chars().skip(s.startsWith("-") ? 1 : 0).allMatch(Character::isDigit)) {
-            try {
-                long n = Long.parseLong(s);
-                return Math.abs(n) < 1_000_000_000_000L
-                        ? Instant.ofEpochSecond(n)
-                        : Instant.ofEpochMilli(n);
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        try {
-            return Instant.parse(s);
-        } catch (RuntimeException e) {
-            try {
-                return java.time.OffsetDateTime.parse(s).toInstant();
-            } catch (RuntimeException e2) {
-                return null;
-            }
-        }
-    }
-
-    static int focusKindCode(String raw) {
-        if (raw == null || raw.isBlank() || raw.contains("${")) {
-            return 0;
-        }
-        String s = raw.trim();
-        String u = s.toUpperCase(Locale.ROOT);
-        if (u.startsWith("PARK") || u.equals("1")) {
-            return DayGridCellDto.PARK;
-        }
-        if (u.startsWith("DRIVE") || u.equals("2")) {
-            return DayGridCellDto.DRIVE;
-        }
-        if (u.startsWith("CHARGE") || u.equals("3")) {
-            return DayGridCellDto.CHARGE;
-        }
-        try {
-            long n = Long.parseLong(s);
-            if (n >= DayGridCellDto.HOVER_TAIL) {
-                int base = (int) (n / DayGridCellDto.HOVER_TAIL);
-                if (base >= 11 && base <= 13) {
-                    return base - 10;
-                }
-                return base >= 1 && base <= 3 ? base : 0;
-            }
-            if (n >= 11 && n <= 13) {
-                return (int) n - 10;
-            }
-            return n >= 1 && n <= 3 ? (int) n : 0;
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
-    private static int kindCode(TimelineKind kind) {
-        if (kind == TimelineKind.DRIVE) {
-            return DayGridCellDto.DRIVE;
-        }
-        if (kind == TimelineKind.CHARGE) {
-            return DayGridCellDto.CHARGE;
-        }
-        return DayGridCellDto.PARK;
-    }
-
     private static boolean overlapsWindow(TimelineItemDto item, Instant from, Instant to) {
         if (item == null || item.start() == null || item.end() == null) {
             return false;
         }
         return item.start().isBefore(to) && item.end().isAfter(from);
-    }
-
-    static Set<String> parseKinds(String raw) {
-        if (raw == null || raw.isBlank() || raw.contains("${")) {
-            return Set.of("drive", "charge", "park");
-        }
-        Set<String> out = new java.util.HashSet<>();
-        for (String part : raw.split(",")) {
-            String k = part.trim().toLowerCase(Locale.ROOT);
-            if (k.equals("drive") || k.equals("charge") || k.equals("park")) {
-                out.add(k);
-            }
-        }
-        return out.isEmpty() ? Set.of("drive", "charge", "park") : Set.copyOf(out);
     }
 
     private static Integer soc(Long positionId, Map<Long, PositionEntity> posById) {

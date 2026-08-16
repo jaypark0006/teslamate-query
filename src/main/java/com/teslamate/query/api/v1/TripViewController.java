@@ -50,9 +50,12 @@ public class TripViewController {
             @RequestParam(required = false) String highlightId,
             @RequestParam(required = false) String dayStartHour
     ) {
-        return tripViewService.timeline(carId, from, to, support.minParkMin(minParkMin),
-                support.units(lengthUnit, tempUnit), support.zone(timezone),
-                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo, highlightId,
+        var range = support.requireRange(from, to);
+        var zone = support.zone(timezone);
+        return tripViewService.timeline(carId, range[0], range[1], support.minParkMin(minParkMin),
+                support.units(lengthUnit, tempUnit), zone,
+                support.tripFocus(highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo,
+                        highlightId, zone),
                 support.dayStartHour(dayStartHour));
     }
 
@@ -67,7 +70,8 @@ public class TripViewController {
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return tripViewService.dailyOccupancy(carId, from, to, support.minParkMin(minParkMin),
+        var range = support.requireRange(from, to);
+        return tripViewService.dailyOccupancy(carId, range[0], range[1], support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone));
     }
 
@@ -89,10 +93,13 @@ public class TripViewController {
             @RequestParam(required = false) String highlightTo,
             @RequestParam(required = false) String highlightId
     ) {
-        return tripViewService.grid(carId, from, to, support.minParkMin(minParkMin),
-                support.units(lengthUnit, tempUnit), support.zone(timezone),
+        var range = support.requireRange(from, to);
+        var zone = support.zone(timezone);
+        return tripViewService.grid(carId, range[0], range[1], support.minParkMin(minParkMin),
+                support.units(lengthUnit, tempUnit), zone,
                 support.dayStartHour(dayStartHour),
-                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo, highlightId);
+                support.tripFocus(highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo,
+                        highlightId, zone));
     }
 
     @GetMapping("/map")
@@ -105,7 +112,8 @@ public class TripViewController {
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return tripViewService.geoJson(carId, from, to, support.minParkMin(minParkMin),
+        var range = support.requireRange(from, to);
+        return tripViewService.geoJson(carId, range[0], range[1], support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit));
     }
 
@@ -121,8 +129,9 @@ public class TripViewController {
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return tripViewService.points(carId, from, to, support.minParkMin(minParkMin), kinds,
-                support.units(lengthUnit, tempUnit));
+        var range = support.requireRange(from, to);
+        return tripViewService.points(carId, range[0], range[1], support.minParkMin(minParkMin),
+                support.layers(kinds), support.units(lengthUnit, tempUnit));
     }
 
     @GetMapping("/map/focus")
@@ -142,8 +151,10 @@ public class TripViewController {
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return tripViewService.focus(carId, day, slot, kind, from, to, id, support.minParkMin(minParkMin),
-                support.units(lengthUnit, tempUnit), support.zone(timezone),
-                support.dayStartHour(dayStartHour), kinds);
+        var zone = support.zone(timezone);
+        return tripViewService.focus(carId,
+                support.tripFocus(day, slot, kind, from, to, id, zone),
+                support.minParkMin(minParkMin), support.units(lengthUnit, tempUnit), zone,
+                support.dayStartHour(dayStartHour), support.layers(kinds));
     }
 }

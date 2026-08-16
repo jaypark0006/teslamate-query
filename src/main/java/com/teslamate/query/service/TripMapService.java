@@ -12,15 +12,18 @@ import org.springframework.stereotype.Service;
 public class TripMapService {
 
     private final TripViewService tripViewService;
+    private final QuerySupport support;
 
-    public TripMapService(TripViewService tripViewService) {
+    public TripMapService(TripViewService tripViewService, QuerySupport support) {
         this.tripViewService = tripViewService;
+        this.support = support;
     }
 
     public MapTracksDto trip(long carId, String fromStr, String toStr,
                              Integer minParkMin, Integer microDriveThresholdMin,
                              Integer maxDrives, Integer maxChargingProcesses, DisplayUnits units) {
-        return tripViewService.geoJson(carId, fromStr, toStr, minParkMin, units);
+        var range = support.requireRange(fromStr, toStr);
+        return tripViewService.geoJson(carId, range[0], range[1], minParkMin, units);
     }
 
     static String chargeType(ChargeEntity sample) {

@@ -82,8 +82,9 @@ public class MapController {
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return tripViewService.points(carId, from, to, support.minParkMin(minParkMin), kinds,
-                support.units(lengthUnit, tempUnit));
+        var range = support.requireRange(from, to);
+        return tripViewService.points(carId, range[0], range[1], support.minParkMin(minParkMin),
+                support.layers(kinds), support.units(lengthUnit, tempUnit));
     }
 
     @GetMapping("/map/timeline")
@@ -97,7 +98,8 @@ public class MapController {
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
-        return tripViewService.timeline(carId, from, to, support.minParkMin(minParkMin),
+        var range = support.requireRange(from, to);
+        return tripViewService.timeline(carId, range[0], range[1], support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone));
     }
 

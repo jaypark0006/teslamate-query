@@ -218,7 +218,7 @@ class DayGridTest {
                 Instant.parse("2026-08-13T00:00:00Z"), Instant.parse("2026-08-13T04:00:00Z"));
         Instant from = Instant.parse("2026-08-13T00:00:00Z");
         Instant to = Instant.parse("2026-08-13T02:00:00Z");
-        List<DayGridCellDto> marked = DayGrid.applyHighlight(cells, from, to, DayGridCellDto.DRIVE, 0, ZoneId.of("UTC"));
+        List<DayGridCellDto> marked = DayGrid.applyHighlight(cells, from, to, TimelineKind.DRIVE, 0, ZoneId.of("UTC"));
         assertTrue(marked.stream().anyMatch(c ->
                 "00".equals(c.slot()) && c.kindCode() == DayGridCellDto.HIGHLIGHT_DRIVE));
         assertTrue(marked.stream().anyMatch(c ->

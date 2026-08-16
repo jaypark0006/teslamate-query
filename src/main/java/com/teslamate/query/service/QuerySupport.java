@@ -2,12 +2,17 @@ package com.teslamate.query.service;
 
 import com.teslamate.query.config.QueryProperties;
 import com.teslamate.query.domain.units.DisplayUnits;
+import com.teslamate.query.dto.TimelineKind;
+import com.teslamate.query.dto.TripFocus;
 import com.teslamate.query.exception.BadRequestException;
+import com.teslamate.query.service.trip.DayGrid;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.Set;
 
 @Component
 public class QuerySupport {
@@ -149,6 +154,95 @@ public class QuerySupport {
                 throw new BadRequestException(name + " must be ISO-8601 datetime, got: " + value);
             }
         }
+    }
+
+    public TripFocus tripFocus(String day, String slot, String kind, String from, String to, String id,
+                               ZoneId zone) {
+        ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
+        Instant windowFrom = optionalInstant(from);
+        Instant windowTo = optionalInstant(to);
+        if (windowFrom != null && !plausibleTrip(windowFrom)) {
+            windowFrom = null;
+        }
+        if (windowTo != null && !plausibleTrip(windowTo)) {
+            windowTo = null;
+        }
+        return new TripFocus(
+                TimelineKind.parse(kind).orElse(null),
+                optionalLong(id),
+                windowFrom,
+                windowTo,
+                optionalDay(day, z),
+                unset(slot) ? null : DayGrid.parseClockHour(slot));
+    }
+
+    public Set<TimelineKind> layers(String kinds) {
+        return TimelineKind.parseLayers(kinds);
+    }
+
+    public Long optionalLong(String raw) {
+        if (unset(raw)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException e) {
+            return DayGrid.parseSourceId(raw);
+        }
+    }
+
+    public Instant optionalInstant(String raw) {
+        if (unset(raw)) {
+            return null;
+        }
+        String s = raw.trim();
+        if (s.matches(".*T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)? \\d{2}:\\d{2}(:\\d{2})?$")) {
+            s = s.replaceFirst(" (\\d{2}:\\d{2}(?::\\d{2})?)$", "+$1");
+        }
+        if (s.chars().skip(s.startsWith("-") ? 1 : 0).allMatch(Character::isDigit)) {
+            try {
+                long n = Long.parseLong(s);
+                Instant t = Math.abs(n) < 1_000_000_000_000L
+                        ? Instant.ofEpochSecond(n)
+                        : Instant.ofEpochMilli(n);
+                return plausibleTrip(t) ? t : null;
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        try {
+            Instant t = Instant.parse(s);
+            return plausibleTrip(t) ? t : null;
+        } catch (RuntimeException e) {
+            try {
+                Instant t = OffsetDateTime.parse(s).toInstant();
+                return plausibleTrip(t) ? t : null;
+            } catch (RuntimeException e2) {
+                return null;
+            }
+        }
+    }
+
+    public LocalDate optionalDay(String raw, ZoneId zone) {
+        if (unset(raw)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(raw.trim());
+        } catch (RuntimeException e) {
+            Instant t = optionalInstant(raw);
+            if (t == null) {
+                return null;
+            }
+            ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
+            return t.atZone(z).toLocalDate();
+        }
+    }
+
+    static final Instant MIN_PLAUSIBLE_TRIP = Instant.parse("2012-01-01T00:00:00Z");
+
+    static boolean plausibleTrip(Instant t) {
+        return t != null && !t.isBefore(MIN_PLAUSIBLE_TRIP);
     }
 
     public Instant[] requireRange(String fromStr, String toStr) {

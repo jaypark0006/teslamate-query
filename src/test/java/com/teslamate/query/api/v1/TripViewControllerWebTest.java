@@ -4,6 +4,7 @@ import com.teslamate.query.dto.DayGridCellDto;
 import com.teslamate.query.dto.MapPointDto;
 import com.teslamate.query.dto.TimelineItemDto;
 import com.teslamate.query.dto.TimelineKind;
+import com.teslamate.query.dto.TripFocus;
 import com.teslamate.query.exception.GlobalExceptionHandler;
 import com.teslamate.query.service.QuerySupport;
 import com.teslamate.query.service.TripViewService;
@@ -16,6 +17,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -44,8 +46,12 @@ class TripViewControllerWebTest {
         when(support.zone(null)).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
         when(support.units(null, null)).thenReturn(null);
         when(support.dayStartHour(null)).thenReturn(0);
-        when(tripViewService.timeline(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
-                eq(10), any(), any(), any(), any(), any(), any(), any(), any(), eq(0))).thenReturn(List.of(
+        when(support.requireRange("2026-08-16T00:00:00Z", "2026-08-16T12:00:00Z")).thenReturn(new Instant[]{
+                Instant.parse("2026-08-16T00:00:00Z"), Instant.parse("2026-08-16T12:00:00Z")});
+        when(support.tripFocus(any(), any(), any(), any(), any(), any(), any())).thenReturn(TripFocus.NONE);
+        when(tripViewService.timeline(eq(1L), eq(Instant.parse("2026-08-16T00:00:00Z")),
+                eq(Instant.parse("2026-08-16T12:00:00Z")),
+                eq(10), any(), any(), any(), eq(0))).thenReturn(List.of(
                 new TimelineItemDto(1, TimelineKind.DRIVE, 9L,
                         Instant.parse("2026-08-16T02:00:00Z"), Instant.parse("2026-08-16T03:00:00Z"),
                         60.0, "Home → Work", "12.0 km · 1h", "#3b82f6",
@@ -68,8 +74,12 @@ class TripViewControllerWebTest {
     void pointsOk() {
         when(support.minParkMin(null)).thenReturn(10);
         when(support.units(null, null)).thenReturn(null);
-        when(tripViewService.points(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
-                eq(10), eq("drive"), any())).thenReturn(List.of(
+        when(support.requireRange("2026-08-16T00:00:00Z", "2026-08-16T12:00:00Z")).thenReturn(new Instant[]{
+                Instant.parse("2026-08-16T00:00:00Z"), Instant.parse("2026-08-16T12:00:00Z")});
+        when(support.layers("drive")).thenReturn(Set.of(TimelineKind.DRIVE));
+        when(tripViewService.points(eq(1L), eq(Instant.parse("2026-08-16T00:00:00Z")),
+                eq(Instant.parse("2026-08-16T12:00:00Z")),
+                eq(10), eq(Set.of(TimelineKind.DRIVE)), any())).thenReturn(List.of(
                 new MapPointDto(Instant.parse("2026-08-16T02:00:00Z"), 29.5, 106.4,
                         "drive", 9L, 1, 90.0, 120.0, "#3b82f6", "Home → Work", null, null, null)));
         client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/map/points")
@@ -91,8 +101,12 @@ class TripViewControllerWebTest {
         when(support.zone(null)).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
         when(support.dayStartHour(null)).thenReturn(0);
         when(support.units(null, null)).thenReturn(null);
-        when(tripViewService.grid(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
-                eq(10), any(), any(), eq(0), any(), any(), any(), any(), any(), any())).thenReturn(List.of(
+        when(support.requireRange("2026-08-16T00:00:00Z", "2026-08-16T12:00:00Z")).thenReturn(new Instant[]{
+                Instant.parse("2026-08-16T00:00:00Z"), Instant.parse("2026-08-16T12:00:00Z")});
+        when(support.tripFocus(any(), any(), any(), any(), any(), any(), any())).thenReturn(TripFocus.NONE);
+        when(tripViewService.grid(eq(1L), eq(Instant.parse("2026-08-16T00:00:00Z")),
+                eq(Instant.parse("2026-08-16T12:00:00Z")),
+                eq(10), any(), any(), eq(0), any())).thenReturn(List.of(
                 new DayGridCellDto(Instant.parse("2026-08-15T16:00:00Z"), "2026-08-16",
                         8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE", 9L, "Drive #9 · 12.0 km · 1h",
                         "12.0 km · 1h", DayGridCellDto.hoverCode(DayGridCellDto.DRIVE, 9),
@@ -118,8 +132,10 @@ class TripViewControllerWebTest {
         when(support.zone(null)).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
         when(support.dayStartHour(null)).thenReturn(0);
         when(support.units(null, null)).thenReturn(null);
-        when(tripViewService.focus(eq(1L), eq(null), eq(null), eq(null), eq(null), eq(null),
-                eq(null), eq(10), any(), any(), eq(0), eq(null))).thenReturn(List.of());
+        when(support.tripFocus(any(), any(), any(), any(), any(), any(), any())).thenReturn(TripFocus.NONE);
+        when(support.layers(null)).thenReturn(Set.of(TimelineKind.values()));
+        when(tripViewService.focus(eq(1L), eq(TripFocus.NONE), eq(10), any(), any(), eq(0), any()))
+                .thenReturn(List.of());
         client.get().uri("/api/v1/cars/1/map/focus")
                 .exchange()
                 .expectStatus().isOk()
