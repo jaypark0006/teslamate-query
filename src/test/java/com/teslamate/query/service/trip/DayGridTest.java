@@ -85,7 +85,28 @@ class DayGridTest {
         DayGridCellDto cell = cells.stream().filter(c -> "16".equals(c.slot())).findFirst().orElseThrow();
         assertEquals(DayGridCellDto.CHARGE, cell.kindCode());
         assertEquals(9L, cell.sourceId());
-        assertEquals("Charge #9 · Drive #12", cell.label());
+        assertEquals("Charge #9  |  Drive #12", cell.label());
+    }
+
+    @Test
+    void chargeAndDriveHoverKeepsEachKindWithItsOwnDetail() {
+        var drive = new TimelineItemDto(
+                1, TimelineKind.DRIVE, 2254L,
+                Instant.parse("2026-08-10T16:00:00Z"), Instant.parse("2026-08-10T16:25:00Z"),
+                25.0, "Home → Work", "106.6 km · 58 min · 100% → 56%", "#3b82f6",
+                null, null, 106.6, 100, 56, null, null,
+                "2026-08-10", 0, null, null, 0);
+        var charge = new TimelineItemDto(
+                2, TimelineKind.CHARGE, 200L,
+                Instant.parse("2026-08-10T16:25:00Z"), Instant.parse("2026-08-10T16:50:00Z"),
+                25.0, "DC charge", "35.9 kWh · 39% → 100% · 38 min", "#22c55e",
+                null, null, null, 39, 100, 35.9, "DC",
+                "2026-08-10", 0, null, null, 0);
+        List<DayGridCellDto> cells = DayGrid.paintFromTimeline(List.of(drive, charge), ZoneId.of("UTC"));
+        DayGridCellDto cell = cells.stream().filter(c -> "16".equals(c.slot())).findFirst().orElseThrow();
+        assertEquals(
+                "Charge #200 · 35.9 kWh · 39% → 100% · 38 min  |  Drive #2254 · 106.6 km · 58 min · 100% → 56%",
+                cell.label());
     }
 
     @Test

@@ -119,7 +119,8 @@ public final class DayGrid {
                 default -> "";
             };
             String detail = displayDetail(c);
-            String label = cellHoverLabel(c.code, c.driveId, c.chargeId, detail);
+            String label = cellHoverLabel(c.code, c.driveId, c.chargeId,
+                    c.driveDetail, c.chargeDetail, c.parkDetail);
             Long sourceId = c.chargeId != null ? c.chargeId : c.driveId;
             long hover = DayGridCellDto.hoverCode(c.code,
                     DayGridCellDto.hoverTail(sourceId, c.day.toString(), slot));
@@ -321,20 +322,47 @@ public final class DayGrid {
         return DayGridCellDto.PARK;
     }
 
-    static String cellHoverLabel(int kindCode, Long driveId, Long chargeId, String detail) {
-        String head = kindCode == 0 ? null : DayGridCellDto.cellLabel(kindCode, driveId, chargeId);
+    static String cellHoverLabel(int kindCode, Long driveId, Long chargeId,
+                                 String driveDetail, String chargeDetail, String parkDetail) {
+        if (kindCode == DayGridCellDto.WEEKEND) {
+            return "Weekend";
+        }
+        if (kindCode == 0) {
+            return null;
+        }
+        String charge = phrase("Charge", chargeId, chargeDetail);
+        String drive = phrase("Drive", driveId, driveDetail);
+        if (charge != null && drive != null) {
+            return charge + "  |  " + drive;
+        }
+        if (charge != null) {
+            return charge;
+        }
+        if (drive != null) {
+            return drive;
+        }
+        return phrase("Park", null, parkDetail);
+    }
+
+    private static String phrase(String kind, Long id, String detail) {
+        if (id == null && (detail == null || detail.isBlank()) && !"Park".equals(kind)) {
+            return null;
+        }
+        String head = id == null ? kind : kind + " #" + id;
         if (detail == null || detail.isBlank()) {
             return head;
-        }
-        if (head == null || head.isBlank()) {
-            return detail;
         }
         return head + " · " + detail;
     }
 
     private static String displayDetail(Painted c) {
         if (c.chargeId != null && c.driveId != null) {
-            return joinDetail(c.chargeDetail, c.driveDetail);
+            String charge = c.chargeDetail == null ? "" : c.chargeDetail;
+            String drive = c.driveDetail == null ? "" : c.driveDetail;
+            if (!charge.isBlank() && !drive.isBlank()) {
+                return charge + "  |  " + drive;
+            }
+            return !charge.isBlank() ? charge : drive;
         }
         if (c.chargeId != null) {
             return c.chargeDetail;
@@ -343,16 +371,6 @@ public final class DayGrid {
             return c.driveDetail;
         }
         return c.parkDetail;
-    }
-
-    private static String joinDetail(String a, String b) {
-        if (a == null || a.isBlank()) {
-            return b;
-        }
-        if (b == null || b.isBlank()) {
-            return a;
-        }
-        return a + " · " + b;
     }
 
     /**
