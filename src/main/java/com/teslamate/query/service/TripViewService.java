@@ -38,6 +38,7 @@ import com.teslamate.query.service.trip.PathSimplify;
 import com.teslamate.query.service.trip.PlaceLabel;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -93,9 +94,32 @@ public class TripViewService {
     private final QuerySupport support;
     private final Clock clock;
     private final Cache<String, Snapshot> windowCache = Caffeine.newBuilder()
-            .maximumWeight(12_000)
+            .maximumWeight(80_000)
             .weigher((String k, Snapshot s) -> Math.max(1, s.points().size() + s.timeline().size()))
-            .expireAfterWrite(15, TimeUnit.SECONDS)
+            .expireAfter(new Expiry<String, Snapshot>() {
+                @Override
+                public long expireAfterCreate(String key, Snapshot value, long currentTime) {
+                    return value.sealed()
+                            ? TimeUnit.MINUTES.toNanos(30)
+                            : TimeUnit.SECONDS.toNanos(15);
+                }
+
+                @Override
+                public long expireAfterUpdate(String key, Snapshot value, long currentTime, long currentDuration) {
+                    return expireAfterCreate(key, value, currentTime);
+                }
+
+                @Override
+                public long expireAfterRead(String key, Snapshot value, long currentTime, long currentDuration) {
+                    return currentDuration;
+                }
+            })
+            .build();
+    /** Finished historical drives, full GPS only (bucket 0). Highlight reuses the overview load. */
+    private final Cache<Long, List<PositionPathPoint>> sealedPathCache = Caffeine.newBuilder()
+            .maximumWeight(80_000)
+            .weigher((Long id, List<PositionPathPoint> pts) -> Math.max(1, pts.size()))
+            .expireAfterWrite(2, TimeUnit.HOURS)
             .build();
 
     public TripViewService(
@@ -301,10 +325,19 @@ public class TripViewService {
         int minPark = minParkMin == null ? DEFAULT_MIN_PARK_MIN : Math.max(minParkMin, 0);
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         String unitKey = units == null ? "km-C" : units.length() + "-" + units.temperature();
-        String key = carId + "|" + from + "|" + to + "|" + minPark + "|" + unitKey
-                + "|" + includePath + "|" + includeGeo + "|" + z.getId();
-        return windowCache.get(key, k -> buildUncached(carId, from, to, minPark, units,
-                includePath, includeGeo, z));
+        String key = carId + "|" + from + "|" + to + "|" + minPark + "|" + unitKey + "|" + z.getId();
+        Snapshot hit = windowCache.getIfPresent(key);
+        if (hit != null && (!includePath || hit.pathsLoaded()) && (!includeGeo || hit.hasGeo())) {
+            return hit;
+        }
+        return windowCache.asMap().compute(key, (k, old) -> {
+            if (old != null && (!includePath || old.pathsLoaded()) && (!includeGeo || old.hasGeo())) {
+                return old;
+            }
+            return buildUncached(carId, from, to, minPark, units,
+                    includePath || (old != null && old.pathsLoaded()),
+                    includeGeo || (old != null && old.hasGeo()), z);
+        });
     }
 
     private Snapshot buildUncached(long carId, Instant from, Instant to, int minPark, DisplayUnits units,
@@ -380,7 +413,7 @@ public class TripViewService {
                     return new Lookups(samplesAndPos.first(), samplesAndPos.second(),
                             places.first(), places.second());
                 },
-                () -> includePath ? loadPaths(windowDrives, from, to) : Map.of());
+                () -> includePath ? loadPaths(windowDrives, now, zone) : Map.of());
         Lookups lookups = side.first();
         Map<Long, ChargeEntity> sampleByProcess = lookups.samples().stream()
                 .collect(Collectors.toMap(ChargeEntity::chargingProcessId, Function.identity(), (a, b) -> a));
@@ -445,11 +478,12 @@ public class TripViewService {
         int driveN = (int) timeline.stream().filter(t -> t.kind() == TimelineKind.DRIVE).count();
         MapTracksDto geo = new MapTracksDto("FeatureCollection", features,
                 new MapTracksDto.Meta(carId, from, to, driveN, chargeCount, parkCount, totalPts));
-        log.info("trip {} car={} drives={} charges={} spans={} pathPts={} {}ms",
+        boolean sealed = sealedWindow(to, now, zone);
+        log.info("trip {} car={} drives={} charges={} spans={} pathPts={} sealed={} {}ms",
                 includePath ? "map" : "timeline",
-                carId, windowDrives.size(), charges.size(), spans.size(), totalPts,
+                carId, windowDrives.size(), charges.size(), spans.size(), totalPts, sealed,
                 (System.nanoTime() - started) / 1_000_000);
-        return new Snapshot(timeline, points, geo);
+        return new Snapshot(timeline, points, geo, sealed, includePath, includeGeo);
     }
 
     private static List<PositionPathPoint> endpointsAsPath(DriveEntity d, Map<Long, PositionEntity> posById) {
@@ -471,17 +505,41 @@ public class TripViewService {
         out.add(new PositionPathPoint(driveId, p.date(), p.longitude(), p.latitude()));
     }
 
-    private Map<Long, List<PositionPathPoint>> loadPaths(List<DriveEntity> drives, Instant from, Instant to) {
+    private Map<Long, List<PositionPathPoint>> loadPaths(List<DriveEntity> drives, Instant now, ZoneId zone) {
         if (drives.isEmpty()) {
             return Map.of();
         }
-        PathQueryPlan plan = PathQueryPlan.of(drives);
-        if (plan.queries().isEmpty()) {
+        PathQueryPlan planned = PathQueryPlan.of(drives);
+        if (planned.queries().isEmpty()) {
             log.info("path plan skip-all drives={} (short hops use start/end)", drives.size());
             return Map.of();
         }
-        double eps = plan.epsilonM();
+        Map<Long, DriveEntity> driveById = drives.stream()
+                .filter(d -> d != null && d.id() != null)
+                .collect(Collectors.toMap(DriveEntity::id, Function.identity(), (a, b) -> a));
         Map<Long, List<PositionPathPoint>> slim = new LinkedHashMap<>();
+        List<DriveEntity> missing = new ArrayList<>();
+        int cachedN = 0;
+        for (PathQueryPlan.Query q : planned.queries()) {
+            if (q.bucketSec() <= 1) {
+                List<PositionPathPoint> hit = sealedPathCache.getIfPresent(q.driveId());
+                if (hit != null) {
+                    slim.put(q.driveId(), hit);
+                    cachedN += hit.size();
+                    continue;
+                }
+            }
+            DriveEntity d = driveById.get(q.driveId());
+            if (d != null) {
+                missing.add(d);
+            }
+        }
+        if (missing.isEmpty()) {
+            log.info("path plan cache-all drives={} pts={}", planned.queries().size(), cachedN);
+            return slim;
+        }
+        PathQueryPlan plan = PathQueryPlan.of(missing);
+        double eps = plan.epsilonM();
         int rawN = 0;
         int slimN = 0;
         List<PathPart> parts = ReadJobs.map(plan.batches(), 2, batch -> {
@@ -511,10 +569,21 @@ public class TripViewService {
             for (Map.Entry<Long, List<PositionPathPoint>> e : part.slim().entrySet()) {
                 slimN += e.getValue().size();
                 slim.put(e.getKey(), e.getValue());
+                DriveEntity d = driveById.get(e.getKey());
+                if (d != null && sealedDrive(d, now, zone)) {
+                    Integer bucket = plan.queries().stream()
+                            .filter(q -> q.driveId() == e.getKey())
+                            .map(PathQueryPlan.Query::bucketSec)
+                            .findFirst()
+                            .orElse(1);
+                    if (bucket <= 1) {
+                        sealedPathCache.put(e.getKey(), e.getValue());
+                    }
+                }
             }
         }
-        log.info("path plan drives={} skip={} batches={} epsilon={}m {} -> {} pts",
-                drives.size(), plan.skipped(), plan.batches().size(), eps, rawN, slimN);
+        log.info("path plan drives={} skip={} batches={} epsilon={}m {} -> {} pts (reuse={})",
+                missing.size(), plan.skipped(), plan.batches().size(), eps, rawN, slimN, cachedN);
         return slim;
     }
 
@@ -837,6 +906,20 @@ public class TripViewService {
         return windowTo != null && now != null && !windowTo.isBefore(now.minusSeconds(120));
     }
 
+    /** Window ended before local midnight — TeslaMate rows will not change. */
+    static boolean sealedWindow(Instant windowTo, Instant now, ZoneId zone) {
+        if (windowTo == null || now == null) {
+            return false;
+        }
+        ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
+        Instant startOfToday = now.atZone(z).toLocalDate().atStartOfDay(z).toInstant();
+        return windowTo.isBefore(startOfToday);
+    }
+
+    static boolean sealedDrive(DriveEntity d, Instant now, ZoneId zone) {
+        return d != null && d.endDate() != null && sealedWindow(d.endDate(), now, zone);
+    }
+
     static boolean openEnded(Instant end, Instant now) {
         return end != null && now != null && !end.isBefore(now.minusSeconds(90));
     }
@@ -887,8 +970,15 @@ public class TripViewService {
     private record Snapshot(
             List<TimelineItemDto> timeline,
             List<MapPointDto> points,
-            MapTracksDto geoJson
-    ) {}
+            MapTracksDto geoJson,
+            boolean sealed,
+            boolean pathsLoaded,
+            boolean geoLoaded
+    ) {
+        boolean hasGeo() {
+            return geoLoaded && geoJson != null;
+        }
+    }
 
     private record Lookups(
             List<ChargeEntity> samples,

@@ -68,4 +68,25 @@ class TripViewServiceTest {
         assertEquals("38 min", TripViewService.parkDurationLabel(38, false));
         assertFalse(TripViewService.liveWindow(Instant.parse("2026-08-10T00:00:00Z"), now));
     }
+
+    @Test
+    void sealedWindowIsYesterdayNotToday() {
+        Instant now = Instant.parse("2026-08-16T15:00:00Z");
+        java.time.ZoneId sh = java.time.ZoneId.of("Asia/Shanghai");
+        assertTrue(TripViewService.sealedWindow(Instant.parse("2026-08-13T11:55:33.897Z"), now, sh));
+        assertFalse(TripViewService.sealedWindow(Instant.parse("2026-08-16T11:00:00Z"), now, sh));
+        assertFalse(TripViewService.sealedWindow(now, now, sh));
+        assertTrue(TripViewService.sealedDrive(
+                new com.teslamate.query.entity.DriveEntity(
+                        5186L, 1L,
+                        Instant.parse("2026-08-13T05:48:54Z"),
+                        Instant.parse("2026-08-13T06:13:40Z"),
+                        null, null, null, null, null,
+                        null, null, null, null,
+                        null, null,
+                        15.2, 25, null, null,
+                        1L, 2L,
+                        null, null, null, null),
+                now, sh));
+    }
 }
