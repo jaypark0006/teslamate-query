@@ -25,7 +25,10 @@ public class ChargeDao {
 
     public long count(ChargeSearchCondition condition) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery("SELECT COUNT(*) FROM charges " + condition.whereClause());
+            Query q = h.createQuery("""
+                    SELECT COUNT(*) FROM charges
+                    %s
+                    """.formatted(condition.whereClause()));
             ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
@@ -33,11 +36,12 @@ public class ChargeDao {
 
     public List<Long> findIds(ChargeSearchCondition condition, int limit, int offset) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery(
-                    "SELECT id FROM charges "
-                            + condition.whereClause() + " "
-                            + condition.sortClause()
-                            + " LIMIT :limit OFFSET :offset");
+            Query q = h.createQuery("""
+                    SELECT id FROM charges
+                    %s
+                    %s
+                    LIMIT :limit OFFSET :offset
+                    """.formatted(condition.whereClause(), condition.sortClause()));
             ConditionBinder.bind(q, condition);
             q.bind("limit", limit).bind("offset", offset);
             return q.mapTo(Long.class).list();
@@ -48,7 +52,10 @@ public class ChargeDao {
         if (IdOrder.isEmpty(ids)) {
             return List.of();
         }
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM charges WHERE id IN (<ids>)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM charges
+                WHERE id IN (<ids>)
+                """)
                 .bindList("ids", ids)
                 .map(ConstructorMapper.of(ChargeEntity.class))
                 .list());
@@ -59,7 +66,10 @@ public class ChargeDao {
     }
 
     public Optional<ChargeEntity> findById(long id) {
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM charges WHERE id = :id")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM charges
+                WHERE id = :id
+                """)
                 .bind("id", id)
                 .map(ConstructorMapper.of(ChargeEntity.class))
                 .findOne());
@@ -75,10 +85,12 @@ public class ChargeDao {
         if (IdOrder.isEmpty(processIds)) {
             return List.of();
         }
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT DISTINCT ON (charging_process_id) * FROM charges "
-                                + "WHERE charging_process_id IN (<processIds>) "
-                                + "ORDER BY charging_process_id, date DESC")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT DISTINCT ON (charging_process_id) *
+                FROM charges
+                WHERE charging_process_id IN (<processIds>)
+                ORDER BY charging_process_id, date DESC
+                """)
                 .bindList("processIds", processIds)
                 .map(ConstructorMapper.of(ChargeEntity.class))
                 .list());
@@ -89,9 +101,12 @@ public class ChargeDao {
             return List.of();
         }
         int cap = Math.min(Math.max(limit, 1), 10_000);
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT * FROM charges WHERE charging_process_id IN (<processIds>) "
-                                + "ORDER BY charging_process_id, date LIMIT :limit")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM charges
+                WHERE charging_process_id IN (<processIds>)
+                ORDER BY charging_process_id, date
+                LIMIT :limit
+                """)
                 .bindList("processIds", processIds)
                 .bind("limit", cap)
                 .map(ConstructorMapper.of(ChargeEntity.class))
@@ -102,9 +117,12 @@ public class ChargeDao {
         if (IdOrder.isEmpty(processIds)) {
             return Optional.empty();
         }
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT * FROM charges WHERE charging_process_id IN (<processIds>) "
-                                + "ORDER BY date DESC LIMIT 1")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM charges
+                WHERE charging_process_id IN (<processIds>)
+                ORDER BY date DESC
+                LIMIT 1
+                """)
                 .bindList("processIds", processIds)
                 .map(ConstructorMapper.of(ChargeEntity.class))
                 .findOne());

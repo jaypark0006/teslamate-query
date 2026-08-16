@@ -17,8 +17,11 @@ public class SettingsDao {
     }
 
     public Optional<SettingsEntity> find() {
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT * FROM settings ORDER BY id LIMIT 1")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM settings
+                ORDER BY id
+                LIMIT 1
+                """)
                 .map(ConstructorMapper.of(SettingsEntity.class))
                 .findOne());
     }

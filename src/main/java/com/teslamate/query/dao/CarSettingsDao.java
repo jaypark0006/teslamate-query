@@ -21,13 +21,19 @@ public class CarSettingsDao {
     }
 
     public List<CarSettingsEntity> findAll() {
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM car_settings ORDER BY id")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM car_settings
+                ORDER BY id
+                """)
                 .map(ConstructorMapper.of(CarSettingsEntity.class))
                 .list());
     }
 
     public Optional<CarSettingsEntity> findById(long id) {
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM car_settings WHERE id = :id")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM car_settings
+                WHERE id = :id
+                """)
                 .bind("id", id)
                 .map(ConstructorMapper.of(CarSettingsEntity.class))
                 .findOne());
@@ -37,7 +43,10 @@ public class CarSettingsDao {
         if (IdOrder.isEmpty(ids)) {
             return List.of();
         }
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM car_settings WHERE id IN (<ids>)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM car_settings
+                WHERE id IN (<ids>)
+                """)
                 .bindList("ids", ids)
                 .map(ConstructorMapper.of(CarSettingsEntity.class))
                 .list());

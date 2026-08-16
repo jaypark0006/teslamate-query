@@ -27,7 +27,10 @@ public class PositionDao {
 
     public long count(PositionSearchCondition condition) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery("SELECT COUNT(*) FROM positions " + condition.whereClause());
+            Query q = h.createQuery("""
+                    SELECT COUNT(*) FROM positions
+                    %s
+                    """.formatted(condition.whereClause()));
             ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
@@ -36,11 +39,12 @@ public class PositionDao {
     public List<Long> findIds(PositionSearchCondition condition, int limit, int offset) {
         int cap = Math.min(Math.max(limit, 1), DEFAULT_ID_CAP);
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery(
-                    "SELECT id FROM positions "
-                            + condition.whereClause() + " "
-                            + condition.sortClause()
-                            + " LIMIT :limit OFFSET :offset");
+            Query q = h.createQuery("""
+                    SELECT id FROM positions
+                    %s
+                    %s
+                    LIMIT :limit OFFSET :offset
+                    """.formatted(condition.whereClause(), condition.sortClause()));
             ConditionBinder.bind(q, condition);
             q.bind("limit", cap).bind("offset", offset);
             return q.mapTo(Long.class).list();
@@ -54,13 +58,20 @@ public class PositionDao {
         int bucket = Math.max(bucketSeconds, 1);
         int cap = Math.min(Math.max(limit, 1), DEFAULT_ID_CAP);
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery(
-                    "SELECT id FROM ("
-                            + " SELECT id, date, ROW_NUMBER() OVER ("
-                            + "   PARTITION BY FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec) ORDER BY date"
-                            + " ) AS rn FROM positions "
-                            + condition.whereClause()
-                            + ") t WHERE rn = 1 ORDER BY date LIMIT :limit");
+            Query q = h.createQuery("""
+                    SELECT id FROM (
+                      SELECT id, date,
+                             ROW_NUMBER() OVER (
+                               PARTITION BY FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec)
+                               ORDER BY date
+                             ) AS rn
+                      FROM positions
+                      %s
+                    ) t
+                    WHERE rn = 1
+                    ORDER BY date
+                    LIMIT :limit
+                    """.formatted(condition.whereClause()));
             ConditionBinder.bind(q, condition);
             q.bind("bucketSec", bucket).bind("limit", cap);
             return q.mapTo(Long.class).list();
@@ -71,7 +82,10 @@ public class PositionDao {
         if (IdOrder.isEmpty(ids)) {
             return List.of();
         }
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM positions WHERE id IN (<ids>)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM positions
+                WHERE id IN (<ids>)
+                """)
                 .bindList("ids", ids)
                 .map(ConstructorMapper.of(PositionEntity.class))
                 .list());
@@ -82,35 +96,48 @@ public class PositionDao {
     }
 
     public Optional<PositionEntity> findById(long id) {
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM positions WHERE id = :id")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM positions
+                WHERE id = :id
+                """)
                 .bind("id", id)
                 .map(ConstructorMapper.of(PositionEntity.class))
                 .findOne());
     }
 
     public Optional<PositionEntity> findLatestByCarId(long carId) {
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT * FROM positions WHERE id = ("
-                                + "SELECT MAX(id) FROM positions WHERE car_id = :carId)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM positions
+                WHERE id = (
+                    SELECT MAX(id) FROM positions WHERE car_id = :carId
+                )
+                """)
                 .bind("carId", carId)
                 .map(ConstructorMapper.of(PositionEntity.class))
                 .findOne());
     }
 
     public Optional<PositionEntity> findLatestWithTpmsByCarId(long carId) {
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT * FROM positions WHERE id = ("
-                                + "SELECT MAX(id) FROM positions WHERE car_id = :carId "
-                                + "AND tpms_pressure_fl IS NOT NULL)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM positions
+                WHERE id = (
+                    SELECT MAX(id) FROM positions
+                    WHERE car_id = :carId
+                      AND tpms_pressure_fl IS NOT NULL
+                )
+                """)
                 .bind("carId", carId)
                 .map(ConstructorMapper.of(PositionEntity.class))
                 .findOne());
     }
 
     public Optional<PositionEntity> findLatestByDriveId(long driveId) {
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT * FROM positions WHERE id = ("
-                                + "SELECT MAX(id) FROM positions WHERE drive_id = :driveId)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM positions
+                WHERE id = (
+                    SELECT MAX(id) FROM positions WHERE drive_id = :driveId
+                )
+                """)
                 .bind("driveId", driveId)
                 .map(ConstructorMapper.of(PositionEntity.class))
                 .findOne());
@@ -131,25 +158,39 @@ public class PositionDao {
         int bucket = Math.max(bucketSeconds, 0);
         int lim = bucket <= 1 ? 8_000 : 2_500;
         if (bucket <= 1) {
-            return jdbi.withHandle(h -> h.createQuery(
-                            "SELECT drive_id, date, longitude, latitude FROM positions "
-                                    + "WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL "
-                                    + "ORDER BY drive_id, date LIMIT :lim")
+            return jdbi.withHandle(h -> h.createQuery("""
+                    SELECT drive_id, date, longitude, latitude
+                    FROM positions
+                    WHERE drive_id IN (<driveIds>)
+                      AND longitude IS NOT NULL
+                      AND latitude IS NOT NULL
+                    ORDER BY drive_id, date
+                    LIMIT :lim
+                    """)
                     .bindList("driveIds", driveIds)
                     .bind("lim", lim)
                     .map(ConstructorMapper.of(PositionPathPoint.class))
                     .list());
         }
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT drive_id, date, longitude, latitude FROM ("
-                                + " SELECT drive_id, date, longitude, latitude,"
-                                + " ROW_NUMBER() OVER (PARTITION BY drive_id, FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec) ORDER BY date) AS rn,"
-                                + " ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS first_rn,"
-                                + " ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date DESC) AS last_rn"
-                                + " FROM positions"
-                                + " WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL"
-                                + ") t WHERE rn = 1 OR first_rn = 1 OR last_rn = 1"
-                                + " ORDER BY drive_id, date LIMIT :lim")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT drive_id, date, longitude, latitude
+                FROM (
+                    SELECT drive_id, date, longitude, latitude,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY drive_id, FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec)
+                               ORDER BY date
+                           ) AS rn,
+                           ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS first_rn,
+                           ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date DESC) AS last_rn
+                    FROM positions
+                    WHERE drive_id IN (<driveIds>)
+                      AND longitude IS NOT NULL
+                      AND latitude IS NOT NULL
+                ) t
+                WHERE rn = 1 OR first_rn = 1 OR last_rn = 1
+                ORDER BY drive_id, date
+                LIMIT :lim
+                """)
                 .bindList("driveIds", driveIds)
                 .bind("bucketSec", bucket)
                 .bind("lim", lim)

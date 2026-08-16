@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * Dynamic WHERE builder for single-table queries.
  * <p>
- * Usage: concatenate into SQL — {@code "SELECT * FROM drives " + condition.whereClause()}.
+ * Usage: splice into a text block — {@code """SELECT * FROM drives %s""".formatted(condition.whereClause())}.
  * Do <b>not</b> feed fragments into StringTemplate: {@code <}/{@code >} in predicates
  * (e.g. {@code distance > 0}) would need escaping there.
  */

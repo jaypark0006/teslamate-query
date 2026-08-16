@@ -25,7 +25,10 @@ public class StateDao {
 
     public long count(StateSearchCondition condition) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery("SELECT COUNT(*) FROM states " + condition.whereClause());
+            Query q = h.createQuery("""
+                    SELECT COUNT(*) FROM states
+                    %s
+                    """.formatted(condition.whereClause()));
             ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
@@ -33,11 +36,12 @@ public class StateDao {
 
     public List<Long> findIds(StateSearchCondition condition, int limit, int offset) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery(
-                    "SELECT id FROM states "
-                            + condition.whereClause() + " "
-                            + condition.sortClause()
-                            + " LIMIT :limit OFFSET :offset");
+            Query q = h.createQuery("""
+                    SELECT id FROM states
+                    %s
+                    %s
+                    LIMIT :limit OFFSET :offset
+                    """.formatted(condition.whereClause(), condition.sortClause()));
             ConditionBinder.bind(q, condition);
             q.bind("limit", limit).bind("offset", offset);
             return q.mapTo(Long.class).list();
@@ -49,9 +53,11 @@ public class StateDao {
             return List.of();
         }
         // state is a PG enum — cast to text for stable String mapping
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT id, car_id, state::text AS state, start_date, end_date "
-                                + "FROM states WHERE id IN (<ids>)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT id, car_id, state::text AS state, start_date, end_date
+                FROM states
+                WHERE id IN (<ids>)
+                """)
                 .bindList("ids", ids)
                 .map(ConstructorMapper.of(StateEntity.class))
                 .list());
@@ -62,9 +68,11 @@ public class StateDao {
     }
 
     public Optional<StateEntity> findById(long id) {
-        return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT id, car_id, state::text AS state, start_date, end_date "
-                                + "FROM states WHERE id = :id")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT id, car_id, state::text AS state, start_date, end_date
+                FROM states
+                WHERE id = :id
+                """)
                 .bind("id", id)
                 .map(ConstructorMapper.of(StateEntity.class))
                 .findOne());

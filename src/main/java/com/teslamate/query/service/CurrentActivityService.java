@@ -157,33 +157,46 @@ public class CurrentActivityService {
     Snapshot load(long carId) {
         CarEntity car = carDao.findById(carId)
                 .orElseThrow(() -> new NotFoundException("Car not found: " + carId));
-        Optional<ChargingProcessEntity> openCharge = first(
-                chargingProcessDao.findIds(
-                        ChargingProcessSearchCondition.builder().carId(carId).incompleteOnly(true).build(),
-                        ONE, 0),
-                chargingProcessDao::findById);
-        Optional<DriveEntity> openDrive = first(
-                driveDao.findIds(
-                        DriveSearchCondition.builder().carId(carId).incompleteOnly(true).build(),
-                        ONE, 0),
-                driveDao::findById);
+        ReadJobs.Pair<Optional<ChargingProcessEntity>, Optional<DriveEntity>> open = ReadJobs.both(
+                () -> first(
+                        chargingProcessDao.findIds(
+                                ChargingProcessSearchCondition.builder().carId(carId).incompleteOnly(true).build(),
+                                ONE, 0),
+                        chargingProcessDao::findById),
+                () -> first(
+                        driveDao.findIds(
+                                DriveSearchCondition.builder().carId(carId).incompleteOnly(true).build(),
+                                ONE, 0),
+                        driveDao::findById));
+        Optional<ChargingProcessEntity> openCharge = open.first();
+        Optional<DriveEntity> openDrive = open.second();
         ActivityStatus status = ActivityClassifier.status(openCharge, openDrive);
         Optional<DriveEntity> lastDrive = Optional.empty();
         Optional<ChargingProcessEntity> lastCharge = Optional.empty();
+        ReadJobs.Pair<Optional<PositionEntity>, ReadJobs.Pair<Optional<DriveEntity>, Optional<ChargingProcessEntity>>> rest =
+                ReadJobs.both(
+                        () -> positionDao.findLatestByCarId(carId),
+                        () -> status != ActivityStatus.PARKING
+                                ? new ReadJobs.Pair<Optional<DriveEntity>, Optional<ChargingProcessEntity>>(
+                                Optional.empty(), Optional.empty())
+                                : ReadJobs.both(
+                                () -> first(
+                                        driveDao.findIds(
+                                                DriveSearchCondition.builder().carId(carId)
+                                                        .completedOnly(true).newestEndFirst().build(),
+                                                ONE, 0),
+                                        driveDao::findById),
+                                () -> first(
+                                        chargingProcessDao.findIds(
+                                                ChargingProcessSearchCondition.builder()
+                                                        .carId(carId).completedOnly(true).newestEndFirst().build(),
+                                                ONE, 0),
+                                        chargingProcessDao::findById)));
+        Optional<PositionEntity> latestPosition = rest.first();
         if (status == ActivityStatus.PARKING) {
-            lastDrive = first(
-                    driveDao.findIds(
-                            DriveSearchCondition.builder().carId(carId).completedOnly(true).newestEndFirst().build(),
-                            ONE, 0),
-                    driveDao::findById);
-            lastCharge = first(
-                    chargingProcessDao.findIds(
-                            ChargingProcessSearchCondition.builder()
-                                    .carId(carId).completedOnly(true).newestEndFirst().build(),
-                            ONE, 0),
-                    chargingProcessDao::findById);
+            lastDrive = rest.second().first();
+            lastCharge = rest.second().second();
         }
-        Optional<PositionEntity> latestPosition = positionDao.findLatestByCarId(carId);
         Instant now = clock.instant();
         Instant since = ActivityClassifier.statusSince(
                 status, openCharge, openDrive, lastDrive, lastCharge,

@@ -54,17 +54,21 @@ public class MapTracksService {
         int chargeLimit = maxChargingProcesses == null ? 200 : Math.min(Math.max(maxChargingProcesses, 1), 1000);
 
         var driveCond = DriveSearchCondition.builder().carId(carId).startDateFrom(from).startDateTo(to).build();
-        List<Long> driveIds = driveDao.findIds(driveCond, driveLimit, 0);
-        List<DriveEntity> drives = driveDao.findByIdsOrdered(driveIds);
+        var chargeCond = ChargingProcessSearchCondition.builder().carId(carId).startDateFrom(from).startDateTo(to).build();
+        ReadJobs.Pair<List<Long>, List<Long>> ids = ReadJobs.both(
+                () -> driveDao.findIds(driveCond, driveLimit, 0),
+                () -> chargingProcessDao.findIds(chargeCond, chargeLimit, 0));
+        List<Long> driveIds = ids.first();
+        List<Long> chargeIds = ids.second();
 
-        List<PositionPathPoint> pathPoints =
-                driveIds.isEmpty() ? List.of() : positionDao.findPathPointsByDriveIds(driveIds);
-        Map<Long, List<PositionPathPoint>> byDrive = pathPoints.stream()
+        ReadJobs.Pair<List<DriveEntity>, List<PositionPathPoint>> driveSide = ReadJobs.both(
+                () -> driveDao.findByIdsOrdered(driveIds),
+                () -> driveIds.isEmpty() ? List.of() : positionDao.findPathPointsByDriveIds(driveIds));
+        List<DriveEntity> drives = driveSide.first();
+        Map<Long, List<PositionPathPoint>> byDrive = driveSide.second().stream()
                 .filter(p -> p.driveId() != null)
                 .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
 
-        var chargeCond = ChargingProcessSearchCondition.builder().carId(carId).startDateFrom(from).startDateTo(to).build();
-        List<Long> chargeIds = chargingProcessDao.findIds(chargeCond, chargeLimit, 0);
         List<ChargingProcessEntity> charges = chargingProcessDao.findByIdsOrdered(chargeIds);
 
         List<Long> posIds = charges.stream().map(ChargingProcessEntity::positionId)

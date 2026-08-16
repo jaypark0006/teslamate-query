@@ -379,8 +379,11 @@ public class TripViewService {
         Instant to = range[1];
         Instant now = clock.instant();
 
-        List<DriveEntity> windowDrives = loadOverlappingDrives(carId, from, to);
-        List<ChargingProcessEntity> charges = loadOverlappingCharges(carId, from, to);
+        ReadJobs.Pair<List<DriveEntity>, List<ChargingProcessEntity>> loaded = ReadJobs.both(
+                () -> loadOverlappingDrives(carId, from, to),
+                () -> loadOverlappingCharges(carId, from, to));
+        List<DriveEntity> windowDrives = loaded.first();
+        List<ChargingProcessEntity> charges = loaded.second();
         Instant composeFrom = from;
         if (windowDrives.size() == DEFAULT_DRIVE_LIMIT && !windowDrives.isEmpty()) {
             Instant first = windowDrives.getFirst().startDate();
@@ -409,11 +412,7 @@ public class TripViewService {
                 .collect(Collectors.toMap(DriveEntity::id, Function.identity(), (a, b) -> a));
         Map<Long, ChargingProcessEntity> chargeById = charges.stream()
                 .collect(Collectors.toMap(ChargingProcessEntity::id, Function.identity(), (a, b) -> a));
-        Map<Long, ChargeEntity> sampleByProcess = chargeDao.findLatestPerProcess(
-                        charges.stream().map(ChargingProcessEntity::id).toList())
-                .stream()
-                .collect(Collectors.toMap(ChargeEntity::chargingProcessId, Function.identity(), (a, b) -> a));
-
+        List<Long> processIds = charges.stream().map(ChargingProcessEntity::id).toList();
         List<Long> posIds = Stream.concat(
                         Stream.concat(
                                 spans.stream().map(ActivitySpan::locationPositionId),
@@ -422,36 +421,41 @@ public class TripViewService {
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        Map<Long, PositionEntity> posById = posIds.isEmpty()
-                ? Map.of()
-                : positionDao.findByIds(posIds).stream()
-                .collect(Collectors.toMap(PositionEntity::id, Function.identity(), (a, b) -> a));
-
         List<Long> addressIds = Stream.concat(
                         windowDrives.stream().flatMap(d -> Stream.of(d.startAddressId(), d.endAddressId())),
                         charges.stream().map(ChargingProcessEntity::addressId))
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        Map<Long, AddressEntity> addrById = addressIds.isEmpty()
-                ? Map.of()
-                : addressDao.findByIds(addressIds).stream()
-                .collect(Collectors.toMap(AddressEntity::id, Function.identity(), (a, b) -> a));
-
         List<Long> geofenceIds = Stream.concat(
                         windowDrives.stream().flatMap(d -> Stream.of(d.startGeofenceId(), d.endGeofenceId())),
                         charges.stream().map(ChargingProcessEntity::geofenceId))
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        Map<Long, GeofenceEntity> geoById = geofenceIds.isEmpty()
-                ? Map.of()
-                : geofenceDao.findByIds(geofenceIds).stream()
-                .collect(Collectors.toMap(GeofenceEntity::id, Function.identity(), (a, b) -> a));
 
-        Map<Long, List<PositionPathPoint>> byDrive = includePath
-                ? loadPaths(windowDrives, from, to)
-                : Map.of();
+        ReadJobs.Pair<Lookups, Map<Long, List<PositionPathPoint>>> side = ReadJobs.both(
+                () -> {
+                    ReadJobs.Pair<List<ChargeEntity>, List<PositionEntity>> samplesAndPos = ReadJobs.both(
+                            () -> chargeDao.findLatestPerProcess(processIds),
+                            () -> posIds.isEmpty() ? List.<PositionEntity>of() : positionDao.findByIds(posIds));
+                    ReadJobs.Pair<List<AddressEntity>, List<GeofenceEntity>> places = ReadJobs.both(
+                            () -> addressIds.isEmpty() ? List.<AddressEntity>of() : addressDao.findByIds(addressIds),
+                            () -> geofenceIds.isEmpty() ? List.<GeofenceEntity>of() : geofenceDao.findByIds(geofenceIds));
+                    return new Lookups(samplesAndPos.first(), samplesAndPos.second(),
+                            places.first(), places.second());
+                },
+                () -> includePath ? loadPaths(windowDrives, from, to) : Map.of());
+        Lookups lookups = side.first();
+        Map<Long, ChargeEntity> sampleByProcess = lookups.samples().stream()
+                .collect(Collectors.toMap(ChargeEntity::chargingProcessId, Function.identity(), (a, b) -> a));
+        Map<Long, PositionEntity> posById = lookups.positions().stream()
+                .collect(Collectors.toMap(PositionEntity::id, Function.identity(), (a, b) -> a));
+        Map<Long, AddressEntity> addrById = lookups.addresses().stream()
+                .collect(Collectors.toMap(AddressEntity::id, Function.identity(), (a, b) -> a));
+        Map<Long, GeofenceEntity> geoById = lookups.geofences().stream()
+                .collect(Collectors.toMap(GeofenceEntity::id, Function.identity(), (a, b) -> a));
+        Map<Long, List<PositionPathPoint>> byDrive = side.second();
 
         List<TimelineItemDto> timeline = new ArrayList<>();
         for (int i = 0; i < spans.size(); i++) {
@@ -545,9 +549,8 @@ public class TripViewService {
         Map<Long, List<PositionPathPoint>> slim = new LinkedHashMap<>();
         int rawN = 0;
         int slimN = 0;
-        for (PathQueryPlan.Batch batch : plan.batches()) {
+        List<PathPart> parts = ReadJobs.map(plan.batches(), 2, batch -> {
             List<PositionPathPoint> rows = positionDao.findPathPointsByDriveIds(batch.driveIds(), batch.bucketSec());
-            rawN += rows.size();
             Map<Long, List<PositionPathPoint>> grouped = new LinkedHashMap<>();
             for (PositionPathPoint p : rows) {
                 if (p.driveId() == null) {
@@ -555,12 +558,18 @@ public class TripViewService {
                 }
                 grouped.computeIfAbsent(p.driveId(), id -> new ArrayList<>()).add(p);
             }
+            Map<Long, List<PositionPathPoint>> out = new LinkedHashMap<>();
             for (Map.Entry<Long, List<PositionPathPoint>> e : grouped.entrySet()) {
                 int cap = batch.capById().getOrDefault(e.getKey(), 16);
-                List<PositionPathPoint> keep = PathSimplify.cap(
-                        PathSimplify.douglasPeucker(e.getValue(), eps), cap);
-                slimN += keep.size();
-                slim.put(e.getKey(), keep);
+                out.put(e.getKey(), PathSimplify.cap(PathSimplify.douglasPeucker(e.getValue(), eps), cap));
+            }
+            return new PathPart(rows.size(), out);
+        });
+        for (PathPart part : parts) {
+            rawN += part.raw();
+            for (Map.Entry<Long, List<PositionPathPoint>> e : part.slim().entrySet()) {
+                slimN += e.getValue().size();
+                slim.put(e.getKey(), e.getValue());
             }
         }
         log.info("path plan drives={} skip={} batches={} epsilon={}m {} -> {} pts",
@@ -1039,4 +1048,13 @@ public class TripViewService {
             List<MapPointDto> points,
             MapTracksDto geoJson
     ) {}
+
+    private record Lookups(
+            List<ChargeEntity> samples,
+            List<PositionEntity> positions,
+            List<AddressEntity> addresses,
+            List<GeofenceEntity> geofences
+    ) {}
+
+    private record PathPart(int raw, Map<Long, List<PositionPathPoint>> slim) {}
 }

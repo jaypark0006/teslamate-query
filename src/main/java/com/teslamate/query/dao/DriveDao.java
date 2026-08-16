@@ -24,7 +24,10 @@ public class DriveDao {
 
     public long count(DriveSearchCondition condition) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery("SELECT COUNT(*) FROM drives " + condition.whereClause());
+            Query q = h.createQuery("""
+                    SELECT COUNT(*) FROM drives
+                    %s
+                    """.formatted(condition.whereClause()));
             ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
@@ -32,11 +35,12 @@ public class DriveDao {
 
     public List<Long> findIds(DriveSearchCondition condition, int limit, int offset) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery(
-                    "SELECT id FROM drives "
-                            + condition.whereClause() + " "
-                            + condition.sortClause()
-                            + " LIMIT :limit OFFSET :offset");
+            Query q = h.createQuery("""
+                    SELECT id FROM drives
+                    %s
+                    %s
+                    LIMIT :limit OFFSET :offset
+                    """.formatted(condition.whereClause(), condition.sortClause()));
             ConditionBinder.bind(q, condition);
             q.bind("limit", limit).bind("offset", offset);
             return q.mapTo(Long.class).list();
@@ -47,7 +51,10 @@ public class DriveDao {
         if (IdOrder.isEmpty(ids)) {
             return List.of();
         }
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM drives WHERE id IN (<ids>)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM drives
+                WHERE id IN (<ids>)
+                """)
                 .bindList("ids", ids)
                 .map(ConstructorMapper.of(DriveEntity.class))
                 .list());
@@ -58,7 +65,10 @@ public class DriveDao {
     }
 
     public Optional<DriveEntity> findById(long id) {
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM drives WHERE id = :id")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM drives
+                WHERE id = :id
+                """)
                 .bind("id", id)
                 .map(ConstructorMapper.of(DriveEntity.class))
                 .findOne());

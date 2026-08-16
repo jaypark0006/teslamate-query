@@ -25,7 +25,10 @@ public class AddressDao {
 
     public long count(AddressSearchCondition condition) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery("SELECT COUNT(*) FROM addresses " + condition.whereClause());
+            Query q = h.createQuery("""
+                    SELECT COUNT(*) FROM addresses
+                    %s
+                    """.formatted(condition.whereClause()));
             ConditionBinder.bind(q, condition);
             return q.mapTo(Long.class).one();
         });
@@ -33,11 +36,12 @@ public class AddressDao {
 
     public List<Long> findIds(AddressSearchCondition condition, int limit, int offset) {
         return jdbi.withHandle(h -> {
-            Query q = h.createQuery(
-                    "SELECT id FROM addresses "
-                            + condition.whereClause() + " "
-                            + condition.sortClause()
-                            + " LIMIT :limit OFFSET :offset");
+            Query q = h.createQuery("""
+                    SELECT id FROM addresses
+                    %s
+                    %s
+                    LIMIT :limit OFFSET :offset
+                    """.formatted(condition.whereClause(), condition.sortClause()));
             ConditionBinder.bind(q, condition);
             q.bind("limit", limit).bind("offset", offset);
             return q.mapTo(Long.class).list();
@@ -48,7 +52,10 @@ public class AddressDao {
         if (IdOrder.isEmpty(ids)) {
             return List.of();
         }
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM addresses WHERE id IN (<ids>)")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM addresses
+                WHERE id IN (<ids>)
+                """)
                 .bindList("ids", ids)
                 .map(ConstructorMapper.of(AddressEntity.class))
                 .list());
@@ -59,7 +66,10 @@ public class AddressDao {
     }
 
     public Optional<AddressEntity> findById(long id) {
-        return jdbi.withHandle(h -> h.createQuery("SELECT * FROM addresses WHERE id = :id")
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM addresses
+                WHERE id = :id
+                """)
                 .bind("id", id)
                 .map(ConstructorMapper.of(AddressEntity.class))
                 .findOne());
