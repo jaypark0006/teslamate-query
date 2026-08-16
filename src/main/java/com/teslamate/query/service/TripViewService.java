@@ -498,10 +498,10 @@ public class TripViewService {
                 int cap = batch.capById().getOrDefault(e.getKey(), 16);
                 List<PositionPathPoint> pts = e.getValue();
                 if (batch.bucketSec() <= 1) {
-                    out.put(e.getKey(), PathSimplify.cap(pts, cap));
+                    out.put(e.getKey(), PathSimplify.thin(pts, cap, PathQueryPlan.epsilonForBucket(2)));
                 } else {
-                    double batchEps = PathQueryPlan.epsilonForBucket(batch.bucketSec());
-                    out.put(e.getKey(), PathSimplify.cap(PathSimplify.douglasPeucker(pts, batchEps), cap));
+                    out.put(e.getKey(), PathSimplify.thin(
+                            pts, cap, PathQueryPlan.epsilonForBucket(batch.bucketSec())));
                 }
             }
             return new PathPart(rows.size(), out);

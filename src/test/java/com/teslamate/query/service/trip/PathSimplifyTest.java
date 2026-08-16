@@ -77,6 +77,33 @@ class PathSimplifyTest {
         assertEquals(line.getLast().longitude(), out.getLast().longitude());
     }
 
+    @Test
+    void thinUnderCapIsIdentity() {
+        List<PositionPathPoint> line = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            line.add(pt(106.0 + i * 0.0001, 29.5));
+        }
+        assertEquals(line, PathSimplify.thin(line, 50, 8));
+    }
+
+    @Test
+    void thinKeepsCornerInsteadOfUniformStride() {
+        List<PositionPathPoint> l = new ArrayList<>();
+        for (int i = 0; i <= 80; i++) {
+            l.add(pt(106.0 + i * 0.0001, 29.5));
+        }
+        for (int i = 1; i <= 80; i++) {
+            l.add(pt(106.008, 29.5 + i * 0.0001));
+        }
+        List<PositionPathPoint> out = PathSimplify.thin(l, 12, 8);
+        assertTrue(out.size() <= 12);
+        assertTrue(out.size() >= 3);
+        boolean hasCorner = out.stream().anyMatch(p ->
+                Math.abs(p.longitude().doubleValue() - 106.008) < 1e-6
+                        && Math.abs(p.latitude().doubleValue() - 29.5) < 1e-6);
+        assertTrue(hasCorner);
+    }
+
     private static PositionPathPoint pt(double lon, double lat) {
         return new PositionPathPoint(1L, Instant.parse("2026-08-16T00:00:00Z"),
                 BigDecimal.valueOf(lon), BigDecimal.valueOf(lat));

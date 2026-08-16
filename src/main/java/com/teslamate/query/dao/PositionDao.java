@@ -148,40 +148,26 @@ public class PositionDao {
     }
 
     /**
-     * Path vertices for many drives. {@code bucketSeconds <= 1} keeps every point
-     * of each drive (stride across the whole trip if a drive exceeds {@code lim}).
-     * Otherwise one sample per time bucket, plus each drive's first and last point.
-     * Limits are per drive — a global LIMIT would drop later drive_ids mid-trip
-     * and Grafana's single Route layer would draw a straight chord to the next trip.
+     * Path vertices for many drives. {@code bucketSeconds <= 1} returns every
+     * GPS sample — shape thinning (Douglas–Peucker) happens in Java so corners
+     * stay. Otherwise one sample per time bucket, plus each drive's first and last.
+     * Never apply a global LIMIT: that chops later drive_ids mid-trip.
      */
     public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds, int bucketSeconds) {
         if (IdOrder.isEmpty(driveIds)) {
             return List.of();
         }
         int bucket = Math.max(bucketSeconds, 0);
-        int lim = bucket <= 1 ? 8_000 : 2_500;
-        int stepDiv = Math.max(lim - 1, 1);
         if (bucket <= 1) {
             return jdbi.withHandle(h -> h.createQuery("""
                     SELECT drive_id, date, longitude, latitude
-                    FROM (
-                        SELECT drive_id, date, longitude, latitude,
-                               ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS rn,
-                               COUNT(*) OVER (PARTITION BY drive_id) AS n
-                        FROM positions
-                        WHERE drive_id IN (<driveIds>)
-                          AND longitude IS NOT NULL
-                          AND latitude IS NOT NULL
-                    ) t
-                    WHERE n <= :lim
-                       OR rn = 1
-                       OR rn = n
-                       OR MOD(rn - 1, GREATEST(1, (n - 1) / :stepDiv)) = 0
+                    FROM positions
+                    WHERE drive_id IN (<driveIds>)
+                      AND longitude IS NOT NULL
+                      AND latitude IS NOT NULL
                     ORDER BY drive_id, date
                     """)
                     .bindList("driveIds", driveIds)
-                    .bind("lim", lim)
-                    .bind("stepDiv", stepDiv)
                     .map(ConstructorMapper.of(PositionPathPoint.class))
                     .list());
         }
@@ -189,28 +175,22 @@ public class PositionDao {
                 SELECT drive_id, date, longitude, latitude
                 FROM (
                     SELECT drive_id, date, longitude, latitude,
-                           ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS keep_rn
-                    FROM (
-                        SELECT drive_id, date, longitude, latitude,
-                               ROW_NUMBER() OVER (
-                                   PARTITION BY drive_id, FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec)
-                                   ORDER BY date
-                               ) AS rn,
-                               ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS first_rn,
-                               ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date DESC) AS last_rn
-                        FROM positions
-                        WHERE drive_id IN (<driveIds>)
-                          AND longitude IS NOT NULL
-                          AND latitude IS NOT NULL
-                    ) t
-                    WHERE rn = 1 OR first_rn = 1 OR last_rn = 1
-                ) k
-                WHERE keep_rn <= :lim
+                           ROW_NUMBER() OVER (
+                               PARTITION BY drive_id, FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec)
+                               ORDER BY date
+                           ) AS rn,
+                           ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS first_rn,
+                           ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date DESC) AS last_rn
+                    FROM positions
+                    WHERE drive_id IN (<driveIds>)
+                      AND longitude IS NOT NULL
+                      AND latitude IS NOT NULL
+                ) t
+                WHERE rn = 1 OR first_rn = 1 OR last_rn = 1
                 ORDER BY drive_id, date
                 """)
                 .bindList("driveIds", driveIds)
                 .bind("bucketSec", bucket)
-                .bind("lim", lim)
                 .map(ConstructorMapper.of(PositionPathPoint.class))
                 .list());
     }

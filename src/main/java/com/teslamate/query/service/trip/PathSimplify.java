@@ -79,6 +79,20 @@ public final class PathSimplify {
         return Math.min(soft, budget);
     }
 
+    /**
+     * Shape-preserving thin: Douglas–Peucker (keep corners, drop near-collinear
+     * originals), then a hard cap. Does not interpolate new coordinates.
+     */
+    public static List<PositionPathPoint> thin(List<PositionPathPoint> points, int max, double epsilonM) {
+        if (points == null || points.isEmpty()) {
+            return List.of();
+        }
+        if (points.size() <= max) {
+            return points;
+        }
+        return cap(douglasPeucker(points, epsilonM), max);
+    }
+
     /** Keep first/last and a uniform sample so a long polyline stays under {@code max}. */
     public static List<PositionPathPoint> cap(List<PositionPathPoint> points, int max) {
         if (points == null || points.isEmpty()) {
