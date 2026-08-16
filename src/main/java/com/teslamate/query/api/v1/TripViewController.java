@@ -41,10 +41,18 @@ public class TripViewController {
             @RequestParam(required = false) String minParkMin,
             @RequestParam(required = false) String timezone,
             @RequestParam(required = false) String lengthUnit,
-            @RequestParam(required = false) String tempUnit
+            @RequestParam(required = false) String tempUnit,
+            @RequestParam(required = false) String highlightDay,
+            @RequestParam(required = false) String highlightSlot,
+            @RequestParam(required = false) String highlightKind,
+            @RequestParam(required = false) String highlightFrom,
+            @RequestParam(required = false) String highlightTo,
+            @RequestParam(required = false) String dayStartHour
     ) {
         return tripViewService.timeline(carId, from, to, support.minParkMin(minParkMin),
-                support.units(lengthUnit, tempUnit), support.zone(timezone));
+                support.units(lengthUnit, tempUnit), support.zone(timezone),
+                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo,
+                support.dayStartHour(dayStartHour));
     }
 
     @GetMapping("/timeline/daily")
@@ -72,11 +80,17 @@ public class TripViewController {
             @RequestParam(required = false) String timezone,
             @RequestParam(required = false) String dayStartHour,
             @RequestParam(required = false) String lengthUnit,
-            @RequestParam(required = false) String tempUnit
+            @RequestParam(required = false) String tempUnit,
+            @RequestParam(required = false) String highlightDay,
+            @RequestParam(required = false) String highlightSlot,
+            @RequestParam(required = false) String highlightKind,
+            @RequestParam(required = false) String highlightFrom,
+            @RequestParam(required = false) String highlightTo
     ) {
         return tripViewService.grid(carId, from, to, support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone),
-                support.dayStartHour(dayStartHour));
+                support.dayStartHour(dayStartHour),
+                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo);
     }
 
     @GetMapping("/map")

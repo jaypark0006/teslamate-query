@@ -21,6 +21,13 @@ public record DayGridCellDto(
     public static final int DRIVE = 2;
     public static final int CHARGE = 3;
     public static final int WEEKEND = 4;
+    public static final int HIGHLIGHT_PARK = 11;
+    public static final int HIGHLIGHT_DRIVE = 12;
+    public static final int HIGHLIGHT_CHARGE = 13;
+
+    public DayGridCellDto withKindCode(int code) {
+        return new DayGridCellDto(time, day, hour, slot, code, kind, sourceId, label);
+    }
 
     public static String cellLabel(int kindCode, Long sourceId) {
         return cellLabel(kindCode, kindCode == DRIVE ? sourceId : null, kindCode == CHARGE ? sourceId : null);

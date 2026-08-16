@@ -23,5 +23,12 @@ public record TimelineItemDto(
         String day,
         Integer dayBand,
         Instant clockStart,
-        Instant clockEnd
-) {}
+        Instant clockEnd,
+        Integer highlight
+) {
+    public TimelineItemDto withHighlight(int value) {
+        return new TimelineItemDto(seq, kind, id, start, end, durationMin, title, detail, color,
+                latitude, longitude, distanceKm, startSocPercent, endSocPercent, energyKwh, chargeType,
+                day, dayBand, clockStart, clockEnd, value);
+    }
+}

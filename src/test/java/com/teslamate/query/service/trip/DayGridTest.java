@@ -104,7 +104,7 @@ class DayGridTest {
                 Instant.parse("2026-08-10T14:00:00Z"), Instant.parse("2026-08-11T00:00:00Z"),
                 600.0, "Parked", "10h", "#1d4ed8",
                 null, null, null, null, null, null, null,
-                "2026-08-10", 0, null, null);
+                "2026-08-10", 0, null, null, 0);
         List<DayGridCellDto> cells = DayGrid.paintFromTimeline(List.of(item), SH);
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && c.hour() >= 22));
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-11") && c.hour() < 8));
@@ -169,5 +169,25 @@ class DayGridTest {
         }
         assertTrue(!xs.getFirst().isBefore(from));
         assertTrue(xs.getLast().isBefore(to));
+    }
+
+    @Test
+    void highlightMarksOverlappingDriveHours() {
+        ActivitySpan drive = new ActivitySpan(
+                TimelineKind.DRIVE, 12L,
+                Instant.parse("2026-08-13T00:00:00Z"),
+                Instant.parse("2026-08-13T02:00:00Z"),
+                120, null, null);
+        List<DayGridCellDto> cells = DayGrid.paint(List.of(drive), ZoneId.of("UTC"), 0,
+                Instant.parse("2026-08-13T00:00:00Z"), Instant.parse("2026-08-13T04:00:00Z"));
+        Instant from = Instant.parse("2026-08-13T00:00:00Z");
+        Instant to = Instant.parse("2026-08-13T02:00:00Z");
+        List<DayGridCellDto> marked = DayGrid.applyHighlight(cells, from, to, DayGridCellDto.DRIVE, 0, ZoneId.of("UTC"));
+        assertTrue(marked.stream().anyMatch(c ->
+                "00".equals(c.slot()) && c.kindCode() == DayGridCellDto.HIGHLIGHT_DRIVE));
+        assertTrue(marked.stream().anyMatch(c ->
+                "01".equals(c.slot()) && c.kindCode() == DayGridCellDto.HIGHLIGHT_DRIVE));
+        assertTrue(marked.stream().anyMatch(c ->
+                "03".equals(c.slot()) && c.kindCode() == 0));
     }
 }

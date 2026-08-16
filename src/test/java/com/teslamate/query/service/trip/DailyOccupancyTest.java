@@ -32,6 +32,6 @@ class DailyOccupancyTest {
                 1, kind, 1L, start, start.plusSeconds((long) (minutes * 60)),
                 minutes, kind.name(), "", "#000",
                 null, null, null, null, null, null, null,
-                day, 0, null, null);
+                day, 0, null, null, 0);
     }
 }

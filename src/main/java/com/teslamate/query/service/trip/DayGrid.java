@@ -144,6 +144,75 @@ public final class DayGrid {
         return out;
     }
 
+    public static List<DayGridCellDto> applyHighlight(List<DayGridCellDto> cells, Instant windowFrom,
+                                                      Instant windowTo, int wantKind, int dayStartHour, ZoneId zone) {
+        if (cells == null || windowFrom == null || windowTo == null) {
+            return cells;
+        }
+        ZoneId z = zone == null ? ZoneId.of("UTC") : zone;
+        int startH = Math.floorMod(dayStartHour, 24);
+        List<DayGridCellDto> out = new ArrayList<>(cells.size());
+        for (DayGridCellDto cell : cells) {
+            if (cell == null || cell.kindCode() <= 0 || cell.kindCode() == DayGridCellDto.WEEKEND) {
+                out.add(cell);
+                continue;
+            }
+            Instant[] range = slotWindow(cell.day(), cell.slot(), startH, z);
+            if (range == null || !rangesOverlap(range[0], range[1], windowFrom, windowTo)
+                    || !cellMatchesFocus(cell, wantKind)) {
+                out.add(cell);
+                continue;
+            }
+            int code = switch (wantKind) {
+                case DayGridCellDto.DRIVE -> DayGridCellDto.HIGHLIGHT_DRIVE;
+                case DayGridCellDto.CHARGE -> DayGridCellDto.HIGHLIGHT_CHARGE;
+                case DayGridCellDto.PARK -> DayGridCellDto.HIGHLIGHT_PARK;
+                default -> cell.kindCode() + 10;
+            };
+            out.add(cell.withKindCode(code));
+        }
+        return out;
+    }
+
+    static boolean cellMatchesFocus(DayGridCellDto cell, int wantKind) {
+        if (wantKind == 0) {
+            return true;
+        }
+        String label = cell.label() == null ? "" : cell.label();
+        if (wantKind == DayGridCellDto.DRIVE) {
+            return cell.kindCode() == DayGridCellDto.DRIVE || label.contains("Drive");
+        }
+        if (wantKind == DayGridCellDto.CHARGE) {
+            return cell.kindCode() == DayGridCellDto.CHARGE || label.contains("Charge");
+        }
+        return cell.kindCode() == DayGridCellDto.PARK;
+    }
+
+    static Instant[] slotWindow(String day, String slot, int startH, ZoneId z) {
+        if (day == null || slot == null || slot.contains("★")) {
+            return null;
+        }
+        Integer clockH = parseClockHour(slot);
+        if (clockH == null) {
+            return null;
+        }
+        LocalDate d;
+        try {
+            d = LocalDate.parse(day);
+        } catch (RuntimeException e) {
+            return null;
+        }
+        ZonedDateTime start = d.atTime(clockH, 0).atZone(z);
+        if (startH != 0 && clockH < startH) {
+            start = start.plusDays(1);
+        }
+        return new Instant[]{start.toInstant(), start.plusHours(1).toInstant()};
+    }
+
+    static boolean rangesOverlap(Instant a0, Instant a1, Instant b0, Instant b1) {
+        return a0 != null && a1 != null && b0 != null && b1 != null && a0.isBefore(b1) && a1.isAfter(b0);
+    }
+
     /**
      * Clock hour labels that stay in 04:00-first order even after a string sort:
      * {@code 04}…{@code 23} then {@code ·00}…{@code ·03}. No {@code HH:mm} so Grafana

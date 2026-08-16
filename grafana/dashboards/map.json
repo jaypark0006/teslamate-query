@@ -930,6 +930,48 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "highlight"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "applyToRow": true,
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": 0
+                    },
+                    {
+                      "color": "#5b4a12",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "time"
             },
             "properties": [
@@ -1225,6 +1267,11 @@
               "selector": "id",
               "text": "id",
               "type": "number"
+            },
+            {
+              "selector": "highlight",
+              "text": "highlight",
+              "type": "number"
             }
           ],
           "datasource": {
@@ -1238,7 +1285,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/timeline?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}",
+          "url": "/api/v1/cars/${car_id}/timeline?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}&highlightFrom=${focus_from}&highlightTo=${focus_to}&highlightKind=${focus_kind}&highlightDay=${focus_day}&highlightSlot=${focus_slot}&dayStartHour=4",
           "url_options": {
             "data": "",
             "method": "GET"
@@ -1319,6 +1366,21 @@
                   "color": "#d97706",
                   "index": 3,
                   "text": "Weekend"
+                },
+                "11": {
+                  "color": "#facc15",
+                  "index": 4,
+                  "text": "Park"
+                },
+                "12": {
+                  "color": "#facc15",
+                  "index": 5,
+                  "text": "Drive"
+                },
+                "13": {
+                  "color": "#facc15",
+                  "index": 6,
+                  "text": "Charge"
                 }
               },
               "type": "value"
@@ -1346,6 +1408,10 @@
               {
                 "color": "#d97706",
                 "value": 4
+              },
+              {
+                "color": "#facc15",
+                "value": 11
               }
             ]
           }
@@ -1445,7 +1511,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/timeline/grid?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}&dayStartHour=4",
+          "url": "/api/v1/cars/${car_id}/timeline/grid?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}&dayStartHour=4&highlightFrom=${focus_from}&highlightTo=${focus_to}&highlightKind=${focus_kind}&highlightDay=${focus_day}&highlightSlot=${focus_slot}",
           "url_options": {
             "data": "",
             "method": "GET"

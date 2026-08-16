@@ -43,13 +43,14 @@ class TripViewControllerWebTest {
         when(support.minParkMin("10")).thenReturn(10);
         when(support.zone(null)).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
         when(support.units(null, null)).thenReturn(null);
+        when(support.dayStartHour(null)).thenReturn(0);
         when(tripViewService.timeline(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
-                eq(10), any(), any())).thenReturn(List.of(
+                eq(10), any(), any(), any(), any(), any(), any(), any(), eq(0))).thenReturn(List.of(
                 new TimelineItemDto(1, TimelineKind.DRIVE, 9L,
                         Instant.parse("2026-08-16T02:00:00Z"), Instant.parse("2026-08-16T03:00:00Z"),
                         60.0, "Home → Work", "12.0 km · 1h", "#3b82f6",
                         29.5, 106.4, 12.0, 70, 61, null, null, "2026-08-16", 0,
-                        Instant.parse("2000-01-01T02:00:00Z"), Instant.parse("2000-01-01T03:00:00Z"))));
+                        Instant.parse("2000-01-01T02:00:00Z"), Instant.parse("2000-01-01T03:00:00Z"), 0)));
         client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/timeline")
                         .queryParam("from", "2026-08-16T00:00:00Z")
                         .queryParam("to", "2026-08-16T12:00:00Z")
@@ -91,7 +92,7 @@ class TripViewControllerWebTest {
         when(support.dayStartHour(null)).thenReturn(0);
         when(support.units(null, null)).thenReturn(null);
         when(tripViewService.grid(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
-                eq(10), any(), any(), eq(0))).thenReturn(List.of(
+                eq(10), any(), any(), eq(0), any(), any(), any(), any(), any())).thenReturn(List.of(
                 new DayGridCellDto(Instant.parse("2026-08-15T16:00:00Z"), "2026-08-16",
                         8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE", 9L, "Drive #9")));
         client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/timeline/grid")
