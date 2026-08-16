@@ -45,31 +45,39 @@ public final class MapStopMerge {
         return out;
     }
 
+    static final double HIDE_PARK_LABEL_BELOW_MIN = 60;
+
     public static String parkLabel(int count, Double totalMin, boolean ongoing) {
-        String dur = ongoing ? "-" : formatDuration(totalMin);
+        if (count <= 1 && !ongoing && totalMin != null && totalMin < HIDE_PARK_LABEL_BELOW_MIN) {
+            return null;
+        }
+        if (ongoing) {
+            return count <= 1 ? "P" : "P×" + count;
+        }
+        String dur = formatDuration(totalMin, true);
         if (count <= 1) {
             return dur == null ? "P" : "P " + dur;
         }
-        return dur == null ? "P ×" + count : "P ×" + count + " · " + dur;
+        return dur == null ? "P×" + count : "P×" + count + " " + dur;
     }
 
     public static String chargeLabel(int count, String type, Double energyKwh, Double totalMin) {
-        String prefix = (type == null || type.isBlank()) ? "Charge" : type;
+        String prefix = (type == null || type.isBlank()) ? "C" : type;
         if (count > 1) {
-            prefix = prefix + " ×" + count;
+            prefix = prefix + "×" + count;
         }
-        String energy = energyKwh == null ? null : "+" + trim(energyKwh) + " kWh";
-        String dur = formatDuration(totalMin);
-        if (energy == null && dur == null) {
-            return prefix;
+        String energy = energyKwh == null ? null : trim(energyKwh) + "kWh";
+        String dur = formatDuration(totalMin, false);
+        if (energy != null && dur != null) {
+            return prefix + " " + energy + " " + dur;
         }
-        if (energy == null) {
-            return prefix + " · " + dur;
-        }
-        if (dur == null) {
+        if (energy != null) {
             return prefix + " " + energy;
         }
-        return prefix + " " + energy + " · " + dur;
+        if (dur != null) {
+            return prefix + " " + dur;
+        }
+        return prefix;
     }
 
     private static MapPointDto collapse(List<MapPointDto> group) {
@@ -182,9 +190,14 @@ public final class MapStopMerge {
     private record Totals(Double durationMin, Double energyKwh, boolean ongoing) {}
 
     private static String chargeTypeFrom(MapPointDto p) {
-        String marked = firstToken(p.durationLabel());
-        if ("DC".equals(marked) || "AC".equals(marked)) {
-            return marked;
+        String marked = p.durationLabel();
+        if (marked != null) {
+            if (marked.startsWith("DC")) {
+                return "DC";
+            }
+            if (marked.startsWith("AC")) {
+                return "AC";
+            }
         }
         String label = p.label();
         if (label != null && (label.startsWith("DC") || label.contains("DC"))) {
@@ -194,14 +207,6 @@ public final class MapStopMerge {
             return "AC";
         }
         return p.kind() != null && p.kind().equals("charge") ? "AC" : null;
-    }
-
-    private static String firstToken(String text) {
-        if (text == null || text.isBlank()) {
-            return null;
-        }
-        int space = text.indexOf(' ');
-        return space < 0 ? text : text.substring(0, space);
     }
 
     private static String labelFor(MapPointDto sample, int count, Double dur, Double energy, boolean ongoing) {
@@ -228,17 +233,20 @@ public final class MapStopMerge {
         return p.kind() + ":" + la + ":" + lo;
     }
 
-    private static String formatDuration(Double minutes) {
+    private static String formatDuration(Double minutes, boolean dropMinutesOverHour) {
         if (minutes == null) {
             return null;
         }
         long m = Math.round(minutes);
         if (m < 60) {
-            return m + " min";
+            return m + "m";
         }
         long h = m / 60;
         long rem = m % 60;
-        return rem == 0 ? h + "h" : h + "h " + rem + "m";
+        if (rem == 0 || dropMinutesOverHour) {
+            return h + "h";
+        }
+        return h + "h" + rem;
     }
 
     private static String trim(double v) {

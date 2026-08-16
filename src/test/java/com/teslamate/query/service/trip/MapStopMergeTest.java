@@ -17,7 +17,7 @@ class MapStopMergeTest {
                 park(29.5182, 106.4603, 60),
                 park(29.5184, 106.4605, 120)));
         assertEquals(1, out.stream().filter(p -> "park".equals(p.kind())).count());
-        assertEquals("P ×2 · 3h", out.getFirst().durationLabel());
+        assertEquals("P×2 3h", out.getFirst().durationLabel());
     }
 
     @Test
@@ -30,9 +30,10 @@ class MapStopMergeTest {
 
     @Test
     void chargeLabelMatchesMockup() {
-        assertEquals("AC +32.4 kWh · 30 min", MapStopMerge.chargeLabel(1, "AC", 32.4, 30.0));
+        assertEquals("AC 32.4kWh 30m", MapStopMerge.chargeLabel(1, "AC", 32.4, 30.0));
         assertEquals("P 14h", MapStopMerge.parkLabel(1, 14 * 60.0, false));
-        assertEquals("P -", MapStopMerge.parkLabel(1, null, true));
+        assertEquals("P", MapStopMerge.parkLabel(1, null, true));
+        assertEquals(null, MapStopMerge.parkLabel(1, 14.0, false));
     }
 
     @Test
@@ -42,7 +43,7 @@ class MapStopMergeTest {
                 charge(29.5183, 106.4604, "DC", 12.0, 25),
                 charge(29.5182, 106.4603, "AC", 8.0, 120)));
         assertEquals(1, out.size());
-        assertEquals("DC ×2 +22 kWh · 45 min\nAC +8 kWh · 2h", out.getFirst().durationLabel());
+        assertEquals("DC×2 22kWh 45m\nAC 8kWh 2h", out.getFirst().durationLabel());
         assertEquals(22.0 + 8.0, out.getFirst().energyKwh());
         assertEquals(20.0 + 25.0 + 120.0, out.getFirst().durationMin());
     }
@@ -53,7 +54,7 @@ class MapStopMergeTest {
                 charge(29.5182, 106.4603, "DC", 10.0, 20),
                 charge(29.5182, 106.4603, "DC", 5.0, 10)));
         assertEquals(1, out.size());
-        assertEquals("DC ×2 +15 kWh · 30 min", out.getFirst().durationLabel());
+        assertEquals("DC×2 15kWh 30m", out.getFirst().durationLabel());
     }
 
     @Test
