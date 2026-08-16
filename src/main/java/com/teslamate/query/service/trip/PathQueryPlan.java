@@ -10,11 +10,16 @@ import java.util.Map;
 
 /**
  * Pick a positions SQL strategy from the actual drive list, not the calendar
- * window. Short hops stay on start/end; longer drives share an 8k-point budget.
+ * window. Micro hops stay on start/end. A highlight or a short window is
+ * cheaper as raw 1 Hz than as a SQL time-bucket + Douglas–Peucker pass.
  */
 public final class PathQueryPlan {
 
     static final int BUDGET = PathSimplify.MAX_WINDOW_POINTS;
+    /** ~15 min at 1 Hz. Window-function + DP costs more than reading these rows. */
+    static final int SHORT_FULL_SEC = 15 * 60;
+    /** Typical one-day outing. Short drives in this set stay 1 Hz. */
+    static final int DAY_SCALE_DRIVES = 12;
     private static final int[] BUCKETS = {2, 5, 10, 15, 30, 60, 120, 180, 300};
 
     public record Query(long driveId, int bucketSec, int cap) {}
@@ -66,17 +71,33 @@ public final class PathQueryPlan {
             return new PathQueryPlan(List.of(), skipped, 8.0);
         }
         List<Query> queries = new ArrayList<>(need.size());
-        int minBucket = Integer.MAX_VALUE;
-        boolean single = need.size() == 1;
+        boolean windowFits = need.size() == 1 || weightSum <= BUDGET;
+        boolean dayScale = need.size() <= DAY_SCALE_DRIVES;
+        int minLodBucket = Integer.MAX_VALUE;
         for (int i = 0; i < need.size(); i++) {
             DriveEntity d = need.get(i);
             int sec = durationSec(d);
-            int target = targetPoints(need.size(), weights[i], weightSum);
-            int bucket = single ? 2 : quantize(Math.max(1, sec / Math.max(target, 1)), false);
-            minBucket = Math.min(minBucket, bucket);
-            queries.add(new Query(d.id(), bucket, target));
+            boolean full = windowFits || (dayScale && sec <= SHORT_FULL_SEC);
+            if (full) {
+                queries.add(fullQuery(d.id(), sec));
+            } else {
+                int target = targetPoints(need.size(), weights[i], weightSum);
+                int bucket = quantize(Math.max(1, sec / Math.max(target, 1)), 5);
+                minLodBucket = Math.min(minLodBucket, bucket);
+                queries.add(new Query(d.id(), bucket, target));
+            }
         }
-        return new PathQueryPlan(queries, skipped, epsilonForBucket(minBucket));
+        double eps = minLodBucket == Integer.MAX_VALUE ? 0 : epsilonForBucket(minLodBucket);
+        return new PathQueryPlan(queries, skipped, eps);
+    }
+
+    /** Raw 1 Hz when it fits the budget; time-bucket only so a long highlight is not truncated. */
+    static Query fullQuery(long driveId, int sec) {
+        if (sec <= BUDGET) {
+            return new Query(driveId, 0, Math.min(BUDGET, Math.max(sec, 16)));
+        }
+        int bucket = quantize(Math.max(1, (sec + BUDGET - 1) / BUDGET), 2);
+        return new Query(driveId, bucket, BUDGET);
     }
 
     public List<Batch> batches() {
@@ -134,9 +155,8 @@ public final class PathQueryPlan {
         return Math.min(share, Math.max(even, 8));
     }
 
-    static int quantize(int seconds, boolean singleDrive) {
-        int min = singleDrive ? 2 : 5;
-        int v = Math.max(seconds, min);
+    static int quantize(int seconds, int minBucket) {
+        int v = Math.max(seconds, minBucket);
         for (int b : BUCKETS) {
             if (b >= v) {
                 return b;
@@ -145,7 +165,7 @@ public final class PathQueryPlan {
         return BUCKETS[BUCKETS.length - 1];
     }
 
-    static double epsilonForBucket(int bucketSec) {
+    public static double epsilonForBucket(int bucketSec) {
         if (bucketSec <= 2) {
             return 8.0;
         }

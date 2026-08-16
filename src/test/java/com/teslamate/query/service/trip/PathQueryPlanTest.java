@@ -13,12 +13,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PathQueryPlanTest {
 
     @Test
-    void oneLongDriveUsesFineBucket() {
+    void highlightKeepsFullPath() {
         PathQueryPlan plan = PathQueryPlan.of(List.of(drive(1, 60, 20.0)));
         assertEquals(1, plan.queries().size());
         assertEquals(0, plan.skipped());
-        assertEquals(2, plan.queries().getFirst().bucketSec());
-        assertEquals(400, plan.queries().getFirst().cap());
+        assertEquals(0, plan.queries().getFirst().bucketSec());
+        assertEquals(3600, plan.queries().getFirst().cap());
+        assertEquals(0, plan.epsilonM());
+    }
+
+    @Test
+    void shortDriveKeepsFullPath() {
+        PathQueryPlan plan = PathQueryPlan.of(List.of(drive(1, 8, 3.0)));
+        assertEquals(0, plan.queries().getFirst().bucketSec());
+        assertEquals(8 * 60, plan.queries().getFirst().cap());
+    }
+
+    @Test
+    void dayOfShortDrivesKeepsFullPath() {
+        List<DriveEntity> drives = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            drives.add(drive(i, 10, 4.0));
+        }
+        PathQueryPlan plan = PathQueryPlan.of(drives);
+        assertEquals(6, plan.queries().size());
+        for (PathQueryPlan.Query q : plan.queries()) {
+            assertEquals(0, q.bucketSec());
+            assertEquals(10 * 60, q.cap());
+        }
+        assertEquals(0, plan.epsilonM());
     }
 
     @Test
@@ -41,8 +64,21 @@ class PathQueryPlanTest {
         assertEquals(20, plan.skipped());
         assertEquals(1, plan.queries().size());
         assertEquals(99L, plan.queries().getFirst().driveId());
-        assertTrue(plan.queries().getFirst().bucketSec() <= 15);
-        assertTrue(plan.queries().getFirst().cap() >= 40);
+        assertEquals(0, plan.queries().getFirst().bucketSec());
+        assertEquals(45 * 60, plan.queries().getFirst().cap());
+    }
+
+    @Test
+    void dayMixKeepsShortDrivesFull() {
+        List<DriveEntity> drives = List.of(
+                drive(1, 10, 4.0),
+                drive(2, 140, 180.0),
+                drive(3, 8, 3.0));
+        PathQueryPlan plan = PathQueryPlan.of(drives);
+        assertEquals(0, bucketOf(plan, 1));
+        assertEquals(0, bucketOf(plan, 3));
+        assertTrue(bucketOf(plan, 2) >= 5, "long drive in a busy window still lods");
+        assertTrue(plan.epsilonM() > 0);
     }
 
     @Test
@@ -59,6 +95,14 @@ class PathQueryPlanTest {
         int cap = plan.queries().getFirst().cap();
         assertTrue(cap >= 6 && cap <= 80, "cap=" + cap);
         assertTrue(plan.batches().size() >= 100 / PathSimplify.PATH_BATCH);
+    }
+
+    private static int bucketOf(PathQueryPlan plan, long driveId) {
+        return plan.queries().stream()
+                .filter(q -> q.driveId() == driveId)
+                .findFirst()
+                .orElseThrow()
+                .bucketSec();
     }
 
     private static DriveEntity drive(long id, int durationMin, double km) {

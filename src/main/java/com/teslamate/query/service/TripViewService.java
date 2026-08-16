@@ -496,7 +496,13 @@ public class TripViewService {
             Map<Long, List<PositionPathPoint>> out = new LinkedHashMap<>();
             for (Map.Entry<Long, List<PositionPathPoint>> e : grouped.entrySet()) {
                 int cap = batch.capById().getOrDefault(e.getKey(), 16);
-                out.put(e.getKey(), PathSimplify.cap(PathSimplify.douglasPeucker(e.getValue(), eps), cap));
+                List<PositionPathPoint> pts = e.getValue();
+                if (batch.bucketSec() <= 1) {
+                    out.put(e.getKey(), PathSimplify.cap(pts, cap));
+                } else {
+                    double batchEps = PathQueryPlan.epsilonForBucket(batch.bucketSec());
+                    out.put(e.getKey(), PathSimplify.cap(PathSimplify.douglasPeucker(pts, batchEps), cap));
+                }
             }
             return new PathPart(rows.size(), out);
         });
