@@ -111,7 +111,12 @@ public final class CommuteCompare {
         List<CommuteSampleDto> out = new ArrayList<>();
         for (double km = 0; km <= total + 1e-6; km += step) {
             int idx = firstAtOrAfter(along, km);
-            out.add(toDto(drive, day, startLocal, raw.get(idx), km, t0, zone));
+            CommuteSampleDto row = toDto(drive, day, startLocal, raw.get(idx), km, t0, zone);
+            // Still in the driveway: not a jam, and it paints the first column black.
+            if (out.isEmpty() && (row.speed() == null || row.speed() <= 3)) {
+                continue;
+            }
+            out.add(row);
         }
         return out;
     }
@@ -163,7 +168,7 @@ public final class CommuteCompare {
             elapsedMin = Duration.between(t0, p.date()).toMillis() / 60_000.0;
         }
         Integer speed = p.speed();
-        String bin = String.format(java.util.Locale.US, "%.1f", km);
+        String bin = String.format(java.util.Locale.US, "%.1fkm", km);
         String label = startLocal + " · " + bin + " km"
                 + (speed == null ? "" : " · " + speed + " km/h");
         Double lat = p.latitude() == null ? null : p.latitude().doubleValue();

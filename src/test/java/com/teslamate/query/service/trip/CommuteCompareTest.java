@@ -47,7 +47,7 @@ class CommuteCompareTest {
                 pt(9, t0.plusSeconds(180), 106.45, 29.51, 12));
         List<CommuteSampleDto> samples = CommuteCompare.resampleByKm(d, pts, 0.5, SH);
         assertTrue(samples.size() >= 3);
-        assertEquals("0.0", samples.getFirst().kmBin());
+        assertEquals("0.0km", samples.getFirst().kmBin());
         assertEquals(50, samples.getFirst().speed());
         assertEquals("08-13 05:48", samples.getFirst().startLocal());
         CommuteSampleDto last = samples.getLast();

@@ -230,7 +230,7 @@
       "transformations": [
         {
           "id": "partitionByValues",
-          "options": { "fields": ["startLocal"], "keepFields": false }
+          "options": { "fields": ["startLocal"], "keepFields": true }
         }
       ],
       "title": "One line per day — speed vs km from start",
