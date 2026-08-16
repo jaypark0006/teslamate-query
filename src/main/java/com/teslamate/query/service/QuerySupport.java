@@ -110,6 +110,38 @@ public class QuerySupport {
                 || raw.equalsIgnoreCase("all") || raw.equalsIgnoreCase("none") || raw.equals("-");
     }
 
+    /**
+     * Local clock as minutes from midnight. Accepts {@code 5:40}, {@code 05:40}, {@code 540}.
+     */
+    public int clockMinutes(String raw, int fallback) {
+        if (raw == null || raw.isBlank() || raw.contains("${") || raw.equals("-")) {
+            return fallback;
+        }
+        String s = raw.trim();
+        int colon = s.indexOf(':');
+        try {
+            if (colon >= 0) {
+                int h = Integer.parseInt(s.substring(0, colon));
+                String rest = s.substring(colon + 1);
+                int m = rest.isEmpty() ? 0 : Integer.parseInt(rest.replaceAll("[^0-9].*", ""));
+                return Math.floorMod(h, 24) * 60 + Math.min(Math.max(m, 0), 59);
+            }
+            String digits = s.replaceAll("[^0-9]", "");
+            if (digits.isEmpty()) {
+                return fallback;
+            }
+            int n = Integer.parseInt(digits);
+            if (n <= 24) {
+                return Math.floorMod(n, 24) * 60;
+            }
+            int h = n / 100;
+            int m = n % 100;
+            return Math.floorMod(h, 24) * 60 + Math.min(m, 59);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
     /** Local hour the day-block starts (0–23). Grafana sends 4 for 04:00–04:00. */
     public int dayStartHour(String raw) {
         if (raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")) {

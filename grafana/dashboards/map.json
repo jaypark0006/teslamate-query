@@ -63,6 +63,17 @@
       "title": "Drive",
       "type": "link",
       "url": "/d/teslamate-query-drive/drive"
+    },
+    {
+      "asDropdown": false,
+      "icon": "clock-nine",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Commute",
+      "type": "link",
+      "url": "/d/teslamate-query-commute/commute"
     }
   ],
   "liveNow": false,

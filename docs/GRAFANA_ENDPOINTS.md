@@ -31,6 +31,7 @@ Drive uid `teslamate-query-drive` (`?var-drive_id=`). Trip uid `teslamate-query-
 | Trip 日占用 | `GET /api/v1/cars/{carId}/timeline/daily?from&to&timezone=` |
 | Trip 日×小时格子 | `GET /api/v1/cars/{carId}/timeline/grid?from&to&timezone=&dayStartHour=` |
 | Trip 格子高亮 | `GET /api/v1/cars/{carId}/map/focus?day&slot&kind&from&to&id&timezone=&dayStartHour=` |
+| 通勤对比 | `GET /api/v1/cars/{carId}/commute?from&to&startAfter=05:40&startBefore=06:30&elapsedMin=10` |
 | SOC 曲线 | `GET /api/v1/series/battery?carId&from&to` |
 
 列表 JSON 根路径多为 `data`（分页）。

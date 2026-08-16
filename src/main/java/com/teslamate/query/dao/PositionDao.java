@@ -3,6 +3,7 @@ package com.teslamate.query.dao;
 import com.teslamate.query.db.ConditionBinder;
 import com.teslamate.query.db.IdOrder;
 import com.teslamate.query.db.condition.PositionSearchCondition;
+import com.teslamate.query.entity.PositionCommutePoint;
 import com.teslamate.query.entity.PositionEntity;
 import com.teslamate.query.entity.PositionPathPoint;
 import org.jdbi.v3.core.Jdbi;
@@ -192,6 +193,38 @@ public class PositionDao {
                 .bindList("driveIds", driveIds)
                 .bind("bucketSec", bucket)
                 .map(ConstructorMapper.of(PositionPathPoint.class))
+                .list());
+    }
+
+    /**
+     * Commute overlay: one sample per time bucket plus first/last, including speed.
+     */
+    public List<PositionCommutePoint> findCommutePointsByDriveIds(Collection<Long> driveIds, int bucketSeconds) {
+        if (IdOrder.isEmpty(driveIds)) {
+            return List.of();
+        }
+        int bucket = Math.max(bucketSeconds, 15);
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT drive_id, date, longitude, latitude, speed, odometer
+                FROM (
+                    SELECT drive_id, date, longitude, latitude, speed, odometer,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY drive_id, FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec)
+                               ORDER BY date
+                           ) AS rn,
+                           ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS first_rn,
+                           ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date DESC) AS last_rn
+                    FROM positions
+                    WHERE drive_id IN (<driveIds>)
+                      AND longitude IS NOT NULL
+                      AND latitude IS NOT NULL
+                ) t
+                WHERE rn = 1 OR first_rn = 1 OR last_rn = 1
+                ORDER BY drive_id, date
+                """)
+                .bindList("driveIds", driveIds)
+                .bind("bucketSec", bucket)
+                .map(ConstructorMapper.of(PositionCommutePoint.class))
                 .list());
     }
 }

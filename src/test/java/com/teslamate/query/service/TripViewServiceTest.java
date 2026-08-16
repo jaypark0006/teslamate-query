@@ -53,6 +53,9 @@ class TripViewServiceTest {
                 support.optionalInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").getEpochSecond())));
         assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
                 support.optionalInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").toEpochMilli())));
+        assertEquals(5 * 60 + 40, support.clockMinutes("05:40", 0));
+        assertEquals(5 * 60 + 40, support.clockMinutes("5:40", 0));
+        assertEquals(5 * 60 + 30, support.clockMinutes("-", 5 * 60 + 30));
         assertEquals(null, support.optionalInstant("1970-01-01T00:00:00.008Z"));
         assertTrue(QuerySupport.plausibleTrip(Instant.parse("2024-08-16T10:00:00Z")));
         assertFalse(QuerySupport.plausibleTrip(Instant.parse("1970-01-01T00:00:00.008Z")));
