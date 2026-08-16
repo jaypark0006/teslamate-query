@@ -15,17 +15,79 @@ import java.util.List;
 public final class PathSimplify {
 
     static final double DEFAULT_EPSILON_M = 12.0;
+    /** Safety cap for a whole map window after per-drive simplify. */
+    static final int MAX_WINDOW_POINTS = 16_000;
 
     private PathSimplify() {}
 
+    /**
+     * Time-range LOD. Grafana Geomap cannot send map zoom; the picker window
+     * is the zoom. Wide windows keep shape, not 1 Hz.
+     */
     public static double epsilonMeters(long windowSec) {
-        if (windowSec <= 2 * 86_400L) {
+        long days = Math.max(windowSec, 0) / 86_400L;
+        if (days <= 2) {
             return 8.0;
         }
-        if (windowSec <= 10 * 86_400L) {
-            return 12.0;
+        if (days <= 7) {
+            return 25.0;
         }
-        return 20.0;
+        if (days <= 30) {
+            return 80.0;
+        }
+        if (days <= 90) {
+            return 250.0;
+        }
+        return 500.0;
+    }
+
+    /** 0 = every GPS point. Wider windows sample in SQL before DP. */
+    public static int sampleBucketSeconds(long windowSec) {
+        long days = Math.max(windowSec, 0) / 86_400L;
+        if (days <= 2) {
+            return 0;
+        }
+        if (days <= 7) {
+            return 5;
+        }
+        if (days <= 30) {
+            return 15;
+        }
+        if (days <= 90) {
+            return 60;
+        }
+        return 180;
+    }
+
+    public static int maxPointsPerDrive(long windowSec, int driveCount) {
+        int budget = driveCount <= 0 ? MAX_WINDOW_POINTS : Math.max(6, MAX_WINDOW_POINTS / driveCount);
+        long days = Math.max(windowSec, 0) / 86_400L;
+        int soft = days <= 2 ? 400 : days <= 7 ? 80 : days <= 30 ? 40 : days <= 90 ? 16 : 8;
+        return Math.min(soft, budget);
+    }
+
+    /** Keep first/last and a uniform sample so a long polyline stays under {@code max}. */
+    public static List<PositionPathPoint> cap(List<PositionPathPoint> points, int max) {
+        if (points == null || points.isEmpty()) {
+            return List.of();
+        }
+        if (max <= 2 || points.size() <= max) {
+            return points.size() <= 2 ? List.copyOf(points) : points;
+        }
+        List<PositionPathPoint> out = new ArrayList<>(max);
+        int last = points.size() - 1;
+        out.add(points.getFirst());
+        for (int i = 1; i < max - 1; i++) {
+            int idx = (int) Math.round(i * (double) last / (max - 1));
+            PositionPathPoint p = points.get(idx);
+            if (!p.equals(out.getLast())) {
+                out.add(p);
+            }
+        }
+        if (!points.get(last).equals(out.getLast())) {
+            out.add(points.get(last));
+        }
+        return out;
     }
 
     public static List<PositionPathPoint> douglasPeucker(List<PositionPathPoint> points) {

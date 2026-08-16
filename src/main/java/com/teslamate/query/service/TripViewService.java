@@ -280,13 +280,12 @@ public class TripViewService {
         if (!support.unset(fromStr) && !support.unset(toStr)) {
             Instant from = parseFlexibleInstant(fromStr);
             Instant to = parseFlexibleInstant(toStr);
-            if (from == null || to == null) {
-                return null;
+            if (from != null && to != null && plausibleTripInstant(from) && plausibleTripInstant(to)) {
+                if (!to.isAfter(from)) {
+                    to = from.plusSeconds(60);
+                }
+                return new Instant[]{from, to};
             }
-            if (!to.isAfter(from)) {
-                to = from.plusSeconds(60);
-            }
-            return new Instant[]{from, to};
         }
         if (support.unset(dayStr) || support.unset(slotStr)) {
             return null;
@@ -325,8 +324,9 @@ public class TripViewService {
 
     public List<MapPointDto> points(long carId, String fromStr, String toStr, Integer minParkMin,
                                     String kinds, DisplayUnits units) {
-        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, true, null);
         Set<String> want = parseKinds(kinds);
+        boolean needPath = want.contains("drive");
+        Snapshot snap = build(carId, fromStr, toStr, minParkMin, units, needPath, null);
         return snap.points.stream().filter(p -> want.contains(p.kind())).toList();
     }
 
@@ -443,35 +443,36 @@ public class TripViewService {
         int totalPts = 0;
         int chevronIdx = 0;
         int chevronBudget = MAX_CHEVRONS;
-        if (includePath) {
-            for (int i = 0; i < spans.size(); i++) {
-                ActivitySpan span = spans.get(i);
-                switch (span.kind()) {
-                    case DRIVE -> {
-                        DriveEntity d = span.sourceId() == null ? null : driveById.get(span.sourceId());
-                        List<PositionPathPoint> path = d == null ? List.of() : byDrive.getOrDefault(d.id(), List.of());
-                        if (path.size() < 2 && d != null) {
-                            path = endpointsAsPath(d, posById);
-                        }
-                        TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
-                                posById, addrById, geoById, u, zone, false, path, dummyDay);
-                        totalPts += addDrivePoints(points, features, item, path, from, chevronIdx, chevronBudget);
-                        if (path.size() >= 2) {
-                            chevronIdx += Math.max(1, path.size() / 8);
-                            chevronBudget = Math.max(0, chevronBudget - Math.max(1, path.size() / 8));
-                        }
+        for (int i = 0; i < spans.size(); i++) {
+            ActivitySpan span = spans.get(i);
+            switch (span.kind()) {
+                case DRIVE -> {
+                    if (!includePath) {
+                        break;
                     }
-                    case CHARGE, PARK -> {
-                        boolean ongoing = i == spans.size() - 1 && span.kind() == TimelineKind.PARK
-                                && liveWindow(to, now) && openEnded(span.end(), now);
-                        TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
-                                posById, addrById, geoById, u, zone, ongoing, List.of(), dummyDay);
-                        addStopPoint(points, features, item, span.kind() == TimelineKind.CHARGE ? "charge" : "park");
+                    DriveEntity d = span.sourceId() == null ? null : driveById.get(span.sourceId());
+                    List<PositionPathPoint> path = d == null ? List.of() : byDrive.getOrDefault(d.id(), List.of());
+                    if (path.size() < 2 && d != null) {
+                        path = endpointsAsPath(d, posById);
+                    }
+                    TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
+                            posById, addrById, geoById, u, zone, false, path, dummyDay);
+                    totalPts += addDrivePoints(points, features, item, path, from, chevronIdx, chevronBudget);
+                    if (path.size() >= 2) {
+                        chevronIdx += Math.max(1, path.size() / 8);
+                        chevronBudget = Math.max(0, chevronBudget - Math.max(1, path.size() / 8));
                     }
                 }
+                case CHARGE, PARK -> {
+                    boolean ongoing = i == spans.size() - 1 && span.kind() == TimelineKind.PARK
+                            && liveWindow(to, now) && openEnded(span.end(), now);
+                    TimelineItemDto item = toItem(i + 1, span, driveById, chargeById, sampleByProcess,
+                            posById, addrById, geoById, u, zone, ongoing, List.of(), dummyDay);
+                    addStopPoint(points, features, item, span.kind() == TimelineKind.CHARGE ? "charge" : "park");
+                }
             }
-            points = MapStopMerge.mergeStops(points);
         }
+        points = MapStopMerge.mergeStops(points);
 
         int parkCount = (int) timeline.stream().filter(t -> t.kind() == TimelineKind.PARK).count();
         int chargeCount = (int) timeline.stream().filter(t -> t.kind() == TimelineKind.CHARGE).count();
@@ -509,21 +510,24 @@ public class TripViewService {
             return Map.of();
         }
         List<Long> driveIds = drives.stream().map(DriveEntity::id).toList();
-        Map<Long, List<PositionPathPoint>> raw = positionDao.findPathPointsByDriveIds(driveIds).stream()
+        long spanSec = Math.max(1, to.getEpochSecond() - from.getEpochSecond());
+        int bucket = PathSimplify.sampleBucketSeconds(spanSec);
+        int cap = PathSimplify.maxPointsPerDrive(spanSec, driveIds.size());
+        Map<Long, List<PositionPathPoint>> raw = positionDao.findPathPointsByDriveIds(driveIds, bucket).stream()
                 .filter(p -> p.driveId() != null)
                 .collect(Collectors.groupingBy(PositionPathPoint::driveId, LinkedHashMap::new, Collectors.toList()));
-        long spanSec = Math.max(1, to.getEpochSecond() - from.getEpochSecond());
         double eps = PathSimplify.epsilonMeters(spanSec);
         Map<Long, List<PositionPathPoint>> slim = new LinkedHashMap<>();
         int rawN = 0;
         int slimN = 0;
         for (Map.Entry<Long, List<PositionPathPoint>> e : raw.entrySet()) {
             rawN += e.getValue().size();
-            List<PositionPathPoint> keep = PathSimplify.douglasPeucker(e.getValue(), eps);
+            List<PositionPathPoint> keep = PathSimplify.cap(PathSimplify.douglasPeucker(e.getValue(), eps), cap);
             slimN += keep.size();
             slim.put(e.getKey(), keep);
         }
-        log.info("path simplify epsilon={}m {} -> {} pts", eps, rawN, slimN);
+        log.info("path simplify window={}d bucket={}s epsilon={}m cap/drive={} {} -> {} pts",
+                spanSec / 86_400L, bucket, eps, cap, rawN, slimN);
         return slim;
     }
 
@@ -792,6 +796,12 @@ public class TripViewService {
      * Grafana may send ISO-8601, unix seconds/millis, or an offset whose {@code +}
      * was decoded as a space in the query string.
      */
+    static final Instant MIN_PLAUSIBLE_TRIP = Instant.parse("2012-01-01T00:00:00Z");
+
+    static boolean plausibleTripInstant(Instant t) {
+        return t != null && !t.isBefore(MIN_PLAUSIBLE_TRIP);
+    }
+
     static Instant coerceInstant(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;

@@ -51,10 +51,26 @@ class PathSimplifyTest {
     }
 
     @Test
-    void widerWindowUsesLargerEpsilon() {
+    void widerWindowUsesCoarserLod() {
         assertEquals(8.0, PathSimplify.epsilonMeters(86_400));
-        assertEquals(12.0, PathSimplify.epsilonMeters(7 * 86_400));
-        assertEquals(20.0, PathSimplify.epsilonMeters(30 * 86_400));
+        assertEquals(25.0, PathSimplify.epsilonMeters(7 * 86_400));
+        assertEquals(80.0, PathSimplify.epsilonMeters(30 * 86_400));
+        assertEquals(250.0, PathSimplify.epsilonMeters(60 * 86_400));
+        assertEquals(0, PathSimplify.sampleBucketSeconds(86_400));
+        assertEquals(60, PathSimplify.sampleBucketSeconds(60 * 86_400));
+        assertEquals(16, PathSimplify.maxPointsPerDrive(60 * 86_400, 641));
+    }
+
+    @Test
+    void capKeepsEndsAndShrinks() {
+        List<PositionPathPoint> line = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            line.add(pt(106.0 + i * 0.001, 29.5));
+        }
+        List<PositionPathPoint> out = PathSimplify.cap(line, 10);
+        assertEquals(10, out.size());
+        assertEquals(line.getFirst().longitude(), out.getFirst().longitude());
+        assertEquals(line.getLast().longitude(), out.getLast().longitude());
     }
 
     private static PositionPathPoint pt(double lon, double lat) {

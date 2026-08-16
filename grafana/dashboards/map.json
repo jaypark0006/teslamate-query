@@ -1007,7 +1007,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.startMs}&var-focus_to=${__data.fields.endMs}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   }
                 ]
               },
@@ -1102,7 +1102,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.startMs}&var-focus_to=${__data.fields.endMs}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   }
                 ]
               }
@@ -1131,7 +1131,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.startMs}&var-focus_to=${__data.fields.endMs}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   },
                   {
                     "title": "Open drive",
@@ -1164,7 +1164,7 @@
                 "value": [
                   {
                     "title": "Highlight this ${__data.fields.kind}",
-                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:seconds}&var-focus_to=${__data.fields.timeEnd:date:seconds}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.startMs}&var-focus_to=${__data.fields.endMs}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-"
                   },
                   {
                     "title": "Open drive",
@@ -1292,6 +1292,16 @@
               "type": "number"
             },
             {
+              "selector": "startMs",
+              "text": "startMs",
+              "type": "number"
+            },
+            {
+              "selector": "endMs",
+              "text": "endMs",
+              "type": "number"
+            },
+            {
               "selector": "highlight",
               "text": "highlight",
               "type": "number"
@@ -1325,7 +1335,9 @@
               "clockEnd": true,
               "seq": true,
               "durationMin": true,
-              "day": true
+              "day": true,
+              "startMs": true,
+              "endMs": true
             },
             "indexByName": {
               "time": 0,

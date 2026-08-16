@@ -40,6 +40,8 @@ class TripViewServiceTest {
                 TripViewService.coerceInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").getEpochSecond())));
         assertEquals(Instant.parse("2026-08-16T04:12:00Z"),
                 TripViewService.coerceInstant(String.valueOf(Instant.parse("2026-08-16T04:12:00Z").toEpochMilli())));
+        assertFalse(TripViewService.plausibleTripInstant(Instant.parse("1970-01-01T00:00:00.008Z")));
+        assertTrue(TripViewService.plausibleTripInstant(Instant.parse("2024-08-16T10:00:00Z")));
     }
 
     @Test

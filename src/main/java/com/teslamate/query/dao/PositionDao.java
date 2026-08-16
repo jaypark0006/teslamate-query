@@ -117,14 +117,39 @@ public class PositionDao {
     }
 
     public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds) {
+        return findPathPointsByDriveIds(driveIds, 0);
+    }
+
+    /**
+     * Path vertices for many drives. {@code bucketSeconds <= 1} keeps every point;
+     * otherwise one sample per time bucket, plus each drive's first and last point.
+     */
+    public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds, int bucketSeconds) {
         if (IdOrder.isEmpty(driveIds)) {
             return List.of();
         }
+        int bucket = Math.max(bucketSeconds, 0);
+        if (bucket <= 1) {
+            return jdbi.withHandle(h -> h.createQuery(
+                            "SELECT drive_id, date, longitude, latitude FROM positions "
+                                    + "WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL "
+                                    + "ORDER BY drive_id, date")
+                    .bindList("driveIds", driveIds)
+                    .map(ConstructorMapper.of(PositionPathPoint.class))
+                    .list());
+        }
         return jdbi.withHandle(h -> h.createQuery(
-                        "SELECT drive_id, date, longitude, latitude FROM positions "
-                                + "WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL "
-                                + "ORDER BY drive_id, date")
+                        "SELECT drive_id, date, longitude, latitude FROM ("
+                                + " SELECT drive_id, date, longitude, latitude,"
+                                + " ROW_NUMBER() OVER (PARTITION BY drive_id, FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec) ORDER BY date) AS rn,"
+                                + " ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date) AS first_rn,"
+                                + " ROW_NUMBER() OVER (PARTITION BY drive_id ORDER BY date DESC) AS last_rn"
+                                + " FROM positions"
+                                + " WHERE drive_id IN (<driveIds>) AND longitude IS NOT NULL AND latitude IS NOT NULL"
+                                + ") t WHERE rn = 1 OR first_rn = 1 OR last_rn = 1"
+                                + " ORDER BY drive_id, date")
                 .bindList("driveIds", driveIds)
+                .bind("bucketSec", bucket)
                 .map(ConstructorMapper.of(PositionPathPoint.class))
                 .list());
     }
