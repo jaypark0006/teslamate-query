@@ -38,11 +38,11 @@ compose 内 Grafana 访问 API：`http://teslamate-query:8080`。公网暴露时
 
 | Job | 做什么 |
 |-----|--------|
-| **test** | JDK 21 + `./mvnw verify`（单元 / Web 切片测试，不连真实 DB） |
+| **test** | JDK 25 + `./mvnw verify`（单元 / Web 切片测试，不连真实 DB） |
 | **docker** | 构建镜像（不 push） |
 | **Release** | 打 `v*` tag 或在 Actions 里 Run **Release**，上传 jar |
 
-源码按 **Java 21** 编译（和 CI / Docker 一致）。本机若装了 25 也能编，但 CI 用 21。
+源码、CI、Docker 一律 **Java 25**。
 
 打正式包：
 
@@ -87,4 +87,4 @@ docker build -t teslamate-query:local .
 
 ## 技术
 
-Java 21 · Spring Boot **4.1** · JDBI 3 · PostgreSQL
+Java 25 · Spring Boot **4.1** · JDBI 3 · PostgreSQL
