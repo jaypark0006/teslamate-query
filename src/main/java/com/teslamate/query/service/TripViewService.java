@@ -119,23 +119,34 @@ public class TripViewService {
 
     public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
                                           DisplayUnits units, ZoneId zone) {
-        return timeline(carId, fromStr, toStr, minParkMin, units, zone, null, null, null, null, null, 4);
+        return timeline(carId, fromStr, toStr, minParkMin, units, zone, null, null, null, null, null, null, 4);
     }
 
     public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
                                           DisplayUnits units, ZoneId zone,
                                           String hlDay, String hlSlot, String hlKind, String hlFrom, String hlTo,
                                           int dayStartHour) {
+        return timeline(carId, fromStr, toStr, minParkMin, units, zone,
+                hlDay, hlSlot, hlKind, hlFrom, hlTo, null, dayStartHour);
+    }
+
+    public List<TimelineItemDto> timeline(long carId, String fromStr, String toStr, Integer minParkMin,
+                                          DisplayUnits units, ZoneId zone,
+                                          String hlDay, String hlSlot, String hlKind, String hlFrom, String hlTo,
+                                          String hlId, int dayStartHour) {
         List<TimelineItemDto> items = build(carId, fromStr, toStr, minParkMin, units, false, zone).timeline;
-        Instant[] win = resolveFocusWindow(items, hlDay, hlSlot, hlKind, hlFrom, hlTo, zone, dayStartHour);
-        if (win == null) {
+        Instant[] win = resolveFocusWindow(items, hlDay, hlSlot, hlKind, hlFrom, hlTo, hlId, zone, dayStartHour);
+        Long focusId = parseFlexibleLong(hlId);
+        int want = focusKindCode(hlKind);
+        if (win == null && focusId == null) {
             return items;
         }
-        int want = focusKindCode(hlKind);
         List<TimelineItemDto> out = new ArrayList<>(items.size());
         for (TimelineItemDto item : items) {
-            boolean on = overlapsWindow(item, win[0], win[1])
-                    && (want == 0 || kindCode(item.kind()) == want);
+            boolean kindOk = want == 0 || kindCode(item.kind()) == want;
+            boolean on = kindOk && (
+                    (focusId != null && focusId.equals(item.id()))
+                            || (win != null && overlapsWindow(item, win[0], win[1])));
             out.add(on ? item.withHighlight(1) : item);
         }
         return out;
@@ -149,17 +160,18 @@ public class TripViewService {
     public List<DayGridCellDto> grid(long carId, String fromStr, String toStr, Integer minParkMin,
                                      DisplayUnits units, ZoneId zone, int dayStartHour) {
         return grid(carId, fromStr, toStr, minParkMin, units, zone, dayStartHour,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     public List<DayGridCellDto> grid(long carId, String fromStr, String toStr, Integer minParkMin,
                                      DisplayUnits units, ZoneId zone, int dayStartHour,
-                                     String hlDay, String hlSlot, String hlKind, String hlFrom, String hlTo) {
+                                     String hlDay, String hlSlot, String hlKind, String hlFrom, String hlTo,
+                                     String hlId) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         Instant[] range = support.requireRange(fromStr, toStr);
         List<TimelineItemDto> items = timeline(carId, fromStr, toStr, minParkMin, units, z);
         List<DayGridCellDto> cells = DayGrid.paintFromTimeline(items, z, dayStartHour, range[0], range[1]);
-        Instant[] win = resolveFocusWindow(items, hlDay, hlSlot, hlKind, hlFrom, hlTo, z, dayStartHour);
+        Instant[] win = resolveFocusWindow(items, hlDay, hlSlot, hlKind, hlFrom, hlTo, hlId, z, dayStartHour);
         return DayGrid.applyHighlight(cells, win == null ? null : win[0],
                 win == null ? null : win[1], focusKindCode(hlKind), dayStartHour, z);
     }
@@ -190,12 +202,35 @@ public class TripViewService {
     }
 
     private Instant[] resolveFocusWindow(List<TimelineItemDto> items, String hlDay, String hlSlot,
-                                         String hlKind, String hlFrom, String hlTo, ZoneId zone, int dayStartHour) {
+                                         String hlKind, String hlFrom, String hlTo, String hlId,
+                                         ZoneId zone, int dayStartHour) {
+        Long focusId = parseFlexibleLong(hlId);
+        int want = focusKindCode(hlKind);
+        if (focusId != null && items != null) {
+            List<TimelineItemDto> byId = items.stream()
+                    .filter(i -> focusId.equals(i.id()))
+                    .filter(i -> want == 0 || kindCode(i.kind()) == want)
+                    .toList();
+            if (!byId.isEmpty()) {
+                return expandFocus(byId, new Instant[]{byId.getFirst().start(), byId.getFirst().end()}, want);
+            }
+        }
         Instant[] raw = parseFocusBounds(hlDay, hlSlot, hlFrom, hlTo, zone, dayStartHour);
         if (raw == null) {
             return null;
         }
-        return expandFocus(items, raw, focusKindCode(hlKind));
+        return expandFocus(items, raw, want);
+    }
+
+    private Long parseFlexibleLong(String raw) {
+        if (support.unset(raw)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException e) {
+            return DayGrid.parseSourceId(raw);
+        }
     }
 
     private Instant[] parseFocusBounds(String dayStr, String slotStr, String fromStr, String toStr,

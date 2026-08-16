@@ -47,11 +47,12 @@ public class TripViewController {
             @RequestParam(required = false) String highlightKind,
             @RequestParam(required = false) String highlightFrom,
             @RequestParam(required = false) String highlightTo,
+            @RequestParam(required = false) String highlightId,
             @RequestParam(required = false) String dayStartHour
     ) {
         return tripViewService.timeline(carId, from, to, support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone),
-                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo,
+                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo, highlightId,
                 support.dayStartHour(dayStartHour));
     }
 
@@ -85,12 +86,13 @@ public class TripViewController {
             @RequestParam(required = false) String highlightSlot,
             @RequestParam(required = false) String highlightKind,
             @RequestParam(required = false) String highlightFrom,
-            @RequestParam(required = false) String highlightTo
+            @RequestParam(required = false) String highlightTo,
+            @RequestParam(required = false) String highlightId
     ) {
         return tripViewService.grid(carId, from, to, support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone),
                 support.dayStartHour(dayStartHour),
-                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo);
+                highlightDay, highlightSlot, highlightKind, highlightFrom, highlightTo, highlightId);
     }
 
     @GetMapping("/map")
