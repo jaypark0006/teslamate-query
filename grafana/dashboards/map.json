@@ -823,7 +823,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/map/focus?day=${focus_day}&slot=${focus_slot}&kind=${focus_kind}&timezone=${__timezone}&dayStartHour=4",
+          "url": "/api/v1/cars/${car_id}/map/focus?day=${focus_day}&slot=${focus_slot}&kind=${focus_kind}&from=${focus_from}&to=${focus_to}&timezone=${__timezone}&dayStartHour=4",
           "url_options": {
             "data": "",
             "method": "GET"
@@ -938,6 +938,15 @@
                 "value": "Start"
               },
               {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Highlight this ${__data.fields.kind}",
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_day=&var-focus_slot="
+                  }
+                ]
+              },
+              {
                 "id": "custom.width",
                 "value": 108
               },
@@ -1022,6 +1031,15 @@
                     "type": "value"
                   }
                 ]
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Highlight this ${__data.fields.kind}",
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_day=&var-focus_slot="
+                  }
+                ]
               }
             ]
           },
@@ -1046,6 +1064,10 @@
               {
                 "id": "links",
                 "value": [
+                  {
+                    "title": "Highlight this ${__data.fields.kind}",
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_day=&var-focus_slot="
+                  },
                   {
                     "title": "Open drive",
                     "url": "/d/teslamate-query-drive/drive?var-drive_id=${__data.fields.id}&var-car_id=${car_id}"
@@ -1075,6 +1097,10 @@
               {
                 "id": "links",
                 "value": [
+                  {
+                    "title": "Highlight this ${__data.fields.kind}",
+                    "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.time:date:iso}&var-focus_to=${__data.fields.timeEnd:date:iso}&var-focus_kind=${__data.fields.kind}&var-focus_day=&var-focus_slot="
+                  },
                   {
                     "title": "Open drive",
                     "url": "/d/teslamate-query-drive/drive?var-drive_id=${__data.fields.id}&var-car_id=${car_id}"
@@ -1259,7 +1285,7 @@
             {
               "targetBlank": false,
               "title": "Highlight this ${__value.text}",
-              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.numeric}"
+              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.numeric}&var-focus_from=&var-focus_to="
             }
           ],
           "custom": {
@@ -1605,6 +1631,32 @@
         "hide": 2,
         "label": "Focus kind",
         "name": "focus_kind",
+        "options": [],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 2,
+        "label": "Focus from",
+        "name": "focus_from",
+        "options": [],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 2,
+        "label": "Focus to",
+        "name": "focus_to",
         "options": [],
         "query": "",
         "skipUrlSync": false,

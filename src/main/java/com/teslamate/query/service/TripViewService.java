@@ -136,50 +136,59 @@ public class TripViewService {
     }
 
     /**
-     * Points for the trip that occupies {@code slot} on {@code day}.
-     * Empty day/slot (Grafana unset vars) returns no rows.
+     * Points for a focused trip. Timeline passes {@code from}/{@code to};
+     * the day-grid passes {@code day}+{@code slot}. Unset vars return no rows.
      */
     public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
+                                   String fromStr, String toStr,
                                    Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
-        if (support.unset(dayStr) || support.unset(slotStr)) {
-            return List.of();
-        }
-        Integer clockH = DayGrid.parseClockHour(slotStr);
-        if (clockH == null) {
-            return List.of();
-        }
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        Instant dayInstant;
-        try {
-            dayInstant = support.parseInstant(dayStr, "day");
-        } catch (RuntimeException e) {
-            try {
-                dayInstant = Instant.ofEpochMilli(Long.parseLong(dayStr.trim()));
-            } catch (RuntimeException e2) {
+        Instant from;
+        Instant to;
+        if (!support.unset(fromStr) && !support.unset(toStr)) {
+            from = parseFlexibleInstant(fromStr);
+            to = parseFlexibleInstant(toStr);
+            if (from == null || to == null) {
                 return List.of();
             }
+            if (!to.isAfter(from)) {
+                to = from.plusSeconds(60);
+            }
+        } else if (!support.unset(dayStr) && !support.unset(slotStr)) {
+            Integer clockH = DayGrid.parseClockHour(slotStr);
+            if (clockH == null) {
+                return List.of();
+            }
+            Instant dayInstant = parseFlexibleInstant(dayStr);
+            if (dayInstant == null) {
+                return List.of();
+            }
+            LocalDate day = dayInstant.atZone(z).toLocalDate();
+            int startH = Math.floorMod(dayStartHour, 24);
+            ZonedDateTime slotStart = day.atTime(clockH, 0).atZone(z);
+            if (clockH < startH) {
+                slotStart = slotStart.plusDays(1);
+            }
+            from = slotStart.toInstant();
+            to = slotStart.plusHours(1).toInstant();
+        } else {
+            return List.of();
         }
-        LocalDate day = dayInstant.atZone(z).toLocalDate();
-        int startH = Math.floorMod(dayStartHour, 24);
-        ZonedDateTime slotStart = day.atTime(clockH, 0).atZone(z);
-        if (clockH < startH) {
-            slotStart = slotStart.plusDays(1);
-        }
-        Instant from = slotStart.toInstant();
-        Instant to = slotStart.plusHours(1).toInstant();
+        Instant windowFrom = from;
+        Instant windowTo = to;
         int want = focusKindCode(kindStr);
-        List<TimelineItemDto> hit = timeline(carId, from.minusSeconds(90).toString(), to.plusSeconds(90).toString(),
-                minParkMin, units, z).stream()
-                .filter(i -> overlapsWindow(i, from, to))
+        List<TimelineItemDto> hit = timeline(carId, windowFrom.minusSeconds(90).toString(),
+                windowTo.plusSeconds(90).toString(), minParkMin, units, z).stream()
+                .filter(i -> overlapsWindow(i, windowFrom, windowTo))
                 .filter(i -> want == 0 || kindCode(i.kind()) == want)
                 .toList();
         if (hit.isEmpty()) {
             return List.of();
         }
         Instant expFrom = hit.stream().map(TimelineItemDto::start).filter(java.util.Objects::nonNull)
-                .min(Instant::compareTo).orElse(from);
+                .min(Instant::compareTo).orElse(windowFrom);
         Instant expTo = hit.stream().map(TimelineItemDto::end).filter(java.util.Objects::nonNull)
-                .max(Instant::compareTo).orElse(to);
+                .max(Instant::compareTo).orElse(windowTo);
         String kinds = switch (want) {
             case DayGridCellDto.DRIVE -> "drive";
             case DayGridCellDto.CHARGE -> "charge";
@@ -648,6 +657,18 @@ public class TripViewService {
 
     private CarEntity requireCar(long carId) {
         return carDao.findById(carId).orElseThrow(() -> new NotFoundException("Car not found: " + carId));
+    }
+
+    private Instant parseFlexibleInstant(String raw) {
+        try {
+            return support.parseInstant(raw, "time");
+        } catch (RuntimeException e) {
+            try {
+                return Instant.ofEpochMilli(Long.parseLong(raw.trim()));
+            } catch (RuntimeException e2) {
+                return null;
+            }
+        }
     }
 
     static int focusKindCode(String raw) {
