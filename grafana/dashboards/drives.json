@@ -1,56 +1,140 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Drive list for the picker window. Click an id to open the Drive dashboard.",
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "id": null,
-  "links": [],
+  "graphTooltip": 0,
+  "links": [
+    { "asDropdown": false, "icon": "dashboard", "includeVars": true, "keepTime": false, "tags": [], "targetBlank": false, "title": "Overview", "type": "link", "url": "/d/7c4e1b92-6a0f-4d3e-9c18-2b5e8a71d046/overview" },
+    { "asDropdown": false, "icon": "compass", "includeVars": true, "keepTime": true, "tags": [], "targetBlank": false, "title": "Map", "type": "link", "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map" },
+    { "asDropdown": false, "icon": "bolt", "includeVars": true, "keepTime": true, "tags": [], "targetBlank": false, "title": "Trip", "type": "link", "url": "/d/teslamate-query-trip/trip" },
+    { "asDropdown": false, "icon": "bolt", "includeVars": true, "keepTime": false, "tags": [], "targetBlank": false, "title": "Drive", "type": "link", "url": "/d/teslamate-query-drive/drive" }
+  ],
+  "liveNow": false,
   "panels": [
     {
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "teslamate-query" },
-      "fieldConfig": {
-        "defaults": {
-          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
       "id": 1,
       "options": {
+        "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
+        "content": "Timezone **Asia/Shanghai (UTC+8)**. Window filter is `start_date` in range. Click **#** for the Drive page, or highlight the same id on Map.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "13.0.1",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "cellOptions": { "type": "auto" }, "inspect": false, "filterable": true },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "id" },
+            "properties": [
+              { "id": "displayName", "value": "#" },
+              { "id": "decimals", "value": 0 },
+              { "id": "custom.width", "value": 72 },
+              {
+                "id": "links",
+                "value": [
+                  { "title": "Open drive", "url": "/d/teslamate-query-drive/drive?var-drive_id=${__data.fields.id}&var-car_id=${car_id}&var-ds=${ds}" },
+                  { "title": "Highlight on map", "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_id=${__data.fields.id}&var-focus_kind=Drive&var-focus_from=-&var-focus_to=-&var-focus_day=-&var-focus_slot=-&from=${__from}&to=${__to}" }
+                ]
+              }
+            ]
+          },
+          { "matcher": { "id": "byName", "options": "startDate" }, "properties": [{ "id": "displayName", "value": "Start" }, { "id": "unit", "value": "time:YYYY-MM-DD HH:mm" }] },
+          { "matcher": { "id": "byName", "options": "endDate" }, "properties": [{ "id": "displayName", "value": "End" }, { "id": "unit", "value": "time:HH:mm" }] },
+          { "matcher": { "id": "byName", "options": "distanceKm" }, "properties": [{ "id": "displayName", "value": "km" }, { "id": "unit", "value": "lengthkm" }, { "id": "decimals", "value": 1 }] },
+          { "matcher": { "id": "byName", "options": "durationMin" }, "properties": [{ "id": "displayName", "value": "min" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "avgSpeedKmh" }, "properties": [{ "id": "displayName", "value": "avg" }, { "id": "unit", "value": "velocitykmh" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "speedMax" }, "properties": [{ "id": "displayName", "value": "vmax" }, { "id": "unit", "value": "velocitykmh" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "powerMax" }, "properties": [{ "id": "displayName", "value": "Pmax" }, { "id": "unit", "value": "kwatt" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "outsideTempAvgC" }, "properties": [{ "id": "displayName", "value": "°C" }, { "id": "unit", "value": "celsius" }, { "id": "decimals", "value": 1 }] },
+          { "matcher": { "id": "byName", "options": "startIdealRangeKm" }, "properties": [{ "id": "displayName", "value": "range in" }, { "id": "unit", "value": "lengthkm" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "endIdealRangeKm" }, "properties": [{ "id": "displayName", "value": "range out" }, { "id": "unit", "value": "lengthkm" }, { "id": "decimals", "value": 0 }] }
+        ]
+      },
+      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 2 },
+      "id": 2,
+      "options": {
         "cellHeight": "sm",
-        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "footer": { "countRows": true, "fields": "distanceKm", "reducer": ["sum"], "show": true },
         "showHeader": true
       },
+      "pluginVersion": "13.0.1",
       "targets": [
         {
-          "columns": [],
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "teslamate-query" },
+          "columns": [
+            { "selector": "id", "text": "id", "type": "number" },
+            { "selector": "startDate", "text": "startDate", "type": "timestamp" },
+            { "selector": "endDate", "text": "endDate", "type": "timestamp" },
+            { "selector": "distanceKm", "text": "distanceKm", "type": "number" },
+            { "selector": "durationMin", "text": "durationMin", "type": "number" },
+            { "selector": "avgSpeedKmh", "text": "avgSpeedKmh", "type": "number" },
+            { "selector": "speedMax", "text": "speedMax", "type": "number" },
+            { "selector": "powerMax", "text": "powerMax", "type": "number" },
+            { "selector": "outsideTempAvgC", "text": "outsideTempAvgC", "type": "number" },
+            { "selector": "startIdealRangeKm", "text": "startIdealRangeKm", "type": "number" },
+            { "selector": "endIdealRangeKm", "text": "endIdealRangeKm", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
           "filters": [],
           "format": "table",
-          "global_query_id": "",
+          "parser": "backend",
           "refId": "A",
           "root_selector": "data",
           "source": "url",
           "type": "json",
-          "url": "http://teslamate-query:8080/api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
-          "url_options": {
-            "data": "",
-            "method": "GET"
-          }
+          "url": "/api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+          "url_options": { "data": "", "method": "GET" }
         }
       ],
       "title": "Drives",
       "type": "table"
     }
   ],
+  "refresh": "",
   "schemaVersion": 39,
-  "tags": ["teslamate-query"],
+  "tags": ["teslamate-query", "drives"],
   "templating": {
     "list": [
       {
         "current": {},
-        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "teslamate-query" },
-        "definition": "http://teslamate-query:8080/api/v1/cars",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "ds",
+        "options": [],
+        "query": "yesoreyeram-infinity-datasource",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": "Car",
@@ -58,21 +142,29 @@
         "name": "car_id",
         "options": [],
         "query": {
-          "columns": [
-            { "selector": "name", "text": "Name", "type": "string" },
-            { "selector": "id", "text": "Id", "type": "string" }
-          ],
-          "filters": [],
-          "format": "table",
-          "refId": "VariableQuery",
-          "root_selector": "",
-          "source": "url",
-          "type": "json",
-          "url": "http://teslamate-query:8080/api/v1/cars",
-          "url_options": { "method": "GET" }
+          "infinityQuery": {
+            "columns": [
+              { "selector": "id", "text": "Id", "type": "string" },
+              { "selector": "vin", "text": "VIN", "type": "string" },
+              { "selector": "model", "text": "Model", "type": "string" }
+            ],
+            "filters": [],
+            "format": "table",
+            "parser": "backend",
+            "refId": "",
+            "root_selector": "",
+            "source": "url",
+            "type": "json",
+            "url": "/api/v1/cars",
+            "url_options": { "data": "", "method": "GET" }
+          },
+          "meta": { "textField": "vin", "valueField": "id" },
+          "queryType": "infinity",
+          "refId": "variable"
         },
         "refresh": 1,
         "regex": "",
+        "regexApplyTo": "value",
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
@@ -81,9 +173,8 @@
   },
   "time": { "from": "now-30d", "to": "now" },
   "timepicker": {},
-  "timezone": "browser",
-  "title": "Drives (REST)",
-  "uid": "tmq-drives",
-  "version": 1,
+  "timezone": "Asia/Shanghai",
+  "title": "Drives",
+  "uid": "teslamate-query-drives",
   "weekStart": ""
 }

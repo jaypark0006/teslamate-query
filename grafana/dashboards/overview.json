@@ -31,6 +31,28 @@
       "tooltip": "Drive / charge / park path + timeline",
       "type": "link",
       "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Trip",
+      "type": "link",
+      "url": "/d/teslamate-query-trip/trip"
+    },
+    {
+      "asDropdown": false,
+      "icon": "list-ul",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Drives",
+      "type": "link",
+      "url": "/d/teslamate-query-drives/drives"
     }
   ],
   "liveNow": false,

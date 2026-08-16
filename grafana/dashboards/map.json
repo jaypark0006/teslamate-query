@@ -30,6 +30,39 @@
       "title": "Overview",
       "type": "link",
       "url": "/d/7c4e1b92-6a0f-4d3e-9c18-2b5e8a71d046/overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Trip",
+      "type": "link",
+      "url": "/d/teslamate-query-trip/trip"
+    },
+    {
+      "asDropdown": false,
+      "icon": "list-ul",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Drives",
+      "type": "link",
+      "url": "/d/teslamate-query-drives/drives"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Drive",
+      "type": "link",
+      "url": "/d/teslamate-query-drive/drive"
     }
   ],
   "liveNow": false,

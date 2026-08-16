@@ -1,0 +1,399 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Time-range trip log: daily hours, DRIVE / CHARGE / PARK timeline, drive list and charge list. Use the picker as the outing window. Map is the spatial twin.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [
+    { "asDropdown": false, "icon": "dashboard", "includeVars": true, "keepTime": false, "tags": [], "targetBlank": false, "title": "Overview", "type": "link", "url": "/d/7c4e1b92-6a0f-4d3e-9c18-2b5e8a71d046/overview" },
+    { "asDropdown": false, "icon": "compass", "includeVars": true, "keepTime": true, "tags": [], "targetBlank": false, "title": "Map", "type": "link", "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map" },
+    { "asDropdown": false, "icon": "list-ul", "includeVars": true, "keepTime": true, "tags": [], "targetBlank": false, "title": "Drives", "type": "link", "url": "/d/teslamate-query-drives/drives" },
+    { "asDropdown": false, "icon": "bolt", "includeVars": true, "keepTime": false, "tags": [], "targetBlank": false, "title": "Drive", "type": "link", "url": "/d/teslamate-query-drive/drive" }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
+        "content": "Timezone **Asia/Shanghai (UTC+8)**. This page is the **outing log** for the picker window. Open **Map** for the path. Click a drive id for the Drive dashboard.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "13.0.1",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 1,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": 0 }] },
+          "unit": "h"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "driveHours" }, "properties": [{ "id": "displayName", "value": "Drive" }, { "id": "color", "value": { "fixedColor": "#3b82f6", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "chargeHours" }, "properties": [{ "id": "displayName", "value": "Charge" }, { "id": "color", "value": { "fixedColor": "#22c55e", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "parkHours" }, "properties": [{ "id": "displayName", "value": "Park" }, { "id": "color", "value": { "fixedColor": "#94a3b8", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 0, "y": 2 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "day", "text": "day", "type": "string" },
+            { "selector": "driveHours", "text": "driveHours", "type": "number" },
+            { "selector": "chargeHours", "text": "chargeHours", "type": "number" },
+            { "selector": "parkHours", "text": "parkHours", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/cars/${car_id}/timeline/daily?from=${__from:date:iso}&to=${__to:date:iso}&timezone=Asia/Shanghai&dayStartHour=4",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Hours in window",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 1,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": 0 }] }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "distanceKm" }, "properties": [{ "id": "displayName", "value": "Distance" }, { "id": "unit", "value": "lengthkm" }, { "id": "color", "value": { "fixedColor": "#3b82f6", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "durationMin" }, "properties": [{ "id": "displayName", "value": "Drive minutes" }, { "id": "unit", "value": "m" }, { "id": "decimals", "value": 0 }] }
+        ]
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 2 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "distanceKm", "text": "distanceKm", "type": "number" },
+            { "selector": "durationMin", "text": "durationMin", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Drives in window",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "cellOptions": { "type": "auto" }, "inspect": false, "filterable": false, "minWidth": 36 },
+          "mappings": []
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "seq" }, "properties": [{ "id": "displayName", "value": "#" }, { "id": "custom.width", "value": 36 }] },
+          { "matcher": { "id": "byName", "options": "time" }, "properties": [{ "id": "displayName", "value": "Start" }, { "id": "unit", "value": "time:MM-DD HH:mm" }, { "id": "custom.width", "value": 108 }] },
+          { "matcher": { "id": "byName", "options": "timeEnd" }, "properties": [{ "id": "displayName", "value": "End" }, { "id": "unit", "value": "time:HH:mm" }, { "id": "custom.width", "value": 56 }] },
+          {
+            "matcher": { "id": "byName", "options": "kind" },
+            "properties": [
+              { "id": "displayName", "value": "Kind" },
+              { "id": "custom.width", "value": 64 },
+              { "id": "custom.cellOptions", "value": { "mode": "basic", "type": "color-background" } },
+              {
+                "id": "mappings",
+                "value": [
+                  { "options": { "DRIVE": { "color": "#3b82f6", "index": 0, "text": "Drive" } }, "type": "value" },
+                  { "options": { "CHARGE": { "color": "#22c55e", "index": 1, "text": "Charge" } }, "type": "value" },
+                  { "options": { "PARK": { "color": "#94a3b8", "index": 2, "text": "Park" } }, "type": "value" }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "id" },
+            "properties": [
+              { "id": "displayName", "value": "#" },
+              { "id": "decimals", "value": 0 },
+              { "id": "custom.width", "value": 56 },
+              {
+                "id": "links",
+                "value": [
+                  { "title": "Open drive", "url": "/d/teslamate-query-drive/drive?var-drive_id=${__data.fields.id}&var-car_id=${car_id}&var-ds=${ds}" },
+                  { "title": "Highlight on map", "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_from=${__data.fields.startMs}&var-focus_to=${__data.fields.endMs}&var-focus_kind=${__data.fields.kind}&var-focus_id=${__data.fields.id}&var-focus_day=-&var-focus_slot=-&from=${__from}&to=${__to}" }
+                ]
+              }
+            ]
+          },
+          { "matcher": { "id": "byName", "options": "title" }, "properties": [{ "id": "displayName", "value": "What" }] },
+          { "matcher": { "id": "byName", "options": "detail" }, "properties": [{ "id": "displayName", "value": "Detail" }] },
+          { "matcher": { "id": "byName", "options": "startMs" }, "properties": [{ "id": "custom.hidden", "value": true }] },
+          { "matcher": { "id": "byName", "options": "endMs" }, "properties": [{ "id": "custom.hidden", "value": true }] }
+        ]
+      },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 7 },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": false, "displayName": "Start" }]
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "seq", "text": "seq", "type": "number" },
+            { "selector": "start", "text": "time", "type": "timestamp" },
+            { "selector": "end", "text": "timeEnd", "type": "timestamp" },
+            { "selector": "kind", "text": "kind", "type": "string" },
+            { "selector": "id", "text": "id", "type": "number" },
+            { "selector": "title", "text": "title", "type": "string" },
+            { "selector": "detail", "text": "detail", "type": "string" },
+            { "selector": "startMs", "text": "startMs", "type": "number" },
+            { "selector": "endMs", "text": "endMs", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/cars/${car_id}/timeline?from=${__from:date:iso}&to=${__to:date:iso}&timezone=Asia/Shanghai&dayStartHour=4",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Timeline",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "cellOptions": { "type": "auto" }, "inspect": false, "filterable": true },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "id" },
+            "properties": [
+              { "id": "displayName", "value": "#" },
+              { "id": "decimals", "value": 0 },
+              { "id": "links", "value": [{ "title": "Open drive", "url": "/d/teslamate-query-drive/drive?var-drive_id=${__data.fields.id}&var-car_id=${car_id}&var-ds=${ds}" }] }
+            ]
+          },
+          { "matcher": { "id": "byName", "options": "startDate" }, "properties": [{ "id": "displayName", "value": "Start" }, { "id": "unit", "value": "time:MM-DD HH:mm" }] },
+          { "matcher": { "id": "byName", "options": "endDate" }, "properties": [{ "id": "displayName", "value": "End" }, { "id": "unit", "value": "time:HH:mm" }] },
+          { "matcher": { "id": "byName", "options": "distanceKm" }, "properties": [{ "id": "displayName", "value": "km" }, { "id": "unit", "value": "lengthkm" }, { "id": "decimals", "value": 1 }] },
+          { "matcher": { "id": "byName", "options": "durationMin" }, "properties": [{ "id": "displayName", "value": "min" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "avgSpeedKmh" }, "properties": [{ "id": "displayName", "value": "avg" }, { "id": "unit", "value": "velocitykmh" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "speedMax" }, "properties": [{ "id": "displayName", "value": "max" }, { "id": "unit", "value": "velocitykmh" }, { "id": "decimals", "value": 0 }] }
+        ]
+      },
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 21 },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": true, "fields": "distanceKm", "reducer": ["sum"], "show": true },
+        "showHeader": true
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "id", "text": "id", "type": "number" },
+            { "selector": "startDate", "text": "startDate", "type": "timestamp" },
+            { "selector": "endDate", "text": "endDate", "type": "timestamp" },
+            { "selector": "distanceKm", "text": "distanceKm", "type": "number" },
+            { "selector": "durationMin", "text": "durationMin", "type": "number" },
+            { "selector": "avgSpeedKmh", "text": "avgSpeedKmh", "type": "number" },
+            { "selector": "speedMax", "text": "speedMax", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/drives?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Drives",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "cellOptions": { "type": "auto" }, "inspect": false, "filterable": true },
+          "mappings": []
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "id" }, "properties": [{ "id": "displayName", "value": "#" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "startDate" }, "properties": [{ "id": "displayName", "value": "Start" }, { "id": "unit", "value": "time:MM-DD HH:mm" }] },
+          { "matcher": { "id": "byName", "options": "endDate" }, "properties": [{ "id": "displayName", "value": "End" }, { "id": "unit", "value": "time:HH:mm" }] },
+          { "matcher": { "id": "byName", "options": "chargeEnergyAdded" }, "properties": [{ "id": "displayName", "value": "Added" }, { "id": "unit", "value": "kwatth" }, { "id": "decimals", "value": 2 }] },
+          { "matcher": { "id": "byName", "options": "durationMin" }, "properties": [{ "id": "displayName", "value": "min" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "startBatteryLevel" }, "properties": [{ "id": "displayName", "value": "SOC in" }, { "id": "unit", "value": "percent" }] },
+          { "matcher": { "id": "byName", "options": "endBatteryLevel" }, "properties": [{ "id": "displayName", "value": "SOC out" }, { "id": "unit", "value": "percent" }] },
+          { "matcher": { "id": "byName", "options": "cost" }, "properties": [{ "id": "displayName", "value": "Cost" }, { "id": "decimals", "value": 2 }] }
+        ]
+      },
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 21 },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": true, "fields": "chargeEnergyAdded", "reducer": ["sum"], "show": true },
+        "showHeader": true
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "id", "text": "id", "type": "number" },
+            { "selector": "startDate", "text": "startDate", "type": "timestamp" },
+            { "selector": "endDate", "text": "endDate", "type": "timestamp" },
+            { "selector": "chargeEnergyAdded", "text": "chargeEnergyAdded", "type": "number" },
+            { "selector": "durationMin", "text": "durationMin", "type": "number" },
+            { "selector": "startBatteryLevel", "text": "startBatteryLevel", "type": "number" },
+            { "selector": "endBatteryLevel", "text": "endBatteryLevel", "type": "number" },
+            { "selector": "cost", "text": "cost", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/charging-processes?carId=${car_id}&from=${__from:date:iso}&to=${__to:date:iso}&size=200",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Charges",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["teslamate-query", "trip"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "ds",
+        "options": [],
+        "query": "yesoreyeram-infinity-datasource",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Car",
+        "multi": false,
+        "name": "car_id",
+        "options": [],
+        "query": {
+          "infinityQuery": {
+            "columns": [
+              { "selector": "id", "text": "Id", "type": "string" },
+              { "selector": "vin", "text": "VIN", "type": "string" },
+              { "selector": "model", "text": "Model", "type": "string" }
+            ],
+            "filters": [],
+            "format": "table",
+            "parser": "backend",
+            "refId": "",
+            "root_selector": "",
+            "source": "url",
+            "type": "json",
+            "url": "/api/v1/cars",
+            "url_options": { "data": "", "method": "GET" }
+          },
+          "meta": { "textField": "vin", "valueField": "id" },
+          "queryType": "infinity",
+          "refId": "variable"
+        },
+        "refresh": 1,
+        "regex": "",
+        "regexApplyTo": "value",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-2d", "to": "now" },
+  "timepicker": {},
+  "timezone": "Asia/Shanghai",
+  "title": "Trip",
+  "uid": "teslamate-query-trip",
+  "weekStart": ""
+}

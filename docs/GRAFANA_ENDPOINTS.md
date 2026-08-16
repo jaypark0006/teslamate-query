@@ -6,6 +6,9 @@ Infinity 数据源：`http://teslamate-query:8080`。
 时间：`from=${__from:date:iso}&to=${__to:date:iso}`  
 车：`carId=${car_id}` ← `GET /api/v1/cars`
 
+Provisioning dashboards (`grafana/dashboards/`): Overview, Map, Trip, Drives, Drive.  
+Drive uid `teslamate-query-drive` (`?var-drive_id=`). Trip uid `teslamate-query-trip` (picker window).
+
 ## 核心接口
 
 | 用途 | Method / Path |
