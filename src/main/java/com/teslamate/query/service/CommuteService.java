@@ -5,6 +5,7 @@ import com.teslamate.query.dao.DriveDao;
 import com.teslamate.query.dao.PositionDao;
 import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.dto.CommuteSampleDto;
+import com.teslamate.query.dto.CommuteTripDto;
 import com.teslamate.query.entity.DriveEntity;
 import com.teslamate.query.entity.PositionCommutePoint;
 import com.teslamate.query.exception.BadRequestException;
@@ -39,23 +40,20 @@ public class CommuteService {
         this.positionDao = positionDao;
     }
 
+    public List<CommuteTripDto> trips(
+            String carKey, Instant from, Instant to, int startAfterMin, int startBeforeMin, ZoneId zone) {
+        ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
+        return pick(carKey, from, to, startAfterMin, startBeforeMin, z).stream()
+                .map(d -> CommuteCompare.toTrip(d, z))
+                .toList();
+    }
+
     public List<CommuteSampleDto> compare(
             String carKey, Instant from, Instant to, int startAfterMin, int startBeforeMin,
             int stepSec, Integer elapsedMin, ZoneId zone) {
-        long carId = requireCarId(carKey);
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         int step = Math.min(Math.max(stepSec, 15), 180);
-        DriveSearchCondition cond = DriveSearchCondition.builder()
-                .carId(carId)
-                .startDateFrom(from)
-                .startDateTo(to)
-                .completedOnly(true)
-                .minDuration(MIN_DURATION_MIN)
-                .minDistance(MIN_KM)
-                .oldestFirst()
-                .build();
-        List<DriveEntity> scanned = driveDao.findByIdsOrdered(driveDao.findIds(cond, DRIVE_SCAN, 0));
-        List<DriveEntity> picked = CommuteCompare.pickOnePerDay(scanned, startAfterMin, startBeforeMin, z);
+        List<DriveEntity> picked = pick(carKey, from, to, startAfterMin, startBeforeMin, z);
         if (picked.isEmpty()) {
             return List.of();
         }
@@ -75,8 +73,25 @@ public class CommuteService {
         }
         out.sort(CommuteCompare.byDayThenElapsed());
         log.info("commute car={} days={} clock={}-{} elapsed={} step={}s samples={}",
-                carId, picked.size(), startAfterMin, startBeforeMin, elapsedMin, step, out.size());
+                picked.isEmpty() ? "?" : picked.getFirst().carId(),
+                picked.size(), startAfterMin, startBeforeMin, elapsedMin, step, out.size());
         return out;
+    }
+
+    private List<DriveEntity> pick(
+            String carKey, Instant from, Instant to, int startAfterMin, int startBeforeMin, ZoneId zone) {
+        long carId = requireCarId(carKey);
+        DriveSearchCondition cond = DriveSearchCondition.builder()
+                .carId(carId)
+                .startDateFrom(from)
+                .startDateTo(to)
+                .completedOnly(true)
+                .minDuration(MIN_DURATION_MIN)
+                .minDistance(MIN_KM)
+                .oldestFirst()
+                .build();
+        List<DriveEntity> scanned = driveDao.findByIdsOrdered(driveDao.findIds(cond, DRIVE_SCAN, 0));
+        return CommuteCompare.pickOnePerDay(scanned, startAfterMin, startBeforeMin, zone);
     }
 
     /** Grafana may send the numeric id or the VIN as {@code car_id}. */

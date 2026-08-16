@@ -1,6 +1,7 @@
 package com.teslamate.query.api.v1;
 
 import com.teslamate.query.dto.CommuteSampleDto;
+import com.teslamate.query.dto.CommuteTripDto;
 import com.teslamate.query.service.CommuteService;
 import com.teslamate.query.service.QuerySupport;
 import com.teslamate.query.service.trip.CommuteCompare;
@@ -26,6 +27,23 @@ public class CommuteController {
     public CommuteController(CommuteService commuteService, QuerySupport support) {
         this.commuteService = commuteService;
         this.support = support;
+    }
+
+    @GetMapping("/trips")
+    @Operation(summary = "Drives this page will compare (one per local day in the clock window)")
+    public List<CommuteTripDto> trips(
+            @PathVariable String carId,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(required = false) String startAfter,
+            @RequestParam(required = false) String startBefore,
+            @RequestParam(required = false) String timezone
+    ) {
+        var range = support.requireRange(from, to);
+        return commuteService.trips(carId, range[0], range[1],
+                support.clockMinutes(startAfter, 5 * 60 + 30),
+                support.clockMinutes(startBefore, 7 * 60),
+                support.zone(timezone));
     }
 
     @GetMapping

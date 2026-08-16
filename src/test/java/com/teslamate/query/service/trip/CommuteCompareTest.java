@@ -53,8 +53,13 @@ class CommuteCompareTest {
         assertEquals(29.55, at10.getFirst().latitude(), 1e-6);
         assertEquals(40, at10.getFirst().speed());
         assertEquals(4.0, at10.getFirst().kmFromStart(), 1e-6);
+        assertEquals("08-13 05:48", at10.getFirst().startLocal());
+        assertTrue(at10.getFirst().label().startsWith("08-13 05:48"));
         assertEquals("00:10", at10.getFirst().elapsedMs().atZone(SH).toLocalTime().toString().substring(0, 5));
         assertTrue(at10.getFirst().label().contains("40"));
+        var trip = CommuteCompare.toTrip(d, SH);
+        assertEquals("08-13 05:48", trip.startLocal());
+        assertEquals(9L, trip.driveId());
     }
 
     @Test

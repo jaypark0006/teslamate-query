@@ -11,6 +11,8 @@ public record CommuteSampleDto(
         Long driveId,
         double elapsedMin,
         Instant elapsedMs,
+        Instant start,
+        String startLocal,
         Double latitude,
         Double longitude,
         Integer speed,

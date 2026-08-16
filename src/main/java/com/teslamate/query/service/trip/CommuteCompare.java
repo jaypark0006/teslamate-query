@@ -1,6 +1,7 @@
 package com.teslamate.query.service.trip;
 
 import com.teslamate.query.dto.CommuteSampleDto;
+import com.teslamate.query.dto.CommuteTripDto;
 import com.teslamate.query.entity.DriveEntity;
 import com.teslamate.query.entity.PositionCommutePoint;
 
@@ -24,7 +25,8 @@ public final class CommuteCompare {
     public static final int MAX_DAYS = 21;
     public static final int DEFAULT_STEP_SEC = 60;
     static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE;
-    static final DateTimeFormatter LABEL_DAY = DateTimeFormatter.ofPattern("MM-dd");
+    static final DateTimeFormatter LOCAL_START = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+    static final DateTimeFormatter LOCAL_END = DateTimeFormatter.ofPattern("HH:mm");
 
     private CommuteCompare() {}
 
@@ -67,6 +69,20 @@ public final class CommuteCompare {
         return out;
     }
 
+    public static CommuteTripDto toTrip(DriveEntity d, ZoneId zone) {
+        var startZ = d.startDate().atZone(zone);
+        var endZ = d.endDate() == null ? null : d.endDate().atZone(zone);
+        return new CommuteTripDto(
+                startZ.toLocalDate().format(DAY),
+                d.id(),
+                d.startDate(),
+                d.endDate(),
+                startZ.format(LOCAL_START),
+                endZ == null ? null : endZ.format(LOCAL_END),
+                d.distance(),
+                d.durationMin());
+    }
+
     static boolean longer(DriveEntity a, DriveEntity b) {
         double da = a.distance() == null ? 0 : a.distance();
         double db = b.distance() == null ? 0 : b.distance();
@@ -92,7 +108,7 @@ public final class CommuteCompare {
         Instant t0 = drive.startDate();
         Double odo0 = raw.getFirst().odometer();
         String day = t0.atZone(zone).toLocalDate().format(DAY);
-        String dayShort = t0.atZone(zone).toLocalDate().format(LABEL_DAY);
+        String startLocal = t0.atZone(zone).format(LOCAL_START);
         Instant lastT = raw.getLast().date();
         if (lastT == null || !lastT.isAfter(t0)) {
             lastT = t0.plusSeconds(60);
@@ -104,13 +120,13 @@ public final class CommuteCompare {
                 return List.of();
             }
             PositionCommutePoint p = atElapsed(raw, t0, want);
-            return p == null ? List.of() : List.of(toDto(drive.id(), day, dayShort, want / 60.0, p, odo0, zone));
+            return p == null ? List.of() : List.of(toDto(drive.id(), day, startLocal, t0, want / 60.0, p, odo0, zone));
         }
         List<CommuteSampleDto> out = new ArrayList<>();
         for (long sec = 0; sec <= spanSec; sec += step) {
             PositionCommutePoint p = atElapsed(raw, t0, sec);
             if (p != null) {
-                out.add(toDto(drive.id(), day, dayShort, sec / 60.0, p, odo0, zone));
+                out.add(toDto(drive.id(), day, startLocal, t0, sec / 60.0, p, odo0, zone));
             }
         }
         return out;
@@ -133,7 +149,7 @@ public final class CommuteCompare {
     }
 
     static CommuteSampleDto toDto(
-            Long driveId, String day, String dayShort, double elapsedMin,
+            Long driveId, String day, String startLocal, Instant start, double elapsedMin,
             PositionCommutePoint p, Double odo0, ZoneId zone) {
         Double km = null;
         if (p.odometer() != null && odo0 != null) {
@@ -141,13 +157,14 @@ public final class CommuteCompare {
         }
         Integer speed = p.speed();
         String label = speed == null
-                ? dayShort
-                : dayShort + " · " + speed + " km/h";
+                ? startLocal
+                : startLocal + " · " + speed + " km/h";
         Instant origin = java.time.LocalDate.of(2020, 1, 1).atStartOfDay(zone).toInstant();
         Instant elapsedMs = origin.plusSeconds(Math.round(elapsedMin * 60.0));
         Double lat = p.latitude() == null ? null : p.latitude().doubleValue();
         Double lon = p.longitude() == null ? null : p.longitude().doubleValue();
-        return new CommuteSampleDto(day, driveId, elapsedMin, elapsedMs, lat, lon, speed, km, label);
+        return new CommuteSampleDto(day, driveId, elapsedMin, elapsedMs, start, startLocal,
+                lat, lon, speed, km, label);
     }
 
     public static Comparator<CommuteSampleDto> byDayThenElapsed() {
