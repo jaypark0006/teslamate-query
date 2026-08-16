@@ -18,7 +18,7 @@ class PathQueryPlanTest {
         assertEquals(1, plan.queries().size());
         assertEquals(0, plan.skipped());
         assertEquals(0, plan.queries().getFirst().bucketSec());
-        assertEquals(3600, plan.queries().getFirst().cap());
+        assertEquals(PathQueryPlan.BUDGET, plan.queries().getFirst().cap());
         assertEquals(0, plan.epsilonM());
     }
 
@@ -26,7 +26,7 @@ class PathQueryPlanTest {
     void shortDriveKeepsFullPath() {
         PathQueryPlan plan = PathQueryPlan.of(List.of(drive(1, 8, 3.0)));
         assertEquals(0, plan.queries().getFirst().bucketSec());
-        assertEquals(8 * 60, plan.queries().getFirst().cap());
+        assertEquals(PathQueryPlan.BUDGET, plan.queries().getFirst().cap());
     }
 
     @Test
@@ -39,7 +39,7 @@ class PathQueryPlanTest {
         assertEquals(6, plan.queries().size());
         for (PathQueryPlan.Query q : plan.queries()) {
             assertEquals(0, q.bucketSec());
-            assertEquals(10 * 60, q.cap());
+            assertEquals(PathQueryPlan.BUDGET, q.cap());
         }
         assertEquals(0, plan.epsilonM());
     }
@@ -65,7 +65,7 @@ class PathQueryPlanTest {
         assertEquals(1, plan.queries().size());
         assertEquals(99L, plan.queries().getFirst().driveId());
         assertEquals(0, plan.queries().getFirst().bucketSec());
-        assertEquals(45 * 60, plan.queries().getFirst().cap());
+        assertEquals(PathQueryPlan.BUDGET, plan.queries().getFirst().cap());
     }
 
     @Test

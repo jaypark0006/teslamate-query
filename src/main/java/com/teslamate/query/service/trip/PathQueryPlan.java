@@ -91,10 +91,13 @@ public final class PathQueryPlan {
         return new PathQueryPlan(queries, skipped, eps);
     }
 
-    /** Raw 1 Hz when it fits the budget; time-bucket only so a long highlight is not truncated. */
+    /**
+     * Raw GPS when the trip is short enough that a 1 Hz guess fits the budget.
+     * Cap is the per-drive safety net, not duration-seconds: TeslaMate is often 3–5 Hz.
+     */
     static Query fullQuery(long driveId, int sec) {
         if (sec <= BUDGET) {
-            return new Query(driveId, 0, Math.min(BUDGET, Math.max(sec, 16)));
+            return new Query(driveId, 0, BUDGET);
         }
         int bucket = quantize(Math.max(1, (sec + BUDGET - 1) / BUDGET), 2);
         return new Query(driveId, bucket, BUDGET);
