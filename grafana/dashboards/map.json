@@ -230,9 +230,9 @@
                   "mode": "mod"
                 },
                 "size": {
-                  "fixed": 5,
-                  "max": 15,
-                  "min": 2
+                  "fixed": 2,
+                  "max": 4,
+                  "min": 1
                 },
                 "symbol": {
                   "fixed": "img/icons/marker/circle.svg",
@@ -477,9 +477,9 @@
                   "mode": "mod"
                 },
                 "size": {
-                  "fixed": 6,
-                  "max": 10,
-                  "min": 3
+                  "fixed": 2,
+                  "max": 3,
+                  "min": 1
                 },
                 "symbol": {
                   "fixed": "img/icons/marker/circle.svg",
@@ -543,7 +543,7 @@
             },
             "filterData": {
               "id": "byRefId",
-              "options": "Focus"
+              "options": "FocusStop"
             },
             "location": {
               "latitude": "latitude",
@@ -824,6 +824,51 @@
           "source": "url",
           "type": "json",
           "url": "/api/v1/cars/${car_id}/map/focus?day=${focus_day}&slot=${focus_slot}&kind=${focus_kind}&from=${focus_from}&to=${focus_to}&id=${focus_id}&timezone=Asia/Shanghai&dayStartHour=4",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "time",
+              "text": "time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "latitude",
+              "text": "latitude",
+              "type": "number"
+            },
+            {
+              "selector": "longitude",
+              "text": "longitude",
+              "type": "number"
+            },
+            {
+              "selector": "label",
+              "text": "label",
+              "type": "string"
+            },
+            {
+              "selector": "durationLabel",
+              "text": "durationLabel",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${ds}"
+          },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "FocusStop",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/cars/${car_id}/map/focus?day=${focus_day}&slot=${focus_slot}&kind=${focus_kind}&from=${focus_from}&to=${focus_to}&id=${focus_id}&kinds=park,charge&timezone=Asia/Shanghai&dayStartHour=4",
           "url_options": {
             "data": "",
             "method": "GET"

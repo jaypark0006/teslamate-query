@@ -135,6 +135,7 @@ public class TripViewController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String id,
+            @RequestParam(required = false) String kinds,
             @RequestParam(required = false) String minParkMin,
             @RequestParam(required = false) String timezone,
             @RequestParam(required = false) String dayStartHour,
@@ -143,6 +144,6 @@ public class TripViewController {
     ) {
         return tripViewService.focus(carId, day, slot, kind, from, to, id, support.minParkMin(minParkMin),
                 support.units(lengthUnit, tempUnit), support.zone(timezone),
-                support.dayStartHour(dayStartHour));
+                support.dayStartHour(dayStartHour), kinds);
     }
 }

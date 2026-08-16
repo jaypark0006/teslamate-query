@@ -99,7 +99,7 @@ GET /api/v1/charges?chargingProcessId=364
 - `GET /cars/{carId}/timeline?from&to&minParkMin=` — chronological DRIVE / CHARGE / PARK log
 - `GET /cars/{carId}/timeline/daily?from&to` — hours of drive/charge/park per local day
 - `GET /cars/{carId}/timeline/grid?from&to&timezone=&dayStartHour=` — day × hour cells; `label` is `Drive #id · <timeline detail>`; `hoverCode` is a unique numeric cell id for Grafana tooltips
-- `GET /cars/{carId}/map/focus?day&slot&kind&from&to&id&timezone=&dayStartHour=` — map points for a focused trip (`id` from the timeline, `from`/`to` as fallback, or `day`+`slot` from the grid)
+- `GET /cars/{carId}/map/focus?day&slot&kind&from&to&id&kinds=&timezone=&dayStartHour=` — map points for a focused trip. `kinds=park,charge` is the pin layer; drive samples stay on the route layer.
 - `GET /series/battery?carId&from&to` — SOC series from positions
 
 ## Health

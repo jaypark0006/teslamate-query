@@ -186,12 +186,20 @@ public class TripViewService {
                                    String fromStr, String toStr,
                                    Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
         return focus(carId, dayStr, slotStr, kindStr, fromStr, toStr, null,
-                minParkMin, units, zone, dayStartHour);
+                minParkMin, units, zone, dayStartHour, null);
     }
 
     public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
                                    String fromStr, String toStr, String idStr,
                                    Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour) {
+        return focus(carId, dayStr, slotStr, kindStr, fromStr, toStr, idStr,
+                minParkMin, units, zone, dayStartHour, null);
+    }
+
+    public List<MapPointDto> focus(long carId, String dayStr, String slotStr, String kindStr,
+                                   String fromStr, String toStr, String idStr,
+                                   Integer minParkMin, DisplayUnits units, ZoneId zone, int dayStartHour,
+                                   String kindsFilter) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
         int want = focusKindCode(kindStr);
         Instant[] byId = rangeForSourceId(carId, parseFlexibleLong(idStr), want);
@@ -211,6 +219,9 @@ public class TripViewService {
             case DayGridCellDto.PARK -> "park";
             default -> "drive,charge,park";
         };
+        if (!support.unset(kindsFilter)) {
+            kinds = kindsFilter;
+        }
         return points(carId, win[0].toString(), win[1].toString(), minParkMin, kinds, units);
     }
 

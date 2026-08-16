@@ -119,7 +119,7 @@ class TripViewControllerWebTest {
         when(support.dayStartHour(null)).thenReturn(0);
         when(support.units(null, null)).thenReturn(null);
         when(tripViewService.focus(eq(1L), eq(null), eq(null), eq(null), eq(null), eq(null),
-                eq(null), eq(10), any(), any(), eq(0))).thenReturn(List.of());
+                eq(null), eq(10), any(), any(), eq(0), eq(null))).thenReturn(List.of());
         client.get().uri("/api/v1/cars/1/map/focus")
                 .exchange()
                 .expectStatus().isOk()
