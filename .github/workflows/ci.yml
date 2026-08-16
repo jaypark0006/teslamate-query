@@ -34,7 +34,7 @@ jobs:
           cache: maven
 
       - name: Test
-        run: mvn -B -q verify
+        run: ./mvnw -B -q verify
 
       - name: Upload Surefire reports on failure
         if: failure()

@@ -38,19 +38,26 @@ compose 内 Grafana 访问 API：`http://teslamate-query:8080`。公网暴露时
 
 | Job | 做什么 |
 |-----|--------|
-| **test** | JDK 21 + `mvn verify`（单元 / Web 切片测试，不连真实 DB） |
+| **test** | JDK 21 + `./mvnw verify`（单元 / Web 切片测试，不连真实 DB） |
 | **docker** | 构建镜像（不 push） |
+| **Release** | 打 `v*` tag 或在 Actions 里 Run **Release**，上传 jar |
 
-触发：`push` / `PR` 到 `main` · `master` · `grok45`，或 Actions 页 **Run workflow**。
+源码按 **Java 21** 编译（和 CI / Docker 一致）。本机若装了 25 也能编，但 CI 用 21。
+
+打正式包：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+# Actions → Release 会生成 GitHub Release，附件 teslamate-query-v0.1.0.jar
+```
 
 本地等价：
 
 ```bash
-mvn -B verify
+./mvnw -B verify
 docker build -t teslamate-query:local .
 ```
-
-以后若要 **push 到 GHCR**，在 workflow 里加 `docker/login-action` + `push: true`，并配置 `packages: write` 权限。
 
 ## 核心 API
 

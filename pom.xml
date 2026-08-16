@@ -18,7 +18,7 @@
   <description>REST API facade over TeslaMate PostgreSQL for Grafana and other clients</description>
 
   <properties>
-    <java.version>25</java.version>
+    <java.version>21</java.version>
     <!-- springdoc 3.x targets Spring Boot 4 -->
     <springdoc.version>3.0.1</springdoc.version>
     <jdbi.version>3.49.6</jdbi.version>
