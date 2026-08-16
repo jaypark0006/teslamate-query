@@ -93,7 +93,7 @@ class TripViewControllerWebTest {
         when(tripViewService.grid(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
                 eq(10), any(), any(), eq(0))).thenReturn(List.of(
                 new DayGridCellDto(Instant.parse("2026-08-15T16:00:00Z"), "2026-08-16",
-                        8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE")));
+                        8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE", 9L, "Drive #9")));
         client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/timeline/grid")
                         .queryParam("from", "2026-08-16T00:00:00Z")
                         .queryParam("to", "2026-08-16T12:00:00Z")
@@ -103,7 +103,9 @@ class TripViewControllerWebTest {
                 .expectBody()
                 .jsonPath("$[0].kind").isEqualTo("DRIVE")
                 .jsonPath("$[0].slot").isEqualTo("08:00")
-                .jsonPath("$[0].kindCode").isEqualTo(2);
+                .jsonPath("$[0].kindCode").isEqualTo(2)
+                .jsonPath("$[0].sourceId").isEqualTo(9)
+                .jsonPath("$[0].label").isEqualTo("Drive #9");
     }
 
     @Test

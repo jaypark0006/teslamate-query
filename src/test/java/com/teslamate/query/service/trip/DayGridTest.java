@@ -47,8 +47,10 @@ class DayGridTest {
         boolean sawDrive = cells.stream().anyMatch(c ->
                 c.kindCode() == DayGridCellDto.DRIVE && c.hour() < 1);
         assertTrue(sawDrive);
-        assertEquals(DayGridCellDto.DRIVE,
-                cells.stream().filter(c -> "00 00:00".equals(c.slot())).findFirst().orElseThrow().kindCode());
+        var driveCell = cells.stream().filter(c -> "00 00:00".equals(c.slot())).findFirst().orElseThrow();
+        assertEquals(DayGridCellDto.DRIVE, driveCell.kindCode());
+        assertEquals(1L, driveCell.sourceId());
+        assertEquals("Drive #1", driveCell.label());
     }
 
     @Test
@@ -105,5 +107,8 @@ class DayGridTest {
         assertEquals(10, DayGrid.parseClockHour("06 10:00"));
         assertEquals(0, DayGrid.parseClockHour("00:00"));
         assertEquals(null, DayGrid.parseClockHour("24 ★"));
+        assertEquals(18432L, DayGrid.parseSourceId("Drive #18432"));
+        assertEquals(99L, DayGrid.parseSourceId("Charge #99"));
+        assertEquals(null, DayGrid.parseSourceId("Park"));
     }
 }

@@ -1225,8 +1225,18 @@
           "links": [
             {
               "targetBlank": false,
-              "title": "Highlight this trip on the map",
-              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.numeric}"
+              "title": "Highlight ${__value.raw} on the map",
+              "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=${__value.raw}"
+            },
+            {
+              "targetBlank": true,
+              "title": "Open drive ${__value.raw}",
+              "url": "/d/teslamate-query-drive/drive?var-drive_id=${__value.raw}&var-car_id=${car_id}"
+            },
+            {
+              "targetBlank": true,
+              "title": "Open charge ${__value.raw}",
+              "url": "/d/teslamate-query-charge/charge?var-chargingProcessId=${__value.raw}&var-car_id=${car_id}"
             }
           ],
           "custom": {
@@ -1241,28 +1251,24 @@
           "mappings": [
             {
               "options": {
-                "1": {
+                "^Park": {
                   "color": "#94a3b8",
-                  "index": 0,
-                  "text": "Park"
+                  "index": 0
                 },
-                "2": {
+                "^Drive": {
                   "color": "#3b82f6",
-                  "index": 1,
-                  "text": "Drive"
+                  "index": 1
                 },
-                "3": {
+                "^Charge": {
                   "color": "#22c55e",
-                  "index": 2,
-                  "text": "Charge"
+                  "index": 2
                 },
-                "4": {
+                "^Weekend": {
                   "color": "#d97706",
-                  "index": 3,
-                  "text": "Weekend"
+                  "index": 3
                 }
               },
-              "type": "value"
+              "type": "regex"
             }
           ],
           "thresholds": {
@@ -1347,6 +1353,16 @@
               "selector": "kind",
               "text": "kind",
               "type": "string"
+            },
+            {
+              "selector": "sourceId",
+              "text": "sourceId",
+              "type": "number"
+            },
+            {
+              "selector": "label",
+              "text": "label",
+              "type": "string"
             }
           ],
           "datasource": {
@@ -1374,7 +1390,7 @@
             "columnField": "slot",
             "emptyValue": "null",
             "rowField": "time",
-            "valueField": "kindCode"
+            "valueField": "label"
           }
         },
         {
@@ -1425,7 +1441,7 @@
         }
       ],
       "title": "Time of day",
-      "description": "One column per local day (04:00–04:00). Gray = park, blue = drive, green = charge. Amber = weekend. Click a cell to highlight that trip on the map.",
+      "description": "One column per local day (04:00–04:00). Hover a cell for Drive #id / Charge #id. Click to highlight on the map or open the drive/charge dashboard.",
       "type": "status-history"
     }
   ],

@@ -98,7 +98,7 @@ GET /api/v1/charges?chargingProcessId=364
 - `GET /cars/{carId}/map/points?from&to&kinds=` — flat lat/lon rows for Grafana Geomap Route (arrows) + Markers
 - `GET /cars/{carId}/timeline?from&to&minParkMin=` — chronological DRIVE / CHARGE / PARK log
 - `GET /cars/{carId}/timeline/daily?from&to` — hours of drive/charge/park per local day
-- `GET /cars/{carId}/timeline/grid?from&to&timezone=&dayStartHour=` — day × hour cells (`kindCode` 1=park 2=drive 3=charge 4=weekend); `dayStartHour=4` makes a day 04:00–04:00 in `timezone`
+- `GET /cars/{carId}/timeline/grid?from&to&timezone=&dayStartHour=` — day × hour cells; `label` is `Drive #id` / `Charge #id` / `Park`; `sourceId` is the drive or charging-process id
 - `GET /cars/{carId}/map/focus?day&slot&kind&timezone=&dayStartHour=` — map points for the trip occupying that Time-of-day cell (empty day/slot → `[]`)
 - `GET /series/battery?carId&from&to` — SOC series from positions
 

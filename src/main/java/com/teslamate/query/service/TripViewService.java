@@ -653,19 +653,22 @@ public class TripViewService {
             return 0;
         }
         String s = raw.trim();
-        return switch (s.toUpperCase(Locale.ROOT)) {
-            case "1", "PARK" -> DayGridCellDto.PARK;
-            case "2", "DRIVE" -> DayGridCellDto.DRIVE;
-            case "3", "CHARGE" -> DayGridCellDto.CHARGE;
-            default -> {
-                try {
-                    int n = Integer.parseInt(s);
-                    yield n >= 1 && n <= 3 ? n : 0;
-                } catch (NumberFormatException e) {
-                    yield 0;
-                }
-            }
-        };
+        String u = s.toUpperCase(Locale.ROOT);
+        if (u.startsWith("PARK") || u.equals("1")) {
+            return DayGridCellDto.PARK;
+        }
+        if (u.startsWith("DRIVE") || u.equals("2")) {
+            return DayGridCellDto.DRIVE;
+        }
+        if (u.startsWith("CHARGE") || u.equals("3")) {
+            return DayGridCellDto.CHARGE;
+        }
+        try {
+            int n = Integer.parseInt(s);
+            return n >= 1 && n <= 3 ? n : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private static int kindCode(TimelineKind kind) {

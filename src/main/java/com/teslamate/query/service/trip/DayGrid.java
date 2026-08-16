@@ -61,7 +61,7 @@ public final class DayGrid {
         }
         ZoneId z = zone == null ? ZoneId.of("UTC") : zone;
         int startH = Math.floorMod(dayStartHour, 24);
-        Map<String, int[]> cells = new LinkedHashMap<>();
+        Map<String, Painted> cells = new LinkedHashMap<>();
         Set<LocalDate> days = new LinkedHashSet<>();
         for (ActivitySpan span : spans) {
             if (span == null || span.start() == null || span.end() == null || !span.end().isAfter(span.start())) {
@@ -89,26 +89,26 @@ public final class DayGrid {
                     slotEnd = cursor.plusSeconds(60);
                 }
                 String key = day + "#" + slot;
-                int[] cell = cells.get(key);
-                if (cell == null || preferred(code, cell[0])) {
-                    cells.put(key, new int[]{code, day.getYear(), day.getMonthValue(), day.getDayOfMonth(), slot});
+                Painted cell = cells.get(key);
+                if (cell == null || preferred(code, cell.code)) {
+                    cells.put(key, new Painted(code, day, slot, span.sourceId()));
                 }
                 cursor = slotEnd;
             }
         }
         List<DayGridCellDto> out = new ArrayList<>(cells.size() + days.size());
-        for (int[] c : cells.values()) {
-            LocalDate day = LocalDate.of(c[1], c[2], c[3]);
-            Instant midnight = day.atStartOfDay(z).toInstant();
-            String slot = slotKey(startH, c[4]);
-            int clockMin = (startH * 60 + c[4] * SLOT_MIN) % (24 * 60);
+        for (Painted c : cells.values()) {
+            Instant midnight = c.day.atStartOfDay(z).toInstant();
+            String slot = slotKey(startH, c.slot);
+            int clockMin = (startH * 60 + c.slot * SLOT_MIN) % (24 * 60);
             double hour = clockMin / 60.0;
-            String kind = switch (c[0]) {
+            String kind = switch (c.code) {
                 case DayGridCellDto.DRIVE -> "DRIVE";
                 case DayGridCellDto.CHARGE -> "CHARGE";
                 default -> "PARK";
             };
-            out.add(new DayGridCellDto(midnight, day.toString(), hour, slot, c[0], kind));
+            out.add(new DayGridCellDto(midnight, c.day.toString(), hour, slot, c.code, kind,
+                    c.sourceId, DayGridCellDto.cellLabel(c.code, c.sourceId)));
         }
         for (LocalDate day : days) {
             DayOfWeek w = day.getDayOfWeek();
@@ -121,7 +121,9 @@ public final class DayGrid {
                     24.0,
                     WEEKEND_SLOT,
                     DayGridCellDto.WEEKEND,
-                    "WEEKEND"));
+                    "WEEKEND",
+                    null,
+                    DayGridCellDto.cellLabel(DayGridCellDto.WEEKEND, null)));
         }
         out.sort(Comparator.comparing(DayGridCellDto::day).thenComparing(DayGridCellDto::slot));
         return out;
@@ -136,6 +138,24 @@ public final class DayGrid {
     }
 
     /** Clock hour from {@code 22:00}, {@code 06 10:00}, or {@code ·00:00}. */
+    public static Long parseSourceId(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        int i = raw.length();
+        while (i > 0 && Character.isDigit(raw.charAt(i - 1))) {
+            i--;
+        }
+        if (i == raw.length()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw.substring(i));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     public static Integer parseClockHour(String slot) {
         if (slot == null || slot.isBlank() || slot.contains("★")) {
             return null;
@@ -168,4 +188,6 @@ public final class DayGrid {
     private static boolean preferred(int incoming, int existing) {
         return incoming > existing;
     }
+
+    private record Painted(int code, LocalDate day, int slot, Long sourceId) {}
 }

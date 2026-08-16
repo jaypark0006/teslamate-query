@@ -16,7 +16,9 @@ class TripViewServiceTest {
         assertEquals(0, TripViewService.focusKindCode(null));
         assertEquals(2, TripViewService.focusKindCode("2"));
         assertEquals(2, TripViewService.focusKindCode("DRIVE"));
+        assertEquals(2, TripViewService.focusKindCode("Drive #18432"));
         assertEquals(3, TripViewService.focusKindCode("charge"));
+        assertEquals(3, TripViewService.focusKindCode("Charge #99"));
     }
 
     @Test
