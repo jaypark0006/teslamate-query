@@ -1028,6 +1028,39 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "#"
+              },
+              {
+                "id": "custom.width",
+                "value": 44
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open drive",
+                    "url": "/d/teslamate-query-drive/drive?var-drive_id=${__data.fields.id}&var-car_id=${car_id}"
+                  },
+                  {
+                    "title": "Open charge",
+                    "url": "/d/teslamate-query-charge/charge?var-chargingProcessId=${__data.fields.id}&var-car_id=${car_id}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "title"
             },
             "properties": [
@@ -1192,7 +1225,6 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "id": true,
               "clockStart": true,
               "clockEnd": true,
               "seq": true,
@@ -1203,8 +1235,9 @@
               "time": 0,
               "timeEnd": 1,
               "kind": 2,
-              "title": 3,
-              "detail": 4
+              "id": 3,
+              "title": 4,
+              "detail": 5
             },
             "renameByName": {}
           }
@@ -1232,16 +1265,6 @@
               "targetBlank": false,
               "title": "Highlight drive",
               "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map?var-car_id=${car_id}&var-ds=${ds}&var-focus_day=${__value.time:date:iso}&var-focus_slot=${__field.name}&var-focus_kind=Drive"
-            },
-            {
-              "targetBlank": true,
-              "title": "Open drive ${__value.raw}",
-              "url": "/d/teslamate-query-drive/drive?var-drive_id=${__value.raw}&var-car_id=${car_id}"
-            },
-            {
-              "targetBlank": true,
-              "title": "Open charge ${__value.raw}",
-              "url": "/d/teslamate-query-charge/charge?var-chargingProcessId=${__value.raw}&var-car_id=${car_id}"
             }
           ],
           "custom": {
@@ -1257,7 +1280,7 @@
             {
               "options": {
                 "1": {
-                  "color": "#94a3b8",
+                  "color": "#64748b",
                   "index": 0,
                   "text": "Park"
                 },
@@ -1286,6 +1309,22 @@
               {
                 "color": "transparent",
                 "value": 0
+              },
+              {
+                "color": "#64748b",
+                "value": 1
+              },
+              {
+                "color": "#3b82f6",
+                "value": 2
+              },
+              {
+                "color": "#22c55e",
+                "value": 3
+              },
+              {
+                "color": "#d97706",
+                "value": 4
               }
             ]
           }
