@@ -105,9 +105,12 @@ public final class DayGrid {
             }
         }
         fillEmptySlots(cells, days, startH, z, from, to);
+        List<LocalDate> orderedDays = new ArrayList<>(days);
+        orderedDays.sort(Comparator.naturalOrder());
+        Map<LocalDate, Instant> columnAt = columnTimes(orderedDays, startH, z, from, to);
         List<DayGridCellDto> out = new ArrayList<>(cells.size() + days.size());
         for (Painted c : cells.values()) {
-            Instant x = columnTime(c.day, startH, z, from, to);
+            Instant x = columnAt.getOrDefault(c.day, columnTime(c.day, startH, z, from, to));
             String slot = slotKey(startH, c.slot);
             int clockMin = (startH * 60 + c.slot * SLOT_MIN) % (24 * 60);
             double hour = clockMin / 60.0;
@@ -128,7 +131,7 @@ public final class DayGrid {
                 continue;
             }
             out.add(new DayGridCellDto(
-                    columnTime(day, startH, z, from, to),
+                    columnAt.getOrDefault(day, columnTime(day, startH, z, from, to)),
                     day.toString(),
                     24.0,
                     WEEKEND_SLOT,
@@ -165,6 +168,31 @@ public final class DayGrid {
             x = to.minusSeconds(1);
         }
         return x;
+    }
+
+    /** Space day columns evenly across [from, to] so Grafana does not leave 1h-wide gaps. */
+    static Map<LocalDate, Instant> columnTimes(List<LocalDate> ordered, int startH, ZoneId z,
+                                               Instant from, Instant to) {
+        Map<LocalDate, Instant> out = new LinkedHashMap<>();
+        if (ordered == null || ordered.isEmpty()) {
+            return out;
+        }
+        if (from == null || to == null || !to.isAfter(from)) {
+            for (LocalDate day : ordered) {
+                out.put(day, columnTime(day, startH, z, from, to));
+            }
+            return out;
+        }
+        int n = ordered.size();
+        long step = Math.max(1L, Duration.between(from, to).toMillis() / n);
+        for (int i = 0; i < n; i++) {
+            Instant x = from.plusMillis(step * i);
+            if (!x.isBefore(to)) {
+                x = to.minusMillis(1);
+            }
+            out.put(ordered.get(i), x);
+        }
+        return out;
     }
 
     private static void fillEmptySlots(Map<String, Painted> cells, Set<LocalDate> days,

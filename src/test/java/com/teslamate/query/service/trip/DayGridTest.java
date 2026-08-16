@@ -152,4 +152,22 @@ class DayGridTest {
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-12")));
         assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-13")));
     }
+
+    @Test
+    void dayColumnsAreEvenlySpacedInsideTheWindow() {
+        Instant from = Instant.parse("2026-08-09T02:40:00Z");
+        Instant to = Instant.parse("2026-08-16T02:40:00Z");
+        ActivitySpan park = new ActivitySpan(
+                TimelineKind.PARK, null, from, to.minusSeconds(60), 7 * 24 * 60, null, null);
+        List<DayGridCellDto> cells = DayGrid.paint(List.of(park), SH, 4, from, to);
+        List<Instant> xs = cells.stream().map(DayGridCellDto::time).distinct().sorted().toList();
+        assertTrue(xs.size() >= 6);
+        long step = xs.get(1).toEpochMilli() - xs.get(0).toEpochMilli();
+        for (int i = 1; i < xs.size(); i++) {
+            long d = xs.get(i).toEpochMilli() - xs.get(i - 1).toEpochMilli();
+            assertEquals(step, d);
+        }
+        assertTrue(!xs.getFirst().isBefore(from));
+        assertTrue(xs.getLast().isBefore(to));
+    }
 }

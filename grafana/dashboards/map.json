@@ -1364,7 +1364,7 @@
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "rowHeight": 0.94,
         "showValue": "never",
