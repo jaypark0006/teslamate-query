@@ -29,7 +29,7 @@
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "**时区 Asia/Shanghai (UTC+8)。** 顶栏日期窗发给 API 的 `from`/`to` 是 UTC（带 Z），和 Map 一样。\n\n**Start after / before** 是上海本地钟点，用来挑「哪一趟」：每个自然日只留一趟，出发落在 **${start_after}–${start_before}**、且 ≥8 分钟 / 2 km。先看下面这张表，对得上你记忆里的上班趟，再往下看对比。\n\n**Elapsed min = ${elapsed_min}** 是「那天自己出发后再过这么多分钟」，不是墙上的 6:00。地图钉和右表都是这个时刻的位置/速度。",
+        "content": "Timezone **Asia/Shanghai (UTC+8)**. The picker sends `from`/`to` as UTC (`…Z`), same as Map.\n\n**Start after / before** are local clock times used to *pick* the outing: one drive per calendar day that started between **${start_after}–${start_before}**, at least 8 min / 2 km. Check the table below first — if those rows are not your commute, change the clock window.\n\n**Elapsed min = ${elapsed_min}** is minutes after *that day's own start*, not 06:00 on the wall. Pins and the right-hand table are where you were at that elapsed time.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
