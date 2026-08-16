@@ -29,7 +29,7 @@
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "Timezone **Asia/Shanghai**. The picker is local; API `from`/`to` are UTC.\n\n**Start after / before** pick which outing (one drive per day that left in **${start_after}–${start_before}**). Check the table first.\n\nThen every day is one **row** and one **line**. The X axis / columns are **minutes since that day's start** — not wall-clock 08:00, not km of road. At **10 min**, a higher line means you had gone farther. A red cell means you were slow at that minute.",
+        "content": "Timezone **Asia/Shanghai**. The picker is local; API `from`/`to` are UTC.\n\n**Start after / before** pick which outing. Check the trip table first.\n\nEvery day is one **row** and one **line**. Columns / X = **minutes since that day's start**. The number in a cell (and the height of a line) is **how many km you had already covered** — not speed. At **10 min**, a bigger number means you got farther.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -115,13 +115,13 @@
             "mode": "absolute",
             "steps": [
               { "color": "#7f1d1d", "value": 0 },
-              { "color": "#ef4444", "value": 10 },
-              { "color": "#f59e0b", "value": 25 },
-              { "color": "#84cc16", "value": 40 },
-              { "color": "#22c55e", "value": 55 }
+              { "color": "#ef4444", "value": 2 },
+              { "color": "#f59e0b", "value": 5 },
+              { "color": "#84cc16", "value": 10 },
+              { "color": "#22c55e", "value": 15 }
             ]
           },
-          "unit": "velocitykmh"
+          "unit": "lengthkm"
         },
         "overrides": [
           { "matcher": { "id": "byName", "options": "startLocal" }, "properties": [{ "id": "displayName", "value": "Left" }, { "id": "custom.width", "value": 92 }, { "id": "custom.cellOptions", "value": { "type": "auto" } }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } }] }
@@ -140,7 +140,7 @@
           "columns": [
             { "selector": "startLocal", "text": "startLocal", "type": "string" },
             { "selector": "elapsedBin", "text": "elapsedBin", "type": "string" },
-            { "selector": "speed", "text": "speed", "type": "number" }
+            { "selector": "kmFromStart", "text": "kmFromStart", "type": "number" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
           "filters": [],
@@ -161,11 +161,11 @@
             "columnField": "elapsedBin",
             "emptyValue": "null",
             "rowField": "startLocal",
-            "valueField": "speed"
+            "valueField": "kmFromStart"
           }
         }
       ],
-      "title": "Speed by minutes since start (rows = days, columns = 0min 1min 2min …). Red at 10min = you were crawling 10 minutes after leaving.",
+      "title": "Km covered by minutes since start. Same column = same minute after leaving. Bigger / greener = farther.",
       "type": "table"
     },
     {
@@ -195,14 +195,17 @@
           },
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] },
-          "unit": "velocitykmh"
+          "unit": "lengthkm"
         },
-        "overrides": []
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "elapsedMin" }, "properties": [{ "id": "displayName", "value": "min since start" }, { "id": "unit", "value": "none" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "kmFromStart" }, "properties": [{ "id": "displayName", "value": "km covered" }, { "id": "unit", "value": "lengthkm" }, { "id": "decimals", "value": 1 }] }
+        ]
       },
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 21 },
       "id": 4,
       "options": {
-        "legend": { "calcs": ["min"], "displayMode": "list", "placement": "right", "showLegend": true },
+        "legend": { "calcs": ["max"], "displayMode": "list", "placement": "right", "showLegend": true },
         "seriesMapping": "auto",
         "tooltip": { "mode": "multi" },
         "xField": "elapsedMin"
