@@ -50,15 +50,15 @@ public class CommuteService {
 
     public List<CommuteSampleDto> compare(
             String carKey, Instant from, Instant to, int startAfterMin, int startBeforeMin,
-            int stepSec, Integer elapsedMin, ZoneId zone) {
+            double stepKm, ZoneId zone) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        int step = Math.min(Math.max(stepSec, 15), 180);
+        double step = Math.min(Math.max(stepKm, 0.2), 2.0);
         List<DriveEntity> picked = pick(carKey, from, to, startAfterMin, startBeforeMin, z);
         if (picked.isEmpty()) {
             return List.of();
         }
         List<Long> ids = picked.stream().map(DriveEntity::id).toList();
-        List<PositionCommutePoint> rows = positionDao.findCommutePointsByDriveIds(ids, step);
+        List<PositionCommutePoint> rows = positionDao.findCommutePointsByDriveIds(ids, 20);
         Map<Long, List<PositionCommutePoint>> byDrive = new LinkedHashMap<>();
         for (PositionCommutePoint p : rows) {
             if (p.driveId() == null) {
@@ -68,13 +68,12 @@ public class CommuteService {
         }
         List<CommuteSampleDto> out = new ArrayList<>();
         for (DriveEntity d : picked) {
-            out.addAll(CommuteCompare.resample(
-                    d, byDrive.getOrDefault(d.id(), List.of()), step, elapsedMin, z));
+            out.addAll(CommuteCompare.resampleByKm(
+                    d, byDrive.getOrDefault(d.id(), List.of()), step, z));
         }
-        out.sort(CommuteCompare.byDayThenElapsed());
-        log.info("commute car={} days={} clock={}-{} elapsed={} step={}s samples={}",
-                picked.isEmpty() ? "?" : picked.getFirst().carId(),
-                picked.size(), startAfterMin, startBeforeMin, elapsedMin, step, out.size());
+        out.sort(CommuteCompare.byDayThenKm());
+        log.info("commute car={} days={} clock={}-{} stepKm={} samples={}",
+                picked.getFirst().carId(), picked.size(), startAfterMin, startBeforeMin, step, out.size());
         return out;
     }
 

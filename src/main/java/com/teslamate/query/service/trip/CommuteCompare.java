@@ -17,13 +17,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Align same-clock commutes by elapsed time from each drive's own start.
- * Clock window picks the outing; elapsed minutes compare traffic.
+ * Clock window picks the outing; kilometres from that day's start align
+ * the same stretch of road across days.
  */
 public final class CommuteCompare {
 
     public static final int MAX_DAYS = 21;
-    public static final int DEFAULT_STEP_SEC = 60;
+    public static final double DEFAULT_STEP_KM = 0.5;
     static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE;
     static final DateTimeFormatter LOCAL_START = DateTimeFormatter.ofPattern("MM-dd HH:mm");
     static final DateTimeFormatter LOCAL_END = DateTimeFormatter.ofPattern("HH:mm");
@@ -94,80 +94,87 @@ public final class CommuteCompare {
         return ta > tb;
     }
 
-    public static List<CommuteSampleDto> resample(
-            DriveEntity drive,
-            List<PositionCommutePoint> raw,
-            int stepSec,
-            Integer onlyElapsedMin,
-            ZoneId zone
-    ) {
+    public static List<CommuteSampleDto> resampleByKm(
+            DriveEntity drive, List<PositionCommutePoint> raw, double stepKm, ZoneId zone) {
         if (drive == null || drive.startDate() == null || raw == null || raw.size() < 2) {
             return List.of();
         }
-        int step = Math.max(stepSec, 15);
+        double step = Math.min(Math.max(stepKm, 0.2), 2.0);
         Instant t0 = drive.startDate();
-        Double odo0 = raw.getFirst().odometer();
         String day = t0.atZone(zone).toLocalDate().format(DAY);
         String startLocal = t0.atZone(zone).format(LOCAL_START);
-        Instant lastT = raw.getLast().date();
-        if (lastT == null || !lastT.isAfter(t0)) {
-            lastT = t0.plusSeconds(60);
-        }
-        long spanSec = Math.min(Duration.between(t0, lastT).getSeconds(), 3 * 3600L);
-        if (onlyElapsedMin != null) {
-            long want = onlyElapsedMin * 60L;
-            if (want > spanSec) {
-                return List.of();
-            }
-            PositionCommutePoint p = atElapsed(raw, t0, want);
-            return p == null ? List.of() : List.of(toDto(drive.id(), day, startLocal, t0, want / 60.0, p, odo0, zone));
+        double[] along = kmAlong(raw);
+        double total = along[along.length - 1];
+        if (total < step / 2) {
+            return List.of();
         }
         List<CommuteSampleDto> out = new ArrayList<>();
-        for (long sec = 0; sec <= spanSec; sec += step) {
-            PositionCommutePoint p = atElapsed(raw, t0, sec);
-            if (p != null) {
-                out.add(toDto(drive.id(), day, startLocal, t0, sec / 60.0, p, odo0, zone));
-            }
+        for (double km = 0; km <= total + 1e-6; km += step) {
+            int idx = firstAtOrAfter(along, km);
+            out.add(toDto(drive, day, startLocal, raw.get(idx), km, t0, zone));
         }
         return out;
     }
 
-    /** Last sample at or before {@code elapsedSec} from {@code t0}. */
-    static PositionCommutePoint atElapsed(List<PositionCommutePoint> raw, Instant t0, long elapsedSec) {
-        PositionCommutePoint keep = null;
-        Instant limit = t0.plusSeconds(elapsedSec);
-        for (PositionCommutePoint p : raw) {
-            if (p.date() == null) {
-                continue;
-            }
-            if (p.date().isAfter(limit)) {
-                break;
-            }
-            keep = p;
+    static double[] kmAlong(List<PositionCommutePoint> raw) {
+        double[] km = new double[raw.size()];
+        for (int i = 1; i < raw.size(); i++) {
+            km[i] = km[i - 1] + havKm(raw.get(i - 1), raw.get(i));
         }
-        return keep != null ? keep : raw.getFirst();
+        return km;
+    }
+
+    /** Point where the car has reached this many km (same stretch across days). */
+    static int firstAtOrAfter(double[] along, double km) {
+        for (int i = 0; i < along.length; i++) {
+            if (along[i] + 1e-9 >= km) {
+                return i;
+            }
+        }
+        return along.length - 1;
+    }
+
+    static double havKm(PositionCommutePoint a, PositionCommutePoint b) {
+        if (a.latitude() == null || a.longitude() == null
+                || b.latitude() == null || b.longitude() == null) {
+            return 0;
+        }
+        return havKm(
+                a.latitude().doubleValue(), a.longitude().doubleValue(),
+                b.latitude().doubleValue(), b.longitude().doubleValue());
+    }
+
+    static double havKm(double lat1, double lon1, double lat2, double lon2) {
+        double r = 6371.0;
+        double p1 = Math.toRadians(lat1);
+        double p2 = Math.toRadians(lat2);
+        double dlat = p2 - p1;
+        double dlon = Math.toRadians(lon2 - lon1);
+        double h = Math.sin(dlat / 2) * Math.sin(dlat / 2)
+                + Math.cos(p1) * Math.cos(p2) * Math.sin(dlon / 2) * Math.sin(dlon / 2);
+        return 2 * r * Math.asin(Math.min(1, Math.sqrt(h)));
     }
 
     static CommuteSampleDto toDto(
-            Long driveId, String day, String startLocal, Instant start, double elapsedMin,
-            PositionCommutePoint p, Double odo0, ZoneId zone) {
-        Double km = null;
-        if (p.odometer() != null && odo0 != null) {
-            km = Math.max(0, p.odometer() - odo0);
+            DriveEntity drive, String day, String startLocal, PositionCommutePoint p,
+            double km, Instant t0, ZoneId zone) {
+        double elapsedMin = 0;
+        if (p.date() != null && t0 != null && p.date().isAfter(t0)) {
+            elapsedMin = Duration.between(t0, p.date()).toMillis() / 60_000.0;
         }
         Integer speed = p.speed();
-        String label = speed == null
-                ? startLocal
-                : startLocal + " · " + speed + " km/h";
-        Instant origin = java.time.LocalDate.of(2020, 1, 1).atStartOfDay(zone).toInstant();
-        Instant elapsedMs = origin.plusSeconds(Math.round(elapsedMin * 60.0));
+        String bin = String.format(java.util.Locale.US, "%.1f", km);
+        String label = startLocal + " · " + bin + " km"
+                + (speed == null ? "" : " · " + speed + " km/h");
         Double lat = p.latitude() == null ? null : p.latitude().doubleValue();
         Double lon = p.longitude() == null ? null : p.longitude().doubleValue();
-        return new CommuteSampleDto(day, driveId, elapsedMin, elapsedMs, start, startLocal,
-                lat, lon, speed, km, label);
+        return new CommuteSampleDto(
+                day, drive.id(), elapsedMin, t0, startLocal,
+                lat, lon, speed, km, bin, label);
     }
 
-    public static Comparator<CommuteSampleDto> byDayThenElapsed() {
-        return Comparator.comparing(CommuteSampleDto::day).thenComparingDouble(CommuteSampleDto::elapsedMin);
+    public static Comparator<CommuteSampleDto> byDayThenKm() {
+        return Comparator.comparing(CommuteSampleDto::day)
+                .thenComparingDouble(s -> s.kmFromStart() == null ? 0 : s.kmFromStart());
     }
 }

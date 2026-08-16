@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Same morning (or evening) outing across days. First confirm the picked drives, then compare where you were N minutes after that day's own start.",
+  "description": "Same commute, every day. Rows / lines are days. Columns / X are km along that day's own start — the same stretch of road.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -25,11 +25,11 @@
   "panels": [
     {
       "datasource": { "type": "grafana", "uid": "-- Grafana --" },
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "Timezone **Asia/Shanghai (UTC+8)**. The picker sends `from`/`to` as UTC (`…Z`), same as Map.\n\n**Start after / before** are local clock times used to *pick* the outing: one drive per calendar day that started between **${start_after}–${start_before}**, at least 8 min / 2 km. Check the table below first — if those rows are not your commute, change the clock window.\n\n**Elapsed min = ${elapsed_min}** is minutes after *that day's own start*, not 06:00 on the wall. Pins and the right-hand table are where you were at that elapsed time.",
+        "content": "Timezone **Asia/Shanghai**. The picker is local; API `from`/`to` are UTC.\n\n**Start after / before** pick the outing (one drive per day that left in **${start_after}–${start_before}**, ≥8 min / 2 km). Check the table. Then every day is one **row** and one **line**. X / columns are **km from that day's start** — 3.0 km is the same stretch of road, not the same clock. Red = slow.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -62,7 +62,7 @@
           { "matcher": { "id": "byName", "options": "end" }, "properties": [{ "id": "custom.hidden", "value": true }] }
         ]
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 3 },
       "id": 2,
       "options": {
         "cellHeight": "sm",
@@ -94,112 +94,44 @@
           "url_options": { "data": "", "method": "GET" }
         }
       ],
-      "title": "Picked drives (started ${start_after}–${start_before} Asia/Shanghai). If a row looks wrong, change the clock window.",
+      "title": "These drives are compared (started ${start_after}–${start_before} Asia/Shanghai)",
       "type": "table"
     },
     {
       "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
-          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "center",
+            "cellOptions": { "mode": "basic", "type": "color-background" },
+            "inspect": false,
+            "filterable": false
+          },
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#ef4444", "value": 0 },
-              { "color": "#f59e0b", "value": 20 },
-              { "color": "#22c55e", "value": 40 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 14, "w": 14, "x": 0, "y": 14 },
-      "id": 3,
-      "options": {
-        "basemap": { "config": {}, "name": "Basemap", "type": "default" },
-        "controls": { "mouseWheelZoom": true, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": true, "showZoom": true },
-        "layers": [
-          {
-            "config": {
-              "showLegend": false,
-              "style": {
-                "color": { "field": "speed", "fixed": "#3b82f6" },
-                "opacity": 1,
-                "rotation": { "fixed": 0, "max": 360, "min": -360, "mode": "mod" },
-                "size": { "fixed": 11, "max": 13, "min": 9 },
-                "symbol": { "fixed": "img/icons/marker/circle.svg", "mode": "fixed" },
-                "symbolAlign": { "horizontal": "center", "vertical": "center" },
-                "text": { "field": "label", "fixed": "", "mode": "field" },
-                "textConfig": { "fontSize": 11, "offsetX": 12, "offsetY": 0, "textAlign": "left", "textBaseline": "middle" }
-              }
-            },
-            "filterData": { "id": "byRefId", "options": "At" },
-            "location": { "latitude": "latitude", "longitude": "longitude", "mode": "coords" },
-            "name": "At T",
-            "opacity": 1,
-            "tooltip": true,
-            "type": "markers"
-          }
-        ],
-        "tooltip": { "mode": "details" },
-        "view": { "allLayers": true, "id": "fit", "lat": 0, "lon": 0, "padding": 0.12, "shared": false, "zoom": 12 }
-      },
-      "pluginVersion": "13.0.1",
-      "targets": [
-        {
-          "columns": [
-            { "selector": "startLocal", "text": "startLocal", "type": "string" },
-            { "selector": "latitude", "text": "latitude", "type": "number" },
-            { "selector": "longitude", "text": "longitude", "type": "number" },
-            { "selector": "speed", "text": "speed", "type": "number" },
-            { "selector": "driveId", "text": "driveId", "type": "number" },
-            { "selector": "kmFromStart", "text": "kmFromStart", "type": "number" },
-            { "selector": "label", "text": "label", "type": "string" }
-          ],
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
-          "filters": [],
-          "format": "table",
-          "parser": "backend",
-          "refId": "At",
-          "root_selector": "",
-          "source": "url",
-          "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&elapsedMin=${elapsed_min}&timezone=Asia/Shanghai",
-          "url_options": { "data": "", "method": "GET" }
-        }
-      ],
-      "title": "Where ${elapsed_min} min after that day's start",
-      "type": "geomap"
-    },
-    {
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
-      "fieldConfig": {
-        "defaults": {
-          "custom": { "align": "left", "cellOptions": { "type": "auto" }, "inspect": false, "filterable": true },
-          "mappings": []
-        },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "startLocal" }, "properties": [{ "id": "displayName", "value": "Left (Shanghai)" }] },
-          {
-            "matcher": { "id": "byName", "options": "driveId" },
-            "properties": [
-              { "id": "displayName", "value": "Drive #" },
-              { "id": "decimals", "value": 0 },
-              { "id": "links", "value": [{ "title": "Open drive", "url": "/d/teslamate-query-drive/drive?var-drive_id=${__data.fields.driveId}&var-car_id=${car_id}&var-ds=${ds}" }] }
+              { "color": "#7f1d1d", "value": 0 },
+              { "color": "#ef4444", "value": 10 },
+              { "color": "#f59e0b", "value": 25 },
+              { "color": "#84cc16", "value": 40 },
+              { "color": "#22c55e", "value": 55 }
             ]
           },
-          { "matcher": { "id": "byName", "options": "speed" }, "properties": [{ "id": "displayName", "value": "km/h then" }, { "id": "unit", "value": "velocitykmh" }] },
-          { "matcher": { "id": "byName", "options": "kmFromStart" }, "properties": [{ "id": "displayName", "value": "km so far" }, { "id": "unit", "value": "lengthkm" }, { "id": "decimals", "value": 1 }] },
-          { "matcher": { "id": "byName", "options": "label" }, "properties": [{ "id": "custom.hidden", "value": true }] }
+          "unit": "velocitykmh"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "startLocal" }, "properties": [{ "id": "displayName", "value": "Left" }, { "id": "custom.width", "value": 92 }, { "id": "custom.cellOptions", "value": { "type": "auto" } }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "text" } }] }
         ]
       },
-      "gridPos": { "h": 14, "w": 10, "x": 14, "y": 14 },
-      "id": 4,
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 11 },
+      "id": 3,
       "options": {
         "cellHeight": "sm",
-        "footer": { "countRows": true, "fields": "", "reducer": ["sum"], "show": false },
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
         "showHeader": true
       },
       "pluginVersion": "13.0.1",
@@ -207,24 +139,33 @@
         {
           "columns": [
             { "selector": "startLocal", "text": "startLocal", "type": "string" },
-            { "selector": "driveId", "text": "driveId", "type": "number" },
-            { "selector": "speed", "text": "speed", "type": "number" },
-            { "selector": "kmFromStart", "text": "kmFromStart", "type": "number" },
-            { "selector": "label", "text": "label", "type": "string" }
+            { "selector": "kmBin", "text": "kmBin", "type": "string" },
+            { "selector": "speed", "text": "speed", "type": "number" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
           "filters": [],
           "format": "table",
           "parser": "backend",
-          "refId": "At",
+          "refId": "A",
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&elapsedMin=${elapsed_min}&timezone=Asia/Shanghai",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepKm=0.5",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
-      "title": "${elapsed_min} min after leaving — speed & how far",
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "kmBin",
+            "emptyValue": "null",
+            "rowField": "startLocal",
+            "valueField": "speed"
+          }
+        }
+      ],
+      "title": "Speed on the road (rows = days, columns = km from start). A red column is the same jam every day.",
       "type": "table"
     },
     {
@@ -256,21 +197,21 @@
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] },
           "unit": "velocitykmh"
         },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "time" }, "properties": [{ "id": "displayName", "value": "Minutes after start" }, { "id": "unit", "value": "time:HH:mm" }] }
-        ]
+        "overrides": []
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
-      "id": 5,
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 21 },
+      "id": 4,
       "options": {
-        "legend": { "calcs": ["min", "mean"], "displayMode": "list", "placement": "right", "showLegend": true },
-        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "none" }
+        "legend": { "calcs": ["min"], "displayMode": "list", "placement": "right", "showLegend": true },
+        "seriesMapping": "auto",
+        "tooltip": { "mode": "multi" },
+        "xField": "kmFromStart"
       },
       "pluginVersion": "13.0.1",
       "targets": [
         {
           "columns": [
-            { "selector": "elapsedMs", "text": "time", "type": "timestamp" },
+            { "selector": "kmFromStart", "text": "kmFromStart", "type": "number" },
             { "selector": "speed", "text": "speed", "type": "number" },
             { "selector": "startLocal", "text": "startLocal", "type": "string" }
           ],
@@ -282,7 +223,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepSec=60",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepKm=0.5",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -292,8 +233,83 @@
           "options": { "fields": ["startLocal"], "keepFields": false }
         }
       ],
-      "title": "Speed vs minutes after that day's start (axis 00:10 = 10 min in, ignore the year)",
-      "type": "timeseries"
+      "title": "One line per day — speed vs km from start",
+      "type": "xychart"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#7f1d1d", "value": 0 },
+              { "color": "#ef4444", "value": 10 },
+              { "color": "#f59e0b", "value": 25 },
+              { "color": "#84cc16", "value": 40 },
+              { "color": "#22c55e", "value": 55 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 21 },
+      "id": 5,
+      "options": {
+        "basemap": { "config": {}, "name": "Basemap", "type": "default" },
+        "controls": { "mouseWheelZoom": true, "showAttribution": true, "showDebug": false, "showMeasure": false, "showScale": true, "showZoom": true },
+        "layers": [
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": { "field": "speed", "fixed": "#3b82f6" },
+                "opacity": 0.85,
+                "rotation": { "fixed": 0, "max": 360, "min": -360, "mode": "mod" },
+                "size": { "fixed": 6, "max": 7, "min": 5 },
+                "symbol": { "fixed": "img/icons/marker/circle.svg", "mode": "fixed" },
+                "symbolAlign": { "horizontal": "center", "vertical": "center" }
+              }
+            },
+            "filterData": { "id": "byRefId", "options": "Pts" },
+            "location": { "latitude": "latitude", "longitude": "longitude", "mode": "coords" },
+            "name": "Speed",
+            "opacity": 1,
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": { "mode": "details" },
+        "view": { "allLayers": true, "id": "fit", "lat": 0, "lon": 0, "padding": 0.1, "shared": false, "zoom": 12 }
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "latitude", "text": "latitude", "type": "number" },
+            { "selector": "longitude", "text": "longitude", "type": "number" },
+            { "selector": "speed", "text": "speed", "type": "number" },
+            { "selector": "startLocal", "text": "startLocal", "type": "string" },
+            { "selector": "kmBin", "text": "kmBin", "type": "string" },
+            { "selector": "label", "text": "label", "type": "string" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "Pts",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepKm=0.5",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "All days on the map (color = speed). A red cluster is a habitual slow spot.",
+      "type": "geomap"
     }
   ],
   "refresh": "",
@@ -370,16 +386,6 @@
         "name": "start_before",
         "options": [{ "selected": true, "text": "06:30", "value": "06:30" }],
         "query": "06:30",
-        "skipUrlSync": false,
-        "type": "textbox"
-      },
-      {
-        "current": { "text": "10", "value": "10" },
-        "hide": 0,
-        "label": "Elapsed min",
-        "name": "elapsed_min",
-        "options": [{ "selected": true, "text": "10", "value": "10" }],
-        "query": "10",
         "skipUrlSync": false,
         "type": "textbox"
       }

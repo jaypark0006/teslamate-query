@@ -47,7 +47,7 @@ public class CommuteController {
     }
 
     @GetMapping
-    @Operation(summary = "Same clock-window outing each local day, sampled by elapsed minutes from that day's start")
+    @Operation(summary = "Same clock-window outing each day, sampled every stepKm along that day's own path")
     public List<CommuteSampleDto> compare(
             @PathVariable String carId,
             @RequestParam String from,
@@ -56,18 +56,15 @@ public class CommuteController {
             @RequestParam(required = false) String startAfter,
             @Parameter(description = "Local start clock, inclusive (HH:mm). Default 07:00")
             @RequestParam(required = false) String startBefore,
-            @Parameter(description = "Sample every N seconds of elapsed time (15–180). Default 60")
-            @RequestParam(required = false) Integer stepSec,
-            @Parameter(description = "If set, one pin per day at this elapsed minute (map overlay)")
-            @RequestParam(required = false) Integer elapsedMin,
+            @Parameter(description = "Sample every N km from that day's start (0.2–2). Default 0.5")
+            @RequestParam(required = false) Double stepKm,
             @RequestParam(required = false) String timezone
     ) {
         var range = support.requireRange(from, to);
         int after = support.clockMinutes(startAfter, 5 * 60 + 30);
         int before = support.clockMinutes(startBefore, 7 * 60);
-        int step = stepSec == null ? CommuteCompare.DEFAULT_STEP_SEC : stepSec;
-        Integer at = elapsedMin == null || elapsedMin < 0 ? null : elapsedMin;
-        return commuteService.compare(carId, range[0], range[1], after, before, step, at,
+        double step = stepKm == null ? CommuteCompare.DEFAULT_STEP_KM : stepKm;
+        return commuteService.compare(carId, range[0], range[1], after, before, step,
                 support.zone(timezone));
     }
 }
