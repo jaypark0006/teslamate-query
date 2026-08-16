@@ -48,9 +48,32 @@ class DayGridTest {
                 c.kindCode() == DayGridCellDto.DRIVE && c.hour() < 1);
         assertTrue(sawDrive);
         assertEquals(DayGridCellDto.DRIVE,
-                cells.stream().filter(c -> c.hour() == 0.25).findFirst().orElseThrow().kindCode());
-        assertEquals("00:15",
-                cells.stream().filter(c -> c.hour() == 0.25).findFirst().orElseThrow().slot());
+                cells.stream().filter(c -> "00:00".equals(c.slot())).findFirst().orElseThrow().kindCode());
+    }
+
+    @Test
+    void fourAmDayKeepsPredawnOnPreviousColumn() {
+        // 02:00–04:00 Aug 11 CST belongs to the Aug 10 04:00–04:00 block
+        ActivitySpan park = new ActivitySpan(
+                TimelineKind.PARK, null,
+                Instant.parse("2026-08-10T18:00:00Z"),
+                Instant.parse("2026-08-10T20:00:00Z"),
+                120, null, null);
+        List<DayGridCellDto> cells = DayGrid.paint(List.of(park), SH, 4);
+        assertTrue(cells.stream().anyMatch(c -> c.day().equals("2026-08-10") && "·02:00".equals(c.slot())));
+        assertTrue(cells.stream().noneMatch(c -> c.day().equals("2026-08-11")));
+    }
+
+    @Test
+    void saturdayGetsWeekendMark() {
+        ActivitySpan park = new ActivitySpan(
+                TimelineKind.PARK, null,
+                Instant.parse("2026-08-15T04:00:00Z"),
+                Instant.parse("2026-08-15T06:00:00Z"),
+                120, null, null);
+        List<DayGridCellDto> cells = DayGrid.paint(List.of(park), SH, 4);
+        assertTrue(cells.stream().anyMatch(c ->
+                c.kindCode() == DayGridCellDto.WEEKEND && c.day().equals("2026-08-15")));
     }
 
     @Test

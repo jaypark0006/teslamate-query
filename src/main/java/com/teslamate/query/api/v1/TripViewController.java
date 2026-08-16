@@ -63,18 +63,20 @@ public class TripViewController {
     }
 
     @GetMapping("/timeline/grid")
-    @Operation(summary = "Day × 15-min slots of DRIVE / CHARGE / PARK (overnight parks fill every local day)")
+    @Operation(summary = "Day × hour slots of DRIVE / CHARGE / PARK (day starts at dayStartHour in timezone)")
     public List<DayGridCellDto> grid(
             @PathVariable long carId,
             @RequestParam String from,
             @RequestParam String to,
             @RequestParam(required = false) String minParkMin,
             @RequestParam(required = false) String timezone,
+            @RequestParam(required = false) String dayStartHour,
             @RequestParam(required = false) String lengthUnit,
             @RequestParam(required = false) String tempUnit
     ) {
         return tripViewService.grid(carId, from, to, support.minParkMin(minParkMin),
-                support.units(lengthUnit, tempUnit), support.zone(timezone));
+                support.units(lengthUnit, tempUnit), support.zone(timezone),
+                support.dayStartHour(dayStartHour));
     }
 
     @GetMapping("/map")

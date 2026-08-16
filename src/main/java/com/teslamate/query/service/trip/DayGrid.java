@@ -4,6 +4,8 @@ import com.teslamate.query.dto.DayGridCellDto;
 import com.teslamate.query.dto.TimelineItemDto;
 import com.teslamate.query.dto.TimelineKind;
 
+import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -11,21 +13,29 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Paint each activity onto 15-minute slots of local days.
- * Overnight parks fill every day they cover (grid only; the log stays one row).
+ * Paint each activity onto hourly slots of local day-blocks.
+ * Overnight parks fill every block they cover (grid only; the log stays one row).
+ * {@code dayStartHour} shifts the civil day (4 → 04:00–04:00) using the caller's zone.
  */
 public final class DayGrid {
 
-    static final int SLOT_MIN = 15;
+    static final int SLOT_MIN = 60;
     static final int SLOTS_PER_DAY = 24 * 60 / SLOT_MIN;
+    static final String WEEKEND_SLOT = "★";
 
     private DayGrid() {}
 
     public static List<DayGridCellDto> paintFromTimeline(List<TimelineItemDto> items, ZoneId zone) {
+        return paintFromTimeline(items, zone, 0);
+    }
+
+    public static List<DayGridCellDto> paintFromTimeline(List<TimelineItemDto> items, ZoneId zone, int dayStartHour) {
         if (items == null || items.isEmpty()) {
             return List.of();
         }
@@ -37,15 +47,21 @@ public final class DayGrid {
             double min = item.durationMin() == null ? 0 : item.durationMin();
             spans.add(new ActivitySpan(item.kind(), item.id(), item.start(), item.end(), min, null, null));
         }
-        return paint(spans, zone);
+        return paint(spans, zone, dayStartHour);
     }
 
     public static List<DayGridCellDto> paint(List<ActivitySpan> spans, ZoneId zone) {
+        return paint(spans, zone, 0);
+    }
+
+    public static List<DayGridCellDto> paint(List<ActivitySpan> spans, ZoneId zone, int dayStartHour) {
         if (spans == null || spans.isEmpty()) {
             return List.of();
         }
         ZoneId z = zone == null ? ZoneId.of("UTC") : zone;
+        int startH = Math.floorMod(dayStartHour, 24);
         Map<String, int[]> cells = new LinkedHashMap<>();
+        Set<LocalDate> days = new LinkedHashSet<>();
         for (ActivitySpan span : spans) {
             if (span == null || span.start() == null || span.end() == null || !span.end().isAfter(span.start())) {
                 continue;
@@ -56,10 +72,15 @@ public final class DayGrid {
             int guard = 0;
             while (cursor.isBefore(end) && guard++ < 20_000) {
                 ZonedDateTime local = cursor.atZone(z);
-                LocalDate day = local.toLocalDate();
-                int minuteOfDay = local.getHour() * 60 + local.getMinute();
-                int slot = Math.min(minuteOfDay / SLOT_MIN, SLOTS_PER_DAY - 1);
-                Instant slotEnd = day.atStartOfDay(z).plusMinutes((long) (slot + 1) * SLOT_MIN).toInstant();
+                LocalDate day = local.minusHours(startH).toLocalDate();
+                days.add(day);
+                ZonedDateTime blockStart = day.atStartOfDay(z).plusHours(startH);
+                long minInto = Duration.between(blockStart, local).toMinutes();
+                if (minInto < 0) {
+                    minInto = 0;
+                }
+                int slot = (int) Math.min(minInto / SLOT_MIN, SLOTS_PER_DAY - 1);
+                Instant slotEnd = blockStart.plusMinutes((long) (slot + 1) * SLOT_MIN).toInstant();
                 if (slotEnd.isAfter(end)) {
                     slotEnd = end;
                 }
@@ -74,13 +95,18 @@ public final class DayGrid {
                 cursor = slotEnd;
             }
         }
-        List<DayGridCellDto> out = new ArrayList<>(cells.size());
+        List<DayGridCellDto> out = new ArrayList<>(cells.size() + days.size());
         for (int[] c : cells.values()) {
             LocalDate day = LocalDate.of(c[1], c[2], c[3]);
             Instant midnight = day.atStartOfDay(z).toInstant();
-            int minutes = c[4] * SLOT_MIN;
-            double hour = minutes / 60.0;
-            String slot = String.format("%02d:%02d", minutes / 60, minutes % 60);
+            int clockMin = (startH * 60 + c[4] * SLOT_MIN) % (24 * 60);
+            int clockH = clockMin / 60;
+            int clockM = clockMin % 60;
+            String slot = String.format("%02d:%02d", clockH, clockM);
+            if (startH != 0 && clockH < startH) {
+                slot = "·" + slot;
+            }
+            double hour = clockH + clockM / 60.0;
             String kind = switch (c[0]) {
                 case DayGridCellDto.DRIVE -> "DRIVE";
                 case DayGridCellDto.CHARGE -> "CHARGE";
@@ -88,7 +114,20 @@ public final class DayGrid {
             };
             out.add(new DayGridCellDto(midnight, day.toString(), hour, slot, c[0], kind));
         }
-        out.sort(Comparator.comparing(DayGridCellDto::day).thenComparingDouble(DayGridCellDto::hour));
+        for (LocalDate day : days) {
+            DayOfWeek w = day.getDayOfWeek();
+            if (w != DayOfWeek.SATURDAY && w != DayOfWeek.SUNDAY) {
+                continue;
+            }
+            out.add(new DayGridCellDto(
+                    day.atStartOfDay(z).toInstant(),
+                    day.toString(),
+                    24.0,
+                    WEEKEND_SLOT,
+                    DayGridCellDto.WEEKEND,
+                    "WEEKEND"));
+        }
+        out.sort(Comparator.comparing(DayGridCellDto::day).thenComparing(DayGridCellDto::slot));
         return out;
     }
 
@@ -102,7 +141,7 @@ public final class DayGrid {
         return DayGridCellDto.PARK;
     }
 
-    /** Charge covers drive covers park when two things share a 15-minute slot. */
+    /** Charge covers drive covers park when two things share an hour slot. */
     private static boolean preferred(int incoming, int existing) {
         return incoming > existing;
     }

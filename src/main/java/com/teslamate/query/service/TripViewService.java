@@ -127,9 +127,9 @@ public class TripViewService {
     }
 
     public List<DayGridCellDto> grid(long carId, String fromStr, String toStr, Integer minParkMin,
-                                     DisplayUnits units, ZoneId zone) {
+                                     DisplayUnits units, ZoneId zone, int dayStartHour) {
         ZoneId z = zone == null ? ZoneId.of("Asia/Shanghai") : zone;
-        return DayGrid.paintFromTimeline(timeline(carId, fromStr, toStr, minParkMin, units, z), z);
+        return DayGrid.paintFromTimeline(timeline(carId, fromStr, toStr, minParkMin, units, z), z, dayStartHour);
     }
 
     public List<MapPointDto> points(long carId, String fromStr, String toStr, Integer minParkMin,

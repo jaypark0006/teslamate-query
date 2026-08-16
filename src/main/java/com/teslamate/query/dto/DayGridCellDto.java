@@ -5,7 +5,7 @@ import java.time.Instant;
 /**
  * One cell on the day × hour-of-day grid.
  * {@code time} is local midnight (Grafana x-axis); {@code slot} is {@code HH:mm}
- * so a matrix transform sorts 00:00 … 23:45; {@code hour} is 0–24.
+ * so a matrix transform sorts clock labels; {@code hour} is the clock hour.
  */
 public record DayGridCellDto(
         Instant time,
@@ -18,4 +18,5 @@ public record DayGridCellDto(
     public static final int PARK = 1;
     public static final int DRIVE = 2;
     public static final int CHARGE = 3;
+    public static final int WEEKEND = 4;
 }

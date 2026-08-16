@@ -88,9 +88,10 @@ class TripViewControllerWebTest {
     void gridOk() {
         when(support.minParkMin(null)).thenReturn(10);
         when(support.zone(null)).thenReturn(java.time.ZoneId.of("Asia/Shanghai"));
+        when(support.dayStartHour(null)).thenReturn(0);
         when(support.units(null, null)).thenReturn(null);
         when(tripViewService.grid(eq(1L), eq("2026-08-16T00:00:00Z"), eq("2026-08-16T12:00:00Z"),
-                eq(10), any(), any())).thenReturn(List.of(
+                eq(10), any(), any(), eq(0))).thenReturn(List.of(
                 new DayGridCellDto(Instant.parse("2026-08-15T16:00:00Z"), "2026-08-16",
                         8.0, "08:00", DayGridCellDto.DRIVE, "DRIVE")));
         client.get().uri(uriBuilder -> uriBuilder.path("/api/v1/cars/1/timeline/grid")

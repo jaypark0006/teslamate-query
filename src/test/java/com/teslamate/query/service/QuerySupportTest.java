@@ -42,6 +42,10 @@ class QuerySupportTest {
         assertEquals("Asia/Shanghai", support.zone(null).getId());
         assertEquals("Asia/Shanghai", support.zone("browser").getId());
         assertEquals("UTC", support.zone("UTC").getId());
+        assertEquals(0, support.dayStartHour(null));
+        assertEquals(0, support.dayStartHour("${dayStartHour}"));
+        assertEquals(4, support.dayStartHour("4"));
+        assertEquals(4, support.dayStartHour("28"));
     }
 
     @Test

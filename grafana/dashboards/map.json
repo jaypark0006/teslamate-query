@@ -297,9 +297,9 @@
                   "mode": "field"
                 },
                 "textConfig": {
-                  "fontSize": 11,
-                  "offsetX": 10,
-                  "offsetY": 8,
+                  "fontSize": 10,
+                  "offsetX": 11,
+                  "offsetY": 9,
                   "textAlign": "left",
                   "textBaseline": "top"
                 }
@@ -352,9 +352,9 @@
                   "mode": "field"
                 },
                 "textConfig": {
-                  "fontSize": 11,
-                  "offsetX": 10,
-                  "offsetY": -10,
+                  "fontSize": 10,
+                  "offsetX": 11,
+                  "offsetY": -12,
                   "textAlign": "left",
                   "textBaseline": "bottom"
                 }
@@ -1017,6 +1017,11 @@
                   "color": "#22c55e",
                   "index": 2,
                   "text": "Charge"
+                },
+                "4": {
+                  "color": "#d97706",
+                  "index": 3,
+                  "text": "Weekend"
                 }
               },
               "type": "value"
@@ -1032,7 +1037,32 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:MM-DD ddd"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "★"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": " "
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 14,
@@ -1092,7 +1122,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/timeline/grid?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}",
+          "url": "/api/v1/cars/${car_id}/timeline/grid?from=${__from:date:iso}&to=${__to:date:iso}&timezone=${__timezone}&dayStartHour=4",
           "url_options": {
             "data": "",
             "method": "GET"
@@ -1123,7 +1153,7 @@
         }
       ],
       "title": "Time of day",
-      "description": "One column per local day in the dashboard range. Each column is 00:00–24:00; gray = park, blue = drive, green = charge (15-minute slots). Overnight parks fill every day they cover.",
+      "description": "One column per local day (04:00–04:00 in the dashboard timezone). Gray = park, blue = drive, green = charge. Amber mark = Sat/Sun. Overnight parks fill every day they cover.",
       "type": "status-history"
     }
   ],

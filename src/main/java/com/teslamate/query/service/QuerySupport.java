@@ -100,6 +100,25 @@ public class QuerySupport {
         return (int) off;
     }
 
+    /** Local hour the day-block starts (0–23). Grafana sends 4 for 04:00–04:00. */
+    public int dayStartHour(String raw) {
+        if (raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")) {
+            return 0;
+        }
+        String s = raw.trim();
+        int i = 0;
+        if (s.charAt(0) == '-') {
+            i = 1;
+        }
+        while (i < s.length() && Character.isDigit(s.charAt(i))) {
+            i++;
+        }
+        if (i == 0 || (i == 1 && s.charAt(0) == '-')) {
+            return 0;
+        }
+        return Math.floorMod(Integer.parseInt(s.substring(0, i)), 24);
+    }
+
     /** Grafana may send {@code browser}, an IANA zone, or an unsubstituted ${__timezone}. */
     public ZoneId zone(String raw) {
         if (raw == null || raw.isBlank() || raw.contains("${") || raw.equalsIgnoreCase("browser")) {
