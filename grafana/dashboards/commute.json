@@ -29,7 +29,7 @@
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "Timezone **Asia/Shanghai**. The picker is local; API `from`/`to` are UTC.\n\n**Start after / before** pick which outing. Check the trip table first.\n\nEvery day is one **row** and one **line**. Columns / X = **minutes since that day's start**. The number in a cell (and the height of a line) is **how many km you had already covered** — not speed. At **10 min**, a bigger number means you got farther.",
+        "content": "Browser timezone **${__timezone}**. API `from`/`to` remain UTC.\n\n**Start after / before** pick which outing. Check the trip table first.\n\nEvery day is one **row** and one **line**. Columns / X = **minutes since that day's start**. The number in a cell (and the height of a line) is **how many km you had already covered** — not speed. At **10 min**, a bigger number means you got farther.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -90,11 +90,11 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute/trips?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai",
+          "url": "/api/v1/cars/${car_id}/commute/trips?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=${__timezone}",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
-      "title": "These drives are compared (started ${start_after}–${start_before} Asia/Shanghai)",
+      "title": "These drives are compared (started ${start_after}–${start_before} ${__timezone})",
       "type": "table"
     },
     {
@@ -150,7 +150,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepSec=60",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=${__timezone}&stepSec=60",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -214,7 +214,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepSec=60",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=${__timezone}&stepSec=60",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -295,7 +295,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=Asia/Shanghai&stepSec=60",
+          "url": "/api/v1/cars/${car_id}/commute?from=${__from:date:iso}&to=${__to:date:iso}&startAfter=${start_after}&startBefore=${start_before}&timezone=${__timezone}&stepSec=60",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -384,7 +384,7 @@
   },
   "time": { "from": "now-14d", "to": "now" },
   "timepicker": {},
-  "timezone": "Asia/Shanghai",
+  "timezone": "browser",
   "title": "Commute",
   "uid": "teslamate-query-commute",
   "weekStart": ""

@@ -3,9 +3,11 @@ package com.teslamate.query.api.v1;
 import com.teslamate.query.dto.ChargeDto;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.PageResponse;
+import com.teslamate.query.dto.RecentChargeDto;
 import com.teslamate.query.service.ChargeService;
 import com.teslamate.query.service.ChargingProcessService;
 import com.teslamate.query.service.QuerySupport;
+import com.teslamate.query.service.RecentActivityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,12 +21,14 @@ public class ChargingProcessController {
     private final ChargingProcessService service;
     private final ChargeService chargeService;
     private final QuerySupport support;
+    private final RecentActivityService recentActivityService;
 
     public ChargingProcessController(ChargingProcessService service, ChargeService chargeService,
-                                     QuerySupport support) {
+                                     QuerySupport support, RecentActivityService recentActivityService) {
         this.service = service;
         this.chargeService = chargeService;
         this.support = support;
+        this.recentActivityService = recentActivityService;
     }
 
     @GetMapping
@@ -67,5 +71,28 @@ public class ChargingProcessController {
     ) {
         return chargeService.list(chargingProcessId, null, null, null, page, size,
                 support.units(lengthUnit, tempUnit));
+    }
+
+    @GetMapping("/{chargingProcessId}/session")
+    @Operation(summary = "Logical charging session containing this process (read-only merge)")
+    public RecentChargeDto session(
+            @PathVariable long chargingProcessId,
+            @RequestParam(required = false) Integer mergeGapMin,
+            @RequestParam(required = false) Integer mergeDistanceM
+    ) {
+        return recentActivityService.chargingSession(chargingProcessId, mergeGapMin, mergeDistanceM);
+    }
+
+    @GetMapping("/{chargingProcessId}/session/charges")
+    @Operation(summary = "All charge samples belonging to the logical session")
+    public java.util.List<ChargeDto> sessionCharges(
+            @PathVariable long chargingProcessId,
+            @RequestParam(required = false) Integer mergeGapMin,
+            @RequestParam(required = false) Integer mergeDistanceM,
+            @RequestParam(required = false) String lengthUnit,
+            @RequestParam(required = false) String tempUnit
+    ) {
+        return recentActivityService.chargingSessionCharges(
+                chargingProcessId, mergeGapMin, mergeDistanceM, support.units(lengthUnit, tempUnit));
     }
 }

@@ -6,8 +6,10 @@ Infinity 数据源：`http://teslamate-query:8080`。
 时间：`from=${__from:date:iso}&to=${__to:date:iso}`  
 车：`carId=${car_id}` ← `GET /api/v1/cars`
 
-Provisioning dashboards (`grafana/dashboards/`): Overview, Map, Trip, Drives, Drive.  
-Drive uid `teslamate-query-drive` (`?var-drive_id=`). Trip uid `teslamate-query-trip` (picker window).
+Provisioning dashboards (`grafana/dashboards/`): Overview, Map, Trip, Drives, Drive, Charge, Commute.
+Drive uid `teslamate-query-drive` (`?var-drive_id=`). Charge uid `teslamate-query-charge`
+(`?var-chargingProcessId=`). Dashboards render timestamp fields in the viewer's browser timezone;
+`from`/`to` remain UTC ISO-8601 values.
 
 ## 核心接口
 
@@ -22,6 +24,8 @@ Drive uid `teslamate-query-drive` (`?var-drive_id=`). Trip uid `teslamate-query-
 | 行程 | `GET /api/v1/drives?...` · `/drives/{driveId}` · `/drives/{driveId}/positions` |
 | 充电会话 | `GET /api/v1/charging-processes?...` · `/{chargingProcessId}` |
 | 某次充电的全部采样 | `GET /api/v1/charging-processes/{chargingProcessId}/charges` 或 `GET /charges?chargingProcessId=` |
+| 逻辑充电会话 | `GET /cars/{carId}/recent/charges?mergeGapMin=15&mergeDistanceM=100` |
+| 逻辑会话详情 / 采样 | `GET /charging-processes/{id}/session` · `/{id}/session/charges` |
 | 轨迹点 | `GET /api/v1/drives/{driveId}/positions` 或 `GET /positions?driveId=` |
 | 状态 / 升级 | `GET /api/v1/states?...` · `/updates?...` |
 | 多轨迹（start 落在窗内） | `GET /api/v1/map/tracks?carId&from&to` |

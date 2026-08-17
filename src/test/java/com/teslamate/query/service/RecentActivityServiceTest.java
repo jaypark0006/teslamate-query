@@ -92,6 +92,27 @@ class RecentActivityServiceTest {
     }
 
     @Test
+    void recentChargesMergeNearbyFragmentsAtSameAddress() {
+        var first = process(365L, "16:05:00", "16:20:00", "10.00", 7L, 44, 60);
+        var second = process(366L, "16:25:00", "16:44:00", "21.72", 7L, 60, 99);
+        when(chargingProcessDao.findIds(ArgumentMatchers.any(), anyInt(), anyInt()))
+                .thenReturn(List.of(366L, 365L));
+        when(chargingProcessDao.findByIdsOrdered(List.of(366L, 365L))).thenReturn(List.of(second, first));
+        when(chargeDao.findLatestPerProcess(List.of(365L, 366L))).thenReturn(List.of());
+        when(chargeDao.findByProcessIds(List.of(365L, 366L), 10_000)).thenReturn(List.of());
+        when(settingsDao.find()).thenReturn(Optional.of(settings("rated")));
+
+        var rows = service.recentCharges(1L, 5, 15, 100);
+
+        assertEquals(1, rows.size());
+        assertEquals(List.of(365L, 366L), rows.getFirst().chargingProcessIds());
+        assertEquals(2, rows.getFirst().mergedCount());
+        assertEquals(new BigDecimal("31.72"), rows.getFirst().energyAddedKwh());
+        assertEquals(44, rows.getFirst().startSocPercent());
+        assertEquals(99, rows.getFirst().endSocPercent());
+    }
+
+    @Test
     void unknownCar404() {
         when(carDao.findById(9L)).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () -> service.recentDrives(9L, 5, 0));
@@ -126,6 +147,23 @@ class RecentActivityServiceTest {
                 new BigDecimal("185.46"), new BigDecimal("414.89"),
                 new BigDecimal("185.46"), new BigDecimal("414.89"),
                 44, 99, 39, null, null, null, null, null);
+    }
+
+    private static ChargingProcessEntity process(
+            long id,
+            String start,
+            String end,
+            String energy,
+            Long addressId,
+            int startSoc,
+            int endSoc
+    ) {
+        return new ChargingProcessEntity(
+                id, 1L,
+                utc("2026-08-01T" + start + "Z"), utc("2026-08-01T" + end + "Z"),
+                new BigDecimal(energy), new BigDecimal(energy),
+                null, null, null, null,
+                startSoc, endSoc, null, null, null, id, addressId, null);
     }
 
     private static ChargeEntity sample() {

@@ -63,6 +63,21 @@ GET /api/v1/charging-processes/364/charges
 GET /api/v1/charges?chargingProcessId=364
 ```
 
+### Logical charging sessions
+
+TeslaMate can split one physical charging stop into adjacent `charging_processes`. The query API can
+merge those fragments read-only when they are at the same location, within the configured gap, and no
+drive occurs between them. It never updates or deletes TeslaMate rows.
+
+```http
+GET /api/v1/cars/{carId}/recent/charges?limit=5&mergeGapMin=15&mergeDistanceM=100
+GET /api/v1/charging-processes/{chargingProcessId}/session?mergeGapMin=15&mergeDistanceM=100
+GET /api/v1/charging-processes/{chargingProcessId}/session/charges?mergeGapMin=15&mergeDistanceM=100
+```
+
+The session response includes `chargingProcessIds` and `mergedCount`. Its `id` is the last process id,
+which is used by the Charge dashboard as the representative id.
+
 ## Single-table resources
 
 | Table | Endpoints |
@@ -91,6 +106,8 @@ GET /api/v1/charges?chargingProcessId=364
 
 - `GET /drives/{driveId}/positions?downsample=`
 - `GET /charging-processes/{chargingProcessId}/charges`
+- `GET /charging-processes/{chargingProcessId}/session` — logical read-only merge around this process
+- `GET /charging-processes/{chargingProcessId}/session/charges` — samples from every merged process
 - `GET /cars/{carId}/latest` — multi-table snapshot
 - `GET /map/tracks?carId&from&to` — GeoJSON composition
 - `GET /map/trip?carId&from&to` — drive lines + charge/park points + direction chevrons (overlap window)

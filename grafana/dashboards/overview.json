@@ -75,7 +75,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "Timezone **Asia/Shanghai (UTC+8)**. The picker and all clocks on this page are local. API `from`/`to` stay UTC (`…Z`). Now: **${__to:date:YYYY-MM-DD HH:mm}**.",
+        "content": "Browser timezone **${__timezone}**. The picker and all clocks on this page are local. API `from`/`to` stay UTC (`…Z`). Now: **${__to:date:YYYY-MM-DD HH:mm}**.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -1501,7 +1501,23 @@
       "pluginVersion": "13.0.1",
       "targets": [
         {
-          "columns": [],
+          "columns": [
+            { "selector": "startDate", "text": "startDate", "type": "timestamp" },
+            { "selector": "endDate", "text": "endDate", "type": "timestamp" },
+            { "selector": "startSocPercent", "text": "startSocPercent", "type": "number" },
+            { "selector": "endSocPercent", "text": "endSocPercent", "type": "number" },
+            { "selector": "startRangeKm", "text": "startRangeKm", "type": "number" },
+            { "selector": "endRangeKm", "text": "endRangeKm", "type": "number" },
+            { "selector": "energyAddedKwh", "text": "energyAddedKwh", "type": "number" },
+            { "selector": "efficiencyPercent", "text": "efficiencyPercent", "type": "number" },
+            { "selector": "avgPowerKw", "text": "avgPowerKw", "type": "number" },
+            { "selector": "power20to80Label", "text": "power20to80Label", "type": "string" },
+            { "selector": "power80toEndLabel", "text": "power80toEndLabel", "type": "string" },
+            { "selector": "durationMin", "text": "durationMin", "type": "number" },
+            { "selector": "chargeType", "text": "chargeType", "type": "string" },
+            { "selector": "mergedCount", "text": "mergedCount", "type": "number" },
+            { "selector": "id", "text": "id", "type": "number" }
+          ],
           "datasource": {
             "type": "yesoreyeram-infinity-datasource",
             "uid": "${ds}"
@@ -3343,7 +3359,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/recent/charges?limit=5",
+          "url": "/api/v1/cars/${car_id}/recent/charges?limit=5&mergeGapMin=15&mergeDistanceM=100",
           "url_options": {
             "data": "",
             "method": "GET"
@@ -3358,7 +3374,13 @@
           "options": {
             "excludeByName": {
               "power20to80Kw": true,
-              "power80toEndKw": true
+              "power80toEndKw": true,
+              "chargingProcessIds": true,
+              "energyUsedKwh": true,
+              "cost": true,
+              "positionId": true,
+              "addressId": true,
+              "geofenceId": true
             },
             "indexByName": {
               "startDate": 0,
@@ -3374,7 +3396,8 @@
               "power80toEndLabel": 10,
               "durationMin": 11,
               "chargeType": 12,
-              "id": 13
+              "mergedCount": 13,
+              "id": 14
             },
             "renameByName": {}
           }
@@ -3515,7 +3538,7 @@
   "timepicker": {
     "hidden": true
   },
-  "timezone": "Asia/Shanghai",
+  "timezone": "browser",
   "title": "Overview",
   "uid": "7c4e1b92-6a0f-4d3e-9c18-2b5e8a71d046",
   "weekStart": ""

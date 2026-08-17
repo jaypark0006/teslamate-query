@@ -54,6 +54,14 @@ public class QuerySupport {
         return Math.min(mergeGapMin, 180);
     }
 
+    public int chargeMergeGapMin(Integer value) {
+        return value == null ? 15 : Math.min(Math.max(value, 0), 180);
+    }
+
+    public int mergeDistanceM(Integer value) {
+        return value == null ? 100 : Math.min(Math.max(value, 0), 1_000);
+    }
+
     /** Grafana custom var: 10, "10 min", or unsubstituted ${min_park}. */
     public int minParkMin(String raw) {
         if (raw == null || raw.isBlank() || raw.contains("${") || raw.contains("%24")) {

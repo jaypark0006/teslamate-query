@@ -30,7 +30,7 @@
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "Timezone **Asia/Shanghai (UTC+8)**. Drive **#${drive_id}**. Curves are 5 s samples; the map uses the same GPS as the Map highlight.",
+        "content": "Browser timezone **${__timezone}**. Drive **#${drive_id}**. Curves are 5 s samples; the map uses the same GPS as the Map highlight.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -155,7 +155,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/cars/${car_id}/map/focus?id=${drive_id}&kind=Drive&day=-&slot=-&from=-&to=-&timezone=Asia/Shanghai&dayStartHour=4",
+          "url": "/api/v1/cars/${car_id}/map/focus?id=${drive_id}&kind=Drive&day=-&slot=-&from=-&to=-&timezone=${__timezone}&dayStartHour=4",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -512,7 +512,7 @@
   },
   "time": { "from": "now-7d", "to": "now" },
   "timepicker": {},
-  "timezone": "Asia/Shanghai",
+  "timezone": "browser",
   "title": "Drive",
   "uid": "teslamate-query-drive",
   "weekStart": ""

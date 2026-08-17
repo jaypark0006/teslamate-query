@@ -1,0 +1,203 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "One logical charging session. Nearby TeslaMate charging_processes at the same location are merged read-only.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    { "asDropdown": false, "icon": "dashboard", "includeVars": true, "keepTime": false, "tags": [], "targetBlank": false, "title": "Overview", "type": "link", "url": "/d/7c4e1b92-6a0f-4d3e-9c18-2b5e8a71d046/overview" },
+    { "asDropdown": false, "icon": "compass", "includeVars": true, "keepTime": true, "tags": [], "targetBlank": false, "title": "Map", "type": "link", "url": "/d/c2e8f4a1-9b7d-4c3e-8a16-5d9f2b0e7c41/map" },
+    { "asDropdown": false, "icon": "bolt", "includeVars": true, "keepTime": true, "tags": [], "targetBlank": false, "title": "Trip", "type": "link", "url": "/d/teslamate-query-trip/trip" }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
+        "content": "Browser timezone **${__timezone}**. Logical charge represented by process **#${chargingProcessId}**. Fragments within 15 minutes at the same location are merged without changing TeslaMate data.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "13.0.1",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "energyAddedKwh" }, "properties": [{ "id": "displayName", "value": "Added" }, { "id": "unit", "value": "kwh" }, { "id": "decimals", "value": 2 }] },
+          { "matcher": { "id": "byName", "options": "durationMin" }, "properties": [{ "id": "displayName", "value": "Duration" }, { "id": "unit", "value": "m" }] },
+          { "matcher": { "id": "byName", "options": "avgPowerKw" }, "properties": [{ "id": "displayName", "value": "Avg power" }, { "id": "unit", "value": "kwatt" }, { "id": "decimals", "value": 1 }] },
+          { "matcher": { "id": "byName", "options": "efficiencyPercent" }, "properties": [{ "id": "displayName", "value": "Pack/grid" }, { "id": "unit", "value": "percent" }, { "id": "decimals", "value": 1 }] },
+          { "matcher": { "id": "byName", "options": "startSocPercent" }, "properties": [{ "id": "displayName", "value": "Start SOC" }, { "id": "unit", "value": "percent" }] },
+          { "matcher": { "id": "byName", "options": "endSocPercent" }, "properties": [{ "id": "displayName", "value": "End SOC" }, { "id": "unit", "value": "percent" }] },
+          { "matcher": { "id": "byName", "options": "mergedCount" }, "properties": [{ "id": "displayName", "value": "Fragments" }] }
+        ]
+      },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 2 },
+      "id": 2,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "energyAddedKwh", "text": "energyAddedKwh", "type": "number" },
+            { "selector": "durationMin", "text": "durationMin", "type": "number" },
+            { "selector": "avgPowerKw", "text": "avgPowerKw", "type": "number" },
+            { "selector": "efficiencyPercent", "text": "efficiencyPercent", "type": "number" },
+            { "selector": "startSocPercent", "text": "startSocPercent", "type": "number" },
+            { "selector": "endSocPercent", "text": "endSocPercent", "type": "number" },
+            { "selector": "mergedCount", "text": "mergedCount", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/charging-processes/${chargingProcessId}/session?mergeGapMin=15&mergeDistanceM=100",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Logical charging session",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 8, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 3, "showPoints": "auto", "spanNulls": true }, "mappings": [], "unit": "percent" },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 7 },
+      "id": 3,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        {
+          "columns": [
+            { "selector": "date", "text": "time", "type": "timestamp" },
+            { "selector": "batteryLevel", "text": "SOC", "type": "number" },
+            { "selector": "usableBatteryLevel", "text": "Usable SOC", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [], "format": "timeseries", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
+          "url": "/api/v1/charging-processes/${chargingProcessId}/session/charges?mergeGapMin=15&mergeDistanceM=100",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Battery",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 8, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 3, "showPoints": "auto", "spanNulls": true }, "mappings": [], "unit": "kwatt" },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 7 },
+      "id": 4,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        {
+          "columns": [
+            { "selector": "date", "text": "time", "type": "timestamp" },
+            { "selector": "chargerPower", "text": "Power", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [], "format": "timeseries", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
+          "url": "/api/v1/charging-processes/${chargingProcessId}/session/charges?mergeGapMin=15&mergeDistanceM=100",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Charging power",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 4, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 2, "showPoints": "auto", "spanNulls": true }, "mappings": [] },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Voltage" }, "properties": [{ "id": "unit", "value": "volt" }] },
+          { "matcher": { "id": "byName", "options": "Current" }, "properties": [{ "id": "unit", "value": "amp" }] },
+          { "matcher": { "id": "byName", "options": "Outside" }, "properties": [{ "id": "unit", "value": "celsius" }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "id": 5,
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        {
+          "columns": [
+            { "selector": "date", "text": "time", "type": "timestamp" },
+            { "selector": "chargerVoltage", "text": "Voltage", "type": "number" },
+            { "selector": "chargerActualCurrent", "text": "Current", "type": "number" },
+            { "selector": "outsideTemp", "text": "Outside", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [], "format": "timeseries", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
+          "url": "/api/v1/charging-processes/${chargingProcessId}/session/charges?mergeGapMin=15&mergeDistanceM=100",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Electrical & temperature",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["teslamate-query", "charge"],
+  "templating": {
+    "list": [
+      {
+        "current": {}, "hide": 0, "includeAll": false, "label": "Datasource", "multi": false, "name": "ds", "options": [],
+        "query": "yesoreyeram-infinity-datasource", "refresh": 1, "regex": "", "skipUrlSync": false, "type": "datasource"
+      },
+      {
+        "current": {}, "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" }, "definition": "", "hide": 0, "includeAll": false, "label": "Car", "multi": false, "name": "car_id", "options": [],
+        "query": {
+          "infinityQuery": {
+            "columns": [{ "selector": "id", "text": "Id", "type": "string" }, { "selector": "vin", "text": "VIN", "type": "string" }],
+            "filters": [], "format": "table", "parser": "backend", "refId": "", "root_selector": "", "source": "url", "type": "json", "url": "/api/v1/cars", "url_options": { "data": "", "method": "GET" }
+          },
+          "meta": { "textField": "vin", "valueField": "id" }, "queryType": "infinity", "refId": "variable"
+        },
+        "refresh": 1, "regex": "", "regexApplyTo": "value", "skipUrlSync": false, "sort": 0, "type": "query"
+      },
+      {
+        "current": { "text": "", "value": "" }, "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" }, "definition": "", "hide": 0, "includeAll": false, "label": "Charge", "multi": false, "name": "chargingProcessId", "options": [],
+        "query": {
+          "infinityQuery": {
+            "columns": [{ "selector": "id", "text": "id", "type": "string" }, { "selector": "startDate", "text": "startDate", "type": "timestamp" }, { "selector": "mergedCount", "text": "mergedCount", "type": "number" }],
+            "filters": [], "format": "table", "parser": "backend", "refId": "", "root_selector": "", "source": "url", "type": "json", "url": "/api/v1/cars/${car_id}/recent/charges?limit=10&mergeGapMin=15&mergeDistanceM=100", "url_options": { "data": "", "method": "GET" }
+          },
+          "meta": { "textField": "startDate", "valueField": "id" }, "queryType": "infinity", "refId": "variable"
+        },
+        "refresh": 2, "regex": "", "regexApplyTo": "value", "skipUrlSync": false, "sort": 3, "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Charge",
+  "uid": "teslamate-query-charge",
+  "weekStart": ""
+}

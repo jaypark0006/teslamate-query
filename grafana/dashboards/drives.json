@@ -30,7 +30,7 @@
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "Timezone **Asia/Shanghai (UTC+8)**. Window filter is `start_date` in range. Click **#** for the Drive page, or highlight the same id on Map.",
+        "content": "Browser timezone **${__timezone}**. Window filter is `start_date` in range. Click **#** for the Drive page, or highlight the same id on Map.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -173,7 +173,7 @@
   },
   "time": { "from": "now-30d", "to": "now" },
   "timepicker": {},
-  "timezone": "Asia/Shanghai",
+  "timezone": "browser",
   "title": "Drives",
   "uid": "teslamate-query-drives",
   "weekStart": ""

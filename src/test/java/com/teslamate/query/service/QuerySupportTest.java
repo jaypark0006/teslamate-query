@@ -33,6 +33,12 @@ class QuerySupportTest {
         assertEquals(10, support.recentLimit(99));
         assertEquals(0, support.mergeGapMin((Integer) null));
         assertEquals(180, support.mergeGapMin(999));
+        assertEquals(15, support.chargeMergeGapMin(null));
+        assertEquals(0, support.chargeMergeGapMin(-1));
+        assertEquals(180, support.chargeMergeGapMin(999));
+        assertEquals(100, support.mergeDistanceM(null));
+        assertEquals(0, support.mergeDistanceM(-1));
+        assertEquals(1_000, support.mergeDistanceM(9_999));
         assertEquals(0, support.mergeGapMin("Off"));
         assertEquals(0, support.mergeGapMin("${merge_gap}"));
         assertEquals(15, support.mergeGapMin("15 min"));

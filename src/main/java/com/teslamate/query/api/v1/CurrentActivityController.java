@@ -66,11 +66,13 @@ public class CurrentActivityController {
     }
 
     @GetMapping("/recent/charges")
-    @Operation(summary = "Last completed charging sessions")
+    @Operation(summary = "Last logical charging sessions; nearby fragments are merged read-only")
     public List<RecentChargeDto> recentCharges(
             @PathVariable long carId,
-            @RequestParam(required = false) Integer limit
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer mergeGapMin,
+            @RequestParam(required = false) Integer mergeDistanceM
     ) {
-        return recent.recentCharges(carId, limit);
+        return recent.recentCharges(carId, limit, mergeGapMin, mergeDistanceM);
     }
 }
