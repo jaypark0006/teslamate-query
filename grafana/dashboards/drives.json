@@ -144,9 +144,9 @@
         "query": {
           "infinityQuery": {
             "columns": [
-              { "selector": "id", "text": "Id", "type": "string" },
-              { "selector": "vin", "text": "VIN", "type": "string" },
-              { "selector": "model", "text": "Model", "type": "string" }
+              { "selector": "id", "text": "id", "type": "string" },
+              { "selector": "vin", "text": "vin", "type": "string" },
+              { "selector": "model", "text": "model", "type": "string" }
             ],
             "filters": [],
             "format": "table",

@@ -3446,17 +3446,17 @@
             "columns": [
               {
                 "selector": "id",
-                "text": "Id",
+                "text": "id",
                 "type": "string"
               },
               {
                 "selector": "vin",
-                "text": "VIN",
+                "text": "vin",
                 "type": "string"
               },
               {
                 "selector": "model",
-                "text": "Model",
+                "text": "model",
                 "type": "string"
               }
             ],
