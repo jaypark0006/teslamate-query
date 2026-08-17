@@ -146,7 +146,7 @@ public class RecentActivityService {
                 support.mergeDistanceM(mergeDistanceM)).stream()
                 .map(ChargingProcessEntity::id)
                 .toList();
-        return chargeDao.findByProcessIds(ids, 10_000).stream()
+        return chargeDao.findByProcessIds(ids).stream()
                 .sorted(java.util.Comparator.comparing(ChargeEntity::date))
                 .map(sample -> EntityMapper.toChargeDto(sample, units))
                 .toList();

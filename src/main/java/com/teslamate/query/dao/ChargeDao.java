@@ -113,6 +113,20 @@ public class ChargeDao {
                 .list());
     }
 
+    public List<ChargeEntity> findByProcessIds(Collection<Long> processIds) {
+        if (IdOrder.isEmpty(processIds)) {
+            return List.of();
+        }
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT * FROM charges
+                WHERE charging_process_id IN (<processIds>)
+                ORDER BY charging_process_id, date
+                """)
+                .bindList("processIds", processIds)
+                .map(ConstructorMapper.of(ChargeEntity.class))
+                .list());
+    }
+
     public Optional<ChargeEntity> findLatestByProcessIds(Collection<Long> processIds) {
         if (IdOrder.isEmpty(processIds)) {
             return Optional.empty();
