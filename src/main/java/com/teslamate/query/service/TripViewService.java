@@ -720,7 +720,7 @@ public class TripViewService {
             }
             double elapsed = p.date() == null || windowFrom == null
                     ? 0
-                    : Duration.between(windowFrom, p.date()).toMillis() / 60_000.0;
+                    : Duration.between(windowFrom, p.date().toInstant(ZoneOffset.UTC)).toMillis() / 60_000.0;
             points.add(new MapPointDto(
                     p.date().toInstant(ZoneOffset.UTC),
                     p.latitude().doubleValue(),
