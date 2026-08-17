@@ -4,7 +4,7 @@ import com.teslamate.query.entity.ChargeEntity;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,7 +47,7 @@ class ChargeSessionMetricsTest {
 
     private static ChargeEntity sample(int soc, String time, String added) {
         return new ChargeEntity(
-                1L, 1L, Instant.parse("2026-08-01T" + time + "Z"),
+                1L, 1L, LocalDateTime.parse("2026-08-01T" + time),
                 soc, soc, new BigDecimal(added),
                 null, null, null, null,
                 true, "Gb", "GB_DC",

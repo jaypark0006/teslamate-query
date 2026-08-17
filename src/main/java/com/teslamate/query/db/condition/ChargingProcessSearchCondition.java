@@ -19,12 +19,12 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
         }
 
         public Builder startDateFrom(Instant value) {
-            gte("start_date", "startDateFrom", value);
+            gteUtc("start_date", "startDateFrom", value);
             return this;
         }
 
         public Builder startDateTo(Instant value) {
-            lte("start_date", "startDateTo", value);
+            lteUtc("start_date", "startDateTo", value);
             return this;
         }
 
@@ -56,11 +56,10 @@ public class ChargingProcessSearchCondition extends JdbiCondition {
 
         public Builder overlapping(Instant from, Instant to) {
             if (to != null) {
-                lte("start_date", "overlapTo", to);
+                lteUtc("start_date", "overlapTo", to);
             }
             if (from != null) {
-                conditions.add("(end_date IS NULL OR end_date >= :overlapFrom)");
-                params.put("overlapFrom", from);
+                rawUtc("(end_date IS NULL OR end_date >= :overlapFrom)", "overlapFrom", from);
             }
             return this;
         }

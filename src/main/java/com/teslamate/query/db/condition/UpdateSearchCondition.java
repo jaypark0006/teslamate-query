@@ -18,12 +18,12 @@ public class UpdateSearchCondition extends JdbiCondition {
         }
 
         public Builder startDateFrom(Instant value) {
-            gte("start_date", "startDateFrom", value);
+            gteUtc("start_date", "startDateFrom", value);
             return this;
         }
 
         public Builder startDateTo(Instant value) {
-            lte("start_date", "startDateTo", value);
+            lteUtc("start_date", "startDateTo", value);
             return this;
         }
 

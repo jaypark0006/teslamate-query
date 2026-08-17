@@ -1,5 +1,8 @@
 package com.teslamate.query.db;
 
+import com.teslamate.query.domain.time.UtcDateTimes;
+
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -66,6 +69,21 @@ public abstract class JdbiCondition {
         }
         conditions.add(sqlColumn + " <= :" + paramName);
         params.put(paramName, value);
+    }
+
+    /** Bind an API instant to a UTC-valued {@code timestamp without time zone} column. */
+    protected final void gteUtc(String sqlColumn, String paramName, Instant value) {
+        gte(sqlColumn, paramName, UtcDateTimes.toDatabase(value));
+    }
+
+    /** Bind an API instant to a UTC-valued {@code timestamp without time zone} column. */
+    protected final void lteUtc(String sqlColumn, String paramName, Instant value) {
+        lte(sqlColumn, paramName, UtcDateTimes.toDatabase(value));
+    }
+
+    /** Bind an API instant used by a custom UTC timestamp predicate. */
+    protected final void rawUtc(String fragment, String paramName, Instant value) {
+        raw(fragment, paramName, UtcDateTimes.toDatabase(value));
     }
 
     protected final void raw(String fragment, String paramName, Object value) {

@@ -23,12 +23,12 @@ public class PositionSearchCondition extends JdbiCondition {
         }
 
         public Builder dateFrom(Instant value) {
-            gte("date", "dateFrom", value);
+            gteUtc("date", "dateFrom", value);
             return this;
         }
 
         public Builder dateTo(Instant value) {
-            lte("date", "dateTo", value);
+            lteUtc("date", "dateTo", value);
             return this;
         }
 

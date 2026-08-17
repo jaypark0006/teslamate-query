@@ -1,6 +1,7 @@
 package com.teslamate.query.service;
 
 import com.teslamate.query.domain.units.DisplayUnits;
+import com.teslamate.query.domain.time.UtcDateTimes;
 import com.teslamate.query.dto.AddressDto;
 import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.CarSettingsDto;
@@ -29,7 +30,6 @@ import com.teslamate.query.entity.UpdateEntity;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
-import java.time.ZoneOffset;
 import java.util.List;
 
 /**
@@ -49,7 +49,8 @@ public final class EntityMapper {
                     .setScale(4, RoundingMode.HALF_UP).doubleValue();
         }
         return new DriveDto(
-                e.id(), e.carId(), e.startDate().toInstant(ZoneOffset.UTC), e.endDate().toInstant(ZoneOffset.UTC), e.durationMin(),
+                e.id(), e.carId(), UtcDateTimes.fromDatabase(e.startDate()),
+                UtcDateTimes.fromDatabase(e.endDate()), e.durationMin(),
                 UnitConverter.length(e.distance(), units),
                 UnitConverter.length(e.startIdealRangeKm(), units),
                 UnitConverter.length(e.endIdealRangeKm(), units),
@@ -74,7 +75,8 @@ public final class EntityMapper {
     public static ChargingProcessDto toChargingProcessDto(ChargingProcessEntity e, DisplayUnits u) {
         DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new ChargingProcessDto(
-                e.id(), e.carId(), e.startDate().toInstant(ZoneOffset.UTC), e.endDate().toInstant(ZoneOffset.UTC),
+                e.id(), e.carId(), UtcDateTimes.fromDatabase(e.startDate()),
+                UtcDateTimes.fromDatabase(e.endDate()),
                 e.chargeEnergyAdded(), e.chargeEnergyUsed(), e.durationMin(),
                 e.startBatteryLevel(), e.endBatteryLevel(),
                 UnitConverter.length(e.startIdealRangeKm(), units),
@@ -93,7 +95,7 @@ public final class EntityMapper {
     public static DrivePositionDto toDrivePositionDto(PositionEntity e, DisplayUnits u) {
         DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new DrivePositionDto(
-                e.id(), e.date().toInstant(ZoneOffset.UTC), e.latitude(), e.longitude(),
+                e.id(), UtcDateTimes.fromDatabase(e.date()), e.latitude(), e.longitude(),
                 UnitConverter.elevation(e.elevation(), units),
                 UnitConverter.speed(e.speed(), units),
                 e.power(),
@@ -109,7 +111,7 @@ public final class EntityMapper {
     public static PositionDto toPositionDto(PositionEntity e, DisplayUnits u) {
         DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new PositionDto(
-                e.id(), e.carId(), e.driveId(), e.date().toInstant(ZoneOffset.UTC), e.latitude(), e.longitude(),
+                e.id(), e.carId(), e.driveId(), UtcDateTimes.fromDatabase(e.date()), e.latitude(), e.longitude(),
                 UnitConverter.elevation(e.elevation(), units),
                 UnitConverter.speed(e.speed(), units),
                 e.power(),
@@ -129,7 +131,8 @@ public final class EntityMapper {
     public static ChargeDto toChargeDto(ChargeEntity e, DisplayUnits u) {
         DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
         return new ChargeDto(
-                e.id(), e.chargingProcessId(), e.date(), e.batteryLevel(), e.usableBatteryLevel(),
+                e.id(), e.chargingProcessId(), UtcDateTimes.fromDatabase(e.date()),
+                e.batteryLevel(), e.usableBatteryLevel(),
                 e.chargeEnergyAdded(), e.chargerPower(), e.chargerVoltage(), e.chargerActualCurrent(),
                 e.chargerPhases(), e.fastChargerPresent(), e.fastChargerType(),
                 UnitConverter.length(e.idealBatteryRangeKm(), units),
@@ -145,7 +148,7 @@ public final class EntityMapper {
 
     public static LatestSnapshotDto fromPosition(PositionEntity p) {
         return new LatestSnapshotDto(
-                p.carId(), p.date().toInstant(ZoneOffset.UTC), "position",
+                p.carId(), UtcDateTimes.fromDatabase(p.date()), "position",
                 p.batteryLevel(), p.usableBatteryLevel(),
                 p.idealBatteryRangeKm(), p.ratedBatteryRangeKm(),
                 p.odometer(), p.latitude(), p.longitude(),
@@ -156,7 +159,7 @@ public final class EntityMapper {
 
     public static LatestSnapshotDto fromCharge(ChargeEntity c, Long carId, PositionEntity pos) {
         return new LatestSnapshotDto(
-                carId, c.date(), "charge",
+                carId, UtcDateTimes.fromDatabase(c.date()), "charge",
                 c.batteryLevel(), c.usableBatteryLevel(),
                 c.idealBatteryRangeKm(), c.ratedBatteryRangeKm(),
                 pos == null ? null : pos.odometer(),
@@ -194,7 +197,8 @@ public final class EntityMapper {
         if (e.startDate() != null && e.endDate() != null) {
             durationSeconds = Duration.between(e.startDate(), e.endDate()).getSeconds();
         }
-        return new StateDto(e.id(), e.carId(), e.state(), e.startDate().toInstant(ZoneOffset.UTC), e.endDate().toInstant(ZoneOffset.UTC), durationSeconds);
+        return new StateDto(e.id(), e.carId(), e.state(), UtcDateTimes.fromDatabase(e.startDate()),
+                UtcDateTimes.fromDatabase(e.endDate()), durationSeconds);
     }
 
     public static List<StateDto> toStateDtos(List<StateEntity> list) {
@@ -202,7 +206,8 @@ public final class EntityMapper {
     }
 
     public static UpdateDto toUpdateDto(UpdateEntity e) {
-        return new UpdateDto(e.id(), e.carId(), e.startDate().toInstant(ZoneOffset.UTC), e.endDate().toInstant(ZoneOffset.UTC), e.version());
+        return new UpdateDto(e.id(), e.carId(), UtcDateTimes.fromDatabase(e.startDate()),
+                UtcDateTimes.fromDatabase(e.endDate()), e.version());
     }
 
     public static List<UpdateDto> toUpdateDtos(List<UpdateEntity> list) {

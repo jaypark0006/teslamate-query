@@ -183,7 +183,7 @@ class CurrentActivityServiceTest {
 
     private static ChargeEntity chargeSample() {
         return new ChargeEntity(
-                1L, 365L, Instant.parse("2026-08-01T16:20:00Z"),
+                1L, 365L, utc("2026-08-01T16:20:00Z"),
                 60, 60, new BigDecimal("10"),
                 80, 400, 200, 3,
                 true, "Gb", "GB_DC",
