@@ -138,22 +138,44 @@
     {
       "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 4, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 2, "showPoints": "auto", "spanNulls": true }, "mappings": [] },
+        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 8, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 3, "showPoints": "auto", "spanNulls": true }, "mappings": [] },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Voltage" }, "properties": [{ "id": "unit", "value": "volt" }] },
-          { "matcher": { "id": "byName", "options": "Current" }, "properties": [{ "id": "unit", "value": "amp" }] },
-          { "matcher": { "id": "byName", "options": "Outside" }, "properties": [{ "id": "unit", "value": "celsius" }] }
+          { "matcher": { "id": "byName", "options": "Voltage" }, "properties": [{ "id": "unit", "value": "volt" }, { "id": "color", "value": { "fixedColor": "#facc15", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Current" }, "properties": [{ "id": "unit", "value": "amp" }, { "id": "color", "value": { "fixedColor": "#22c55e", "mode": "fixed" } }] }
         ]
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
       "id": 5,
       "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
         {
           "columns": [
             { "selector": "date", "text": "time", "type": "timestamp" },
-            { "selector": "chargerVoltage", "text": "Voltage", "type": "number" },
-            { "selector": "chargerActualCurrent", "text": "Current", "type": "number" },
+            { "selector": "acVoltage", "text": "Voltage", "type": "number" },
+            { "selector": "acCurrent", "text": "Current", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [], "format": "timeseries", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
+          "url": "/api/v1/charging-processes/${chargingProcessId}/session/charges?mergeGapMin=${merge_gap}&mergeDistanceM=100",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "AC input",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": { "color": { "fixedColor": "#38bdf8", "mode": "fixed" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 8, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 3, "showPoints": "auto", "spanNulls": true }, "mappings": [], "unit": "celsius" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 6,
+      "options": { "legend": { "calcs": ["min", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        {
+          "columns": [
+            { "selector": "date", "text": "time", "type": "timestamp" },
             { "selector": "outsideTemp", "text": "Outside", "type": "number" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
@@ -162,7 +184,7 @@
           "url_options": { "data": "", "method": "GET" }
         }
       ],
-      "title": "Electrical & temperature",
+      "title": "Outside temperature",
       "type": "timeseries"
     }
   ],

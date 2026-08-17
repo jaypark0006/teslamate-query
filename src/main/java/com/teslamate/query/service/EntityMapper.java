@@ -6,6 +6,7 @@ import com.teslamate.query.dto.AddressDto;
 import com.teslamate.query.dto.CarDto;
 import com.teslamate.query.dto.CarSettingsDto;
 import com.teslamate.query.dto.ChargeDto;
+import com.teslamate.query.dto.ChargeType;
 import com.teslamate.query.dto.ChargingProcessDto;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
@@ -130,6 +131,14 @@ public final class EntityMapper {
 
     public static ChargeDto toChargeDto(ChargeEntity e, DisplayUnits u) {
         DisplayUnits units = u == null ? DisplayUnits.METRIC : u;
+        boolean ac = ActivityClassifier.chargeType(
+                e.fastChargerPresent(), e.fastChargerType(), e.connChargeCable()) == ChargeType.AC;
+        Integer acCurrent = ac && e.chargerActualCurrent() != null && e.chargerActualCurrent() > 0
+                ? e.chargerActualCurrent()
+                : null;
+        Integer acVoltage = acCurrent != null && e.chargerVoltage() != null && e.chargerVoltage() > 10
+                ? e.chargerVoltage()
+                : null;
         return new ChargeDto(
                 e.id(), e.chargingProcessId(), UtcDateTimes.fromDatabase(e.date()),
                 e.batteryLevel(), e.usableBatteryLevel(),
@@ -138,7 +147,8 @@ public final class EntityMapper {
                 UnitConverter.length(e.idealBatteryRangeKm(), units),
                 UnitConverter.length(e.ratedBatteryRangeKm(), units),
                 UnitConverter.temp(e.outsideTemp(), units),
-                e.batteryHeaterOn()
+                e.batteryHeaterOn(),
+                acVoltage, acCurrent
         );
     }
 

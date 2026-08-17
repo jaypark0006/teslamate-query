@@ -20,6 +20,8 @@ public record ChargeDto(
         BigDecimal idealBatteryRangeKm,
         BigDecimal ratedBatteryRangeKm,
         BigDecimal outsideTemp,
-        Boolean batteryHeaterOn
+        Boolean batteryHeaterOn,
+        Integer acVoltage,
+        Integer acCurrent
 ) {
 }
