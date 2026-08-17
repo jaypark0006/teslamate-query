@@ -4,10 +4,13 @@ import com.teslamate.query.dao.DriveDao;
 import com.teslamate.query.dao.PositionDao;
 import com.teslamate.query.db.condition.DriveSearchCondition;
 import com.teslamate.query.db.condition.PositionSearchCondition;
+import com.teslamate.query.domain.time.UtcDateTimes;
 import com.teslamate.query.domain.units.DisplayUnits;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
 import com.teslamate.query.dto.PageResponse;
+import com.teslamate.query.dto.TirePressureDto;
+import com.teslamate.query.dto.TirePressureSampleDto;
 import com.teslamate.query.entity.DriveEntity;
 import com.teslamate.query.exception.NotFoundException;
 import org.springframework.stereotype.Service;
@@ -64,6 +67,16 @@ public class DriveService {
         }
         return positionDao.findByIdsOrdered(ids).stream()
                 .map(e -> EntityMapper.toDrivePositionDto(e, u))
+                .toList();
+    }
+
+    public List<TirePressureSampleDto> tirePressures(long id, Integer downsampleSeconds) {
+        get(id, DisplayUnits.METRIC);
+        int bucket = downsampleSeconds == null ? 0 : Math.max(downsampleSeconds, 0);
+        return positionDao.findTirePressuresByDriveId(id, bucket, POSITION_CAP).stream()
+                .map(p -> new TirePressureSampleDto(
+                        UtcDateTimes.fromDatabase(p.date()),
+                        new TirePressureDto(p.fl(), p.fr(), p.rl(), p.rr())))
                 .toList();
     }
 

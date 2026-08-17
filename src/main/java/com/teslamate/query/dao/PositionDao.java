@@ -6,6 +6,7 @@ import com.teslamate.query.db.condition.PositionSearchCondition;
 import com.teslamate.query.entity.PositionCommutePoint;
 import com.teslamate.query.entity.PositionEntity;
 import com.teslamate.query.entity.PositionPathPoint;
+import com.teslamate.query.entity.PositionTirePressure;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
@@ -142,6 +143,59 @@ public class PositionDao {
                 .bind("driveId", driveId)
                 .map(ConstructorMapper.of(PositionEntity.class))
                 .findOne());
+    }
+
+    /**
+     * TPMS samples for one drive. Null TPMS rows are removed before bucketing,
+     * so sparse pressure updates are not discarded by the generic position sampler.
+     */
+    public List<PositionTirePressure> findTirePressuresByDriveId(
+            long driveId,
+            int bucketSeconds,
+            int limit
+    ) {
+        int bucket = Math.max(bucketSeconds, 0);
+        int cap = Math.min(Math.max(limit, 1), DEFAULT_ID_CAP);
+        if (bucket <= 1) {
+            return jdbi.withHandle(h -> h.createQuery("""
+                    SELECT date, tpms_pressure_fl, tpms_pressure_fr,
+                           tpms_pressure_rl, tpms_pressure_rr
+                    FROM positions
+                    WHERE drive_id = :driveId
+                      AND (tpms_pressure_fl IS NOT NULL OR tpms_pressure_fr IS NOT NULL
+                           OR tpms_pressure_rl IS NOT NULL OR tpms_pressure_rr IS NOT NULL)
+                    ORDER BY date
+                    LIMIT :limit
+                    """)
+                    .bind("driveId", driveId)
+                    .bind("limit", cap)
+                    .map(ConstructorMapper.of(PositionTirePressure.class))
+                    .list());
+        }
+        return jdbi.withHandle(h -> h.createQuery("""
+                SELECT date, tpms_pressure_fl, tpms_pressure_fr,
+                       tpms_pressure_rl, tpms_pressure_rr
+                FROM (
+                  SELECT date, tpms_pressure_fl, tpms_pressure_fr,
+                         tpms_pressure_rl, tpms_pressure_rr,
+                         ROW_NUMBER() OVER (
+                           PARTITION BY FLOOR(EXTRACT(EPOCH FROM date) / :bucketSec)
+                           ORDER BY date
+                         ) AS rn
+                  FROM positions
+                  WHERE drive_id = :driveId
+                    AND (tpms_pressure_fl IS NOT NULL OR tpms_pressure_fr IS NOT NULL
+                         OR tpms_pressure_rl IS NOT NULL OR tpms_pressure_rr IS NOT NULL)
+                ) samples
+                WHERE rn = 1
+                ORDER BY date
+                LIMIT :limit
+                """)
+                .bind("driveId", driveId)
+                .bind("bucketSec", bucket)
+                .bind("limit", cap)
+                .map(ConstructorMapper.of(PositionTirePressure.class))
+                .list());
     }
 
     public List<PositionPathPoint> findPathPointsByDriveIds(Collection<Long> driveIds) {

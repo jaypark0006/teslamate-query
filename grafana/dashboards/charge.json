@@ -51,7 +51,7 @@
           { "matcher": { "id": "byName", "options": "mergedCount" }, "properties": [{ "id": "displayName", "value": "Fragments" }] }
         ]
       },
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 2 },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 2 },
       "id": 2,
       "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name", "wideLayout": true },
       "pluginVersion": "13.0.1",

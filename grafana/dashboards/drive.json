@@ -30,7 +30,7 @@
       "id": 1,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "Browser timezone **${__timezone}**. Drive **#${drive_id}**. Curves are 5 s samples; the map uses the same GPS as the Map highlight.",
+        "content": "Browser timezone **${__timezone}**. Drive **#${drive_id}**. Curves use all recorded samples; the map uses the same GPS as the Map highlight.",
         "mode": "markdown"
       },
       "pluginVersion": "13.0.1",
@@ -279,7 +279,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/drives/${drive_id}/positions?downsample=5",
+          "url": "/api/v1/drives/${drive_id}/positions",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -341,7 +341,7 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/drives/${drive_id}/positions?downsample=5",
+          "url": "/api/v1/drives/${drive_id}/positions",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
@@ -405,11 +405,77 @@
           "root_selector": "",
           "source": "url",
           "type": "json",
-          "url": "/api/v1/drives/${drive_id}/positions?downsample=5",
+          "url": "/api/v1/drives/${drive_id}/positions",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
       "title": "Elevation & temperature",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "fl" }, "properties": [{ "id": "displayName", "value": "Front left" }, { "id": "unit", "value": "pressurebar" }, { "id": "decimals", "value": 2 }, { "id": "color", "value": { "fixedColor": "#3b82f6", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "fr" }, "properties": [{ "id": "displayName", "value": "Front right" }, { "id": "unit", "value": "pressurebar" }, { "id": "decimals", "value": 2 }, { "id": "color", "value": { "fixedColor": "#38bdf8", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "rl" }, "properties": [{ "id": "displayName", "value": "Rear left" }, { "id": "unit", "value": "pressurebar" }, { "id": "decimals", "value": 2 }, { "id": "color", "value": { "fixedColor": "#f59e0b", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "rr" }, "properties": [{ "id": "displayName", "value": "Rear right" }, { "id": "unit", "value": "pressurebar" }, { "id": "decimals", "value": 2 }, { "id": "color", "value": { "fixedColor": "#f97316", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 37 },
+      "id": 8,
+      "options": {
+        "legend": { "calcs": ["min", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "none" }
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "columns": [
+            { "selector": "date", "text": "time", "type": "timestamp" },
+            { "selector": "tirePressure.fl", "text": "fl", "type": "number" },
+            { "selector": "tirePressure.fr", "text": "fr", "type": "number" },
+            { "selector": "tirePressure.rl", "text": "rl", "type": "number" },
+            { "selector": "tirePressure.rr", "text": "rr", "type": "number" }
+          ],
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
+          "filters": [],
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "/api/v1/drives/${drive_id}/tire-pressures",
+          "url_options": { "data": "", "method": "GET" }
+        }
+      ],
+      "title": "Tire pressure",
       "type": "timeseries"
     }
   ],

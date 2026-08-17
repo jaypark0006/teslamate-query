@@ -3,6 +3,7 @@ package com.teslamate.query.api.v1;
 import com.teslamate.query.dto.DriveDto;
 import com.teslamate.query.dto.DrivePositionDto;
 import com.teslamate.query.dto.PageResponse;
+import com.teslamate.query.dto.TirePressureSampleDto;
 import com.teslamate.query.service.DriveService;
 import com.teslamate.query.service.QuerySupport;
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,5 +65,14 @@ public class DriveController {
             @RequestParam(required = false) String tempUnit
     ) {
         return driveService.positions(driveId, downsample, support.units(lengthUnit, tempUnit));
+    }
+
+    @GetMapping("/{driveId}/tire-pressures")
+    @Operation(summary = "Tire-pressure samples for one drive")
+    public List<TirePressureSampleDto> tirePressures(
+            @PathVariable long driveId,
+            @RequestParam(required = false) Integer downsample
+    ) {
+        return driveService.tirePressures(driveId, downsample);
     }
 }
