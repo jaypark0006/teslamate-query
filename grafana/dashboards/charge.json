@@ -84,7 +84,7 @@
     {
       "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisPlacement": "auto", "axisColorMode": "text", "show": "lines", "lineWidth": 2, "pointSize": { "fixed": 3 }, "pointShape": "circle", "scaleDistribution": { "type": "linear" } }, "mappings": [] },
+        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 8, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 3, "showPoints": "auto", "spanNulls": true }, "mappings": [] },
         "overrides": [
           { "matcher": { "id": "byName", "options": "SOC" }, "properties": [{ "id": "unit", "value": "percent" }] },
           { "matcher": { "id": "byName", "options": "Usable SOC" }, "properties": [{ "id": "unit", "value": "percent" }] }
@@ -92,7 +92,7 @@
       },
       "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
       "id": 3,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "seriesMapping": "auto", "tooltip": { "mode": "single" }, "xField": "time" },
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
         {
           "columns": [
@@ -101,25 +101,25 @@
             { "selector": "usableBatteryLevel", "text": "Usable SOC", "type": "number" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
-          "filters": [], "format": "table", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
+          "filters": [], "format": "timeseries", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
           "url": "/api/v1/charging-processes/${chargingProcessId}/session/charges?mergeGapMin=${merge_gap}&mergeDistanceM=100",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
       "title": "Battery",
-      "type": "xychart"
+      "type": "timeseries"
     },
     {
       "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisPlacement": "auto", "axisColorMode": "text", "show": "lines", "lineWidth": 2, "pointSize": { "fixed": 3 }, "pointShape": "circle", "scaleDistribution": { "type": "linear" } }, "mappings": [] },
+        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 8, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 3, "showPoints": "auto", "spanNulls": true }, "mappings": [] },
         "overrides": [
           { "matcher": { "id": "byName", "options": "Power" }, "properties": [{ "id": "unit", "value": "kwatt" }] }
         ]
       },
       "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
       "id": 4,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "seriesMapping": "auto", "tooltip": { "mode": "single" }, "xField": "time" },
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
         {
           "columns": [
@@ -127,18 +127,18 @@
             { "selector": "chargerPower", "text": "Power", "type": "number" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
-          "filters": [], "format": "table", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
+          "filters": [], "format": "timeseries", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
           "url": "/api/v1/charging-processes/${chargingProcessId}/session/charges?mergeGapMin=${merge_gap}&mergeDistanceM=100",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
       "title": "Charging power",
-      "type": "xychart"
+      "type": "timeseries"
     },
     {
       "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisPlacement": "auto", "axisColorMode": "text", "show": "lines", "lineWidth": 2, "pointSize": { "fixed": 2 }, "pointShape": "circle", "scaleDistribution": { "type": "linear" } }, "mappings": [] },
+        "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 4, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 2, "showPoints": "auto", "spanNulls": true }, "mappings": [] },
         "overrides": [
           { "matcher": { "id": "byName", "options": "Voltage" }, "properties": [{ "id": "unit", "value": "volt" }] },
           { "matcher": { "id": "byName", "options": "Current" }, "properties": [{ "id": "unit", "value": "amp" }] },
@@ -147,7 +147,7 @@
       },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
       "id": 5,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "seriesMapping": "auto", "tooltip": { "mode": "single" }, "xField": "time" },
+      "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
         {
           "columns": [
@@ -157,13 +157,13 @@
             { "selector": "outsideTemp", "text": "Outside", "type": "number" }
           ],
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "${ds}" },
-          "filters": [], "format": "table", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
+          "filters": [], "format": "timeseries", "parser": "backend", "refId": "A", "root_selector": "", "source": "url", "type": "json",
           "url": "/api/v1/charging-processes/${chargingProcessId}/session/charges?mergeGapMin=${merge_gap}&mergeDistanceM=100",
           "url_options": { "data": "", "method": "GET" }
         }
       ],
       "title": "Electrical & temperature",
-      "type": "xychart"
+      "type": "timeseries"
     }
   ],
   "refresh": "",
