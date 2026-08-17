@@ -7,6 +7,8 @@ import com.teslamate.query.entity.DriveEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,16 +62,20 @@ class ActivityClassifierTest {
 
     private static DriveEntity drive(Long id, Instant start, Instant end) {
         return new DriveEntity(
-                id, 1L, start, end,
+                id, 1L, utc(start), utc(end),
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null, null, null, null, null,
                 null, null, null, null, null, null);
     }
 
+    private static LocalDateTime utc(Instant value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC).toLocalDateTime();
+    }
+
     private static ChargingProcessEntity charge(Long id, Instant start, Instant end) {
         return new ChargingProcessEntity(
-                id, 1L, start, end,
+                id, 1L, utc(start), utc(end),
                 null, null, null, null, null, null,
                 null, null, null, null,
                 null, null, null, null);

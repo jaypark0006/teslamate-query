@@ -4,6 +4,7 @@ import com.teslamate.query.entity.DriveEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,8 +50,8 @@ class DriveOutingComposerTest {
     private static DriveEntity drive(long id, String start, String end) {
         return new DriveEntity(
                 id, 1L,
-                Instant.parse("2026-08-13T" + start + "Z"),
-                Instant.parse("2026-08-13T" + end + "Z"),
+                Instant.parse("2026-08-13T" + start + "Z").atOffset(ZoneOffset.UTC).toLocalDateTime(),
+                Instant.parse("2026-08-13T" + end + "Z").atOffset(ZoneOffset.UTC).toLocalDateTime(),
                 null, null, null, null, null,
                 null, null, null, null,
                 0.0, 0.0, 1.0, 10, null, null,

@@ -36,7 +36,7 @@ public final class DriveOutingComposer {
             for (DriveEntity d : oldestFirst) {
                 Instant end = d.endDate() != null ? d.endDate().toInstant(ZoneOffset.UTC) : d.startDate().toInstant(ZoneOffset.UTC);
                 boolean newOuting = prevEnd == null
-                        || Duration.between(prevEnd, d.startDate()).toMinutes() >= mergeGapMin;
+                        || Duration.between(prevEnd, d.startDate().toInstant(ZoneOffset.UTC)).toMinutes() >= mergeGapMin;
                 if (newOuting && !current.isEmpty()) {
                     clusters.add(List.copyOf(current));
                     current = new ArrayList<>();

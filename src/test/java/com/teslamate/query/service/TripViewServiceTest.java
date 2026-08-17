@@ -6,6 +6,7 @@ import com.teslamate.query.dto.TimelineKind;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
@@ -82,8 +83,8 @@ class TripViewServiceTest {
         assertTrue(TripViewService.sealedDrive(
                 new com.teslamate.query.entity.DriveEntity(
                         5186L, 1L,
-                        Instant.parse("2026-08-13T05:48:54Z"),
-                        Instant.parse("2026-08-13T06:13:40Z"),
+                        Instant.parse("2026-08-13T05:48:54Z").atOffset(ZoneOffset.UTC).toLocalDateTime(),
+                        Instant.parse("2026-08-13T06:13:40Z").atOffset(ZoneOffset.UTC).toLocalDateTime(),
                         null, null, null, null, null,
                         null, null, null, null,
                         null, null,

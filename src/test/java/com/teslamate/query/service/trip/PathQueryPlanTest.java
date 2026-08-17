@@ -4,6 +4,7 @@ import com.teslamate.query.entity.DriveEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -109,7 +110,7 @@ class PathQueryPlanTest {
         Instant start = Instant.parse("2026-08-16T00:00:00Z");
         Instant end = start.plusSeconds(durationMin * 60L);
         return new DriveEntity(
-                id, 1L, start, end,
+                id, 1L, start.atOffset(ZoneOffset.UTC).toLocalDateTime(), end.atOffset(ZoneOffset.UTC).toLocalDateTime(),
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null,

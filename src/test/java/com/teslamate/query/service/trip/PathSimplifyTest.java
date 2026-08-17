@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -105,7 +106,7 @@ class PathSimplifyTest {
     }
 
     private static PositionPathPoint pt(double lon, double lat) {
-        return new PositionPathPoint(1L, Instant.parse("2026-08-16T00:00:00Z"),
+        return new PositionPathPoint(1L, Instant.parse("2026-08-16T00:00:00Z").atOffset(ZoneOffset.UTC).toLocalDateTime(),
                 BigDecimal.valueOf(lon), BigDecimal.valueOf(lat));
     }
 }

@@ -23,6 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -109,7 +111,7 @@ class RecentActivityServiceTest {
         BigDecimal e = new BigDecimal(endRange);
         return new DriveEntity(
                 id, 1L,
-                Instant.parse("2026-08-13T07:10:58Z"), Instant.parse("2026-08-13T07:35:44Z"),
+                utc("2026-08-13T07:10:58Z"), utc("2026-08-13T07:35:44Z"),
                 null, null, null, null, null,
                 s, e, s, e,
                 0.0, distance, distance, duration, null, null,
@@ -119,7 +121,7 @@ class RecentActivityServiceTest {
     private static ChargingProcessEntity process() {
         return new ChargingProcessEntity(
                 365L, 1L,
-                Instant.parse("2026-08-01T16:05:46Z"), Instant.parse("2026-08-01T16:44:20Z"),
+                utc("2026-08-01T16:05:46Z"), utc("2026-08-01T16:44:20Z"),
                 new BigDecimal("31.72"), new BigDecimal("33.26"),
                 new BigDecimal("185.46"), new BigDecimal("414.89"),
                 new BigDecimal("185.46"), new BigDecimal("414.89"),
@@ -134,5 +136,9 @@ class RecentActivityServiceTest {
                 true, "Gb", "GB_DC",
                 new BigDecimal("414.89"), new BigDecimal("414.89"),
                 new BigDecimal("28"), false);
+    }
+
+    private static LocalDateTime utc(String value) {
+        return Instant.parse(value).atOffset(ZoneOffset.UTC).toLocalDateTime();
     }
 }

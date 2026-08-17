@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -135,7 +137,7 @@ class ActivityTimelineComposerTest {
 
     private static DriveEntity drive(long id, Instant start, Instant end, Long endPos) {
         return new DriveEntity(
-                id, 1L, start, end,
+                id, 1L, utc(start), utc(end),
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null,
@@ -146,7 +148,7 @@ class ActivityTimelineComposerTest {
 
     private static ChargingProcessEntity charge(long id, String start, String end, Long pos) {
         return new ChargingProcessEntity(
-                id, 1L, t(start), t(end),
+                id, 1L, t(start).atOffset(ZoneOffset.UTC).toLocalDateTime(), t(end).atOffset(ZoneOffset.UTC).toLocalDateTime(),
                 new BigDecimal("12.5"), new BigDecimal("13.0"),
                 null, null, null, null,
                 30, 60, 60, null, null,
@@ -155,5 +157,9 @@ class ActivityTimelineComposerTest {
 
     private static Instant t(String hhmmss) {
         return Instant.parse("2026-08-16T" + hhmmss + "Z");
+    }
+
+    private static LocalDateTime utc(Instant value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC).toLocalDateTime();
     }
 }

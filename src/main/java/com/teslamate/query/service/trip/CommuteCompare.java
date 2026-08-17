@@ -53,7 +53,7 @@ public final class CommuteCompare {
             if (!inClockWindow(clockMinutes(d.startDate().toInstant(ZoneOffset.UTC), zone), afterMin, beforeMin)) {
                 continue;
             }
-            LocalDate day = d.startDate().atZone(zone).toLocalDate();
+            LocalDate day = d.startDate().toInstant(ZoneOffset.UTC).atZone(zone).toLocalDate();
             DriveEntity prev = best.get(day);
             if (prev == null || longer(d, prev)) {
                 best.put(day, d);
@@ -67,8 +67,8 @@ public final class CommuteCompare {
     }
 
     public static CommuteTripDto toTrip(DriveEntity d, ZoneId zone) {
-        var startZ = d.startDate().atZone(zone);
-        var endZ = d.endDate() == null ? null : d.endDate().atZone(zone);
+        var startZ = d.startDate().toInstant(ZoneOffset.UTC).atZone(zone);
+        var endZ = d.endDate() == null ? null : d.endDate().toInstant(ZoneOffset.UTC).atZone(zone);
         return new CommuteTripDto(
                 startZ.toLocalDate().format(DAY),
                 d.id(),

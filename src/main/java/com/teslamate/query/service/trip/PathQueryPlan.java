@@ -140,7 +140,9 @@ public final class PathQueryPlan {
             return d.durationMin() * 60;
         }
         if (d.startDate() != null && d.endDate() != null && d.endDate().isAfter(d.startDate())) {
-            long s = Duration.between(d.startDate(), d.endDate()).getSeconds();
+            long s = Duration.between(
+                    d.startDate().toInstant(java.time.ZoneOffset.UTC),
+                    d.endDate().toInstant(java.time.ZoneOffset.UTC)).getSeconds();
             return (int) Math.max(1, Math.min(s, Integer.MAX_VALUE));
         }
         return 60;

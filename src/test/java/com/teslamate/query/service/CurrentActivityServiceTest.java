@@ -27,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -79,7 +80,7 @@ class CurrentActivityServiceTest {
         when(settingsDao.find()).thenReturn(Optional.of(settings("rated")));
         when(updateDao.findIds(ArgumentMatchers.any(), anyInt(), anyInt())).thenReturn(List.of(17L));
         when(updateDao.findById(17L)).thenReturn(Optional.of(
-                new UpdateEntity(17L, 1L, Instant.parse("2026-08-04T02:30:31Z"), Instant.parse("2026-08-04T02:33:39Z"), "2026.8.3.6")));
+                new UpdateEntity(17L, 1L, utc("2026-08-04T02:30:31Z"), utc("2026-08-04T02:33:39Z"), "2026.8.3.6")));
 
         var dto = service.status(1L);
         assertEquals(ActivityStatus.PARKING, dto.status());
@@ -162,7 +163,7 @@ class CurrentActivityServiceTest {
 
     private static DriveEntity drive(Long id, Instant start, Instant end, Double startKm, Double distance) {
         return new DriveEntity(
-                id, 1L, start, end,
+                id, 1L, utc(start), utc(end),
                 null, null, null, null, null,
                 new BigDecimal("163.75"), new BigDecimal("161.72"),
                 new BigDecimal("163.75"), new BigDecimal("161.72"),
@@ -173,7 +174,7 @@ class CurrentActivityServiceTest {
     private static ChargingProcessEntity chargeProcess() {
         return new ChargingProcessEntity(
                 365L, 1L,
-                Instant.parse("2026-08-01T16:05:46Z"), null,
+                utc("2026-08-01T16:05:46Z"), null,
                 new BigDecimal("31.72"), new BigDecimal("33.26"),
                 new BigDecimal("185.46"), null,
                 new BigDecimal("185.46"), null,
@@ -192,7 +193,7 @@ class CurrentActivityServiceTest {
 
     private static PositionEntity position(Instant date, int battery, String range, double odo) {
         return new PositionEntity(
-                10L, 1L, null, date,
+                10L, 1L, null, utc(date),
                 new BigDecimal("29.518242"), new BigDecimal("106.460280"),
                 null, null, 0, odo,
                 new BigDecimal(range), new BigDecimal("209.26"), new BigDecimal(range),
@@ -201,5 +202,13 @@ class CurrentActivityServiceTest {
                 0, new BigDecimal("21.0"), new BigDecimal("21.0"),
                 false, false, false, false, false,
                 new BigDecimal("3.0"), new BigDecimal("3.0"), new BigDecimal("3.0"), new BigDecimal("3.0"));
+    }
+
+    private static LocalDateTime utc(String value) {
+        return utc(Instant.parse(value));
+    }
+
+    private static LocalDateTime utc(Instant value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC).toLocalDateTime();
     }
 }

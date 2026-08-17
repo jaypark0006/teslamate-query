@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,7 +69,7 @@ class CommuteCompareTest {
     private static DriveEntity drive(long id, Instant start, int durationMin, double km) {
         Instant end = start.plusSeconds(durationMin * 60L);
         return new DriveEntity(
-                id, 1L, start, end,
+                id, 1L, utc(start), utc(end),
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null,
@@ -78,7 +80,11 @@ class CommuteCompareTest {
 
     private static PositionCommutePoint pt(
             long driveId, Instant date, double lon, double lat, int speed) {
-        return new PositionCommutePoint(driveId, date, BigDecimal.valueOf(lon), BigDecimal.valueOf(lat),
+        return new PositionCommutePoint(driveId, utc(date), BigDecimal.valueOf(lon), BigDecimal.valueOf(lat),
                 speed, null);
+    }
+
+    private static LocalDateTime utc(Instant value) {
+        return value.atOffset(ZoneOffset.UTC).toLocalDateTime();
     }
 }
