@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -89,7 +90,7 @@ public class CurrentActivityService {
                 pos == null ? null : pos.climateOn(),
                 pos == null ? null : pos.driverTempSetting(),
                 tirePressure(tpmsPos),
-                tpmsPos == null ? null : tpmsPos.date(),
+                tpmsPos == null ? null : tpmsPos.date().toInstant(ZoneOffset.UTC),
                 latestFirmware(carId)
         );
     }
@@ -136,7 +137,7 @@ public class CurrentActivityService {
                 pos == null ? null : pos.speed(),
                 pos == null ? null : pos.power(),
                 distanceKm(drive, pos),
-                ActivityClassifier.minutesBetween(drive.startDate(), snap.now),
+                ActivityClassifier.minutesBetween(drive.startDate().toInstant(ZoneOffset.UTC), snap.now),
                 rangeChange(startRange, currentRange)
         );
     }
@@ -200,7 +201,7 @@ public class CurrentActivityService {
         Instant now = clock.instant();
         Instant since = ActivityClassifier.statusSince(
                 status, openCharge, openDrive, lastDrive, lastCharge,
-                latestPosition.map(PositionEntity::date).orElse(now));
+                latestPosition.map(e->e.date().toInstant(ZoneOffset.UTC)).orElse(now));
         return new Snapshot(car, status, since, now, openCharge, openDrive, latestPosition);
     }
 

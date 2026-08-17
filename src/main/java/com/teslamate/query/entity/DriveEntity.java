@@ -4,13 +4,14 @@ import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /** Table: drives */
 public record DriveEntity(
         @ColumnName("id") Long id,
         @ColumnName("car_id") Long carId,
-        @ColumnName("start_date") Instant startDate,
-        @ColumnName("end_date") Instant endDate,
+        @ColumnName("start_date") LocalDateTime startDate,
+        @ColumnName("end_date") LocalDateTime endDate,
         @ColumnName("outside_temp_avg") BigDecimal outsideTempAvg,
         @ColumnName("inside_temp_avg") BigDecimal insideTempAvg,
         @ColumnName("speed_max") Integer speedMax,

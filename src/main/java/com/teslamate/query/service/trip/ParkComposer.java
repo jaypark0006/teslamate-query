@@ -4,6 +4,7 @@ import com.teslamate.query.entity.DriveEntity;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -71,8 +72,8 @@ public final class ParkComposer {
         Cluster current = null;
         Instant prevEnd = null;
         for (DriveEntity d : ordered) {
-            Instant start = d.startDate();
-            Instant end = d.endDate() == null ? now : d.endDate();
+            Instant start = d.startDate().toInstant(ZoneOffset.UTC);
+            Instant end = d.endDate() == null ? now : d.endDate().toInstant(ZoneOffset.UTC);
             boolean newCluster = prevEnd == null
                     || Duration.between(prevEnd, start).toMinutes() >= microMin;
             if (newCluster || current == null) {

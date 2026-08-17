@@ -4,6 +4,7 @@ import com.teslamate.query.entity.DriveEntity;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -33,7 +34,7 @@ public final class DriveOutingComposer {
             List<DriveEntity> current = new ArrayList<>();
             Instant prevEnd = null;
             for (DriveEntity d : oldestFirst) {
-                Instant end = d.endDate() != null ? d.endDate() : d.startDate();
+                Instant end = d.endDate() != null ? d.endDate().toInstant(ZoneOffset.UTC) : d.startDate().toInstant(ZoneOffset.UTC);
                 boolean newOuting = prevEnd == null
                         || Duration.between(prevEnd, d.startDate()).toMinutes() >= mergeGapMin;
                 if (newOuting && !current.isEmpty()) {

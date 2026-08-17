@@ -5,10 +5,7 @@ import com.teslamate.query.dto.CommuteTripDto;
 import com.teslamate.query.entity.DriveEntity;
 import com.teslamate.query.entity.PositionCommutePoint;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,7 +50,7 @@ public final class CommuteCompare {
             if (d == null || d.id() == null || d.startDate() == null || d.endDate() == null) {
                 continue;
             }
-            if (!inClockWindow(clockMinutes(d.startDate(), zone), afterMin, beforeMin)) {
+            if (!inClockWindow(clockMinutes(d.startDate().toInstant(ZoneOffset.UTC), zone), afterMin, beforeMin)) {
                 continue;
             }
             LocalDate day = d.startDate().atZone(zone).toLocalDate();
@@ -75,8 +72,8 @@ public final class CommuteCompare {
         return new CommuteTripDto(
                 startZ.toLocalDate().format(DAY),
                 d.id(),
-                d.startDate(),
-                d.endDate(),
+                d.startDate().toInstant(ZoneOffset.UTC),
+                d.endDate().toInstant(ZoneOffset.UTC),
                 startZ.format(LOCAL_START),
                 endZ == null ? null : endZ.format(LOCAL_END),
                 d.distance(),
@@ -100,11 +97,11 @@ public final class CommuteCompare {
             return List.of();
         }
         int step = Math.min(Math.max(stepSec, 30), 180);
-        Instant t0 = drive.startDate();
+        Instant t0 = drive.startDate().toInstant(ZoneOffset.UTC);
         String day = t0.atZone(zone).toLocalDate().format(DAY);
         String startLocal = t0.atZone(zone).format(LOCAL_START);
         double[] along = kmAlong(raw);
-        Instant lastT = raw.getLast().date();
+        Instant lastT = raw.getLast().date().toInstant(ZoneOffset.UTC);
         if (lastT == null || !lastT.isAfter(t0)) {
             return List.of();
         }
@@ -135,7 +132,7 @@ public final class CommuteCompare {
         Instant limit = t0.plusSeconds(elapsedSec);
         int keep = 0;
         for (int i = 0; i < raw.size(); i++) {
-            Instant t = raw.get(i).date();
+            Instant t = raw.get(i).date().toInstant(ZoneOffset.UTC);
             if (t == null || t.isAfter(limit)) {
                 break;
             }

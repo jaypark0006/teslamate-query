@@ -7,6 +7,7 @@ import com.teslamate.query.entity.DriveEntity;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -37,8 +38,8 @@ public final class ActivityClassifier {
             Instant fallback
     ) {
         return switch (status) {
-            case CHARGING -> openCharge.map(ChargingProcessEntity::startDate).orElse(fallback);
-            case DRIVING -> openDrive.map(DriveEntity::startDate).orElse(fallback);
+            case CHARGING -> openCharge.map(e->e.startDate().toInstant(ZoneOffset.UTC)).orElse(fallback);
+            case DRIVING -> openDrive.map(e->e.startDate().toInstant(ZoneOffset.UTC)).orElse(fallback);
             case PARKING -> parkingSince(lastCompletedDrive, lastCompletedCharge, fallback);
         };
     }
@@ -48,8 +49,8 @@ public final class ActivityClassifier {
             Optional<ChargingProcessEntity> lastCompletedCharge,
             Instant fallback
     ) {
-        Instant driveEnd = lastCompletedDrive.map(DriveEntity::endDate).orElse(null);
-        Instant chargeEnd = lastCompletedCharge.map(ChargingProcessEntity::endDate).orElse(null);
+        Instant driveEnd = lastCompletedDrive.map(e->e.endDate().toInstant(ZoneOffset.UTC)).orElse(null);
+        Instant chargeEnd = lastCompletedCharge.map(e->e.endDate().toInstant(ZoneOffset.UTC)).orElse(null);
         if (driveEnd == null) {
             return chargeEnd != null ? chargeEnd : fallback;
         }

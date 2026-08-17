@@ -6,6 +6,7 @@ import com.teslamate.query.entity.DriveEntity;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -40,8 +41,8 @@ public final class ActivityTimelineComposer {
                 if (d == null || d.startDate() == null) {
                     continue;
                 }
-                Instant end = d.endDate() == null ? clock : d.endDate();
-                Instant start = clipStart(d.startDate(), windowFrom);
+                Instant end = d.endDate() == null ? clock : d.endDate().toInstant(ZoneOffset.UTC);
+                Instant start = clipStart(d.startDate().toInstant(ZoneOffset.UTC), windowFrom);
                 Instant stop = clipEnd(end, windowTo);
                 if (!stop.isAfter(start)) {
                     continue;
@@ -55,8 +56,8 @@ public final class ActivityTimelineComposer {
                 if (c == null || c.startDate() == null) {
                     continue;
                 }
-                Instant end = c.endDate() == null ? clock : c.endDate();
-                Instant start = clipStart(c.startDate(), windowFrom);
+                Instant end = c.endDate() == null ? clock : c.endDate().toInstant(ZoneOffset.UTC);
+                Instant start = clipStart(c.startDate().toInstant(ZoneOffset.UTC), windowFrom);
                 Instant stop = clipEnd(end, windowTo);
                 if (!stop.isAfter(start)) {
                     continue;

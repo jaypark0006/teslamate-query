@@ -4,13 +4,14 @@ import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /** Table: positions */
 public record PositionEntity(
         @ColumnName("id") Long id,
         @ColumnName("car_id") Long carId,
         @ColumnName("drive_id") Long driveId,
-        @ColumnName("date") Instant date,
+        @ColumnName("date") LocalDateTime date,
         @ColumnName("latitude") BigDecimal latitude,
         @ColumnName("longitude") BigDecimal longitude,
         @ColumnName("elevation") Integer elevation,

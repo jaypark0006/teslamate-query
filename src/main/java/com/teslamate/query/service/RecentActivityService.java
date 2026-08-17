@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -147,8 +148,8 @@ public class RecentActivityService {
         return new RecentDriveDto(
                 first.id(),
                 driveIds,
-                first.startDate(),
-                last.endDate(),
+                first.startDate().toInstant(ZoneOffset.UTC),
+                last.endDate().toInstant(ZoneOffset.UTC),
                 duration,
                 round1(distance),
                 energy,
@@ -190,8 +191,8 @@ public class RecentActivityService {
         var band80end = ChargeSessionMetrics.band80toEnd(samples);
         return new RecentChargeDto(
                 p.id(),
-                p.startDate(),
-                p.endDate(),
+                p.startDate().toInstant(ZoneOffset.UTC),
+                p.endDate().toInstant(ZoneOffset.UTC),
                 p.durationMin(),
                 p.chargeEnergyAdded(),
                 type,

@@ -4,13 +4,14 @@ import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /** Table: charging_processes */
 public record ChargingProcessEntity(
         @ColumnName("id") Long id,
         @ColumnName("car_id") Long carId,
-        @ColumnName("start_date") Instant startDate,
-        @ColumnName("end_date") Instant endDate,
+        @ColumnName("start_date") LocalDateTime startDate,
+        @ColumnName("end_date") LocalDateTime endDate,
         @ColumnName("charge_energy_added") BigDecimal chargeEnergyAdded,
         @ColumnName("charge_energy_used") BigDecimal chargeEnergyUsed,
         @ColumnName("start_ideal_range_km") BigDecimal startIdealRangeKm,

@@ -45,12 +45,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -214,7 +209,7 @@ public class TripViewService {
         if (want == null || want == TimelineKind.CHARGE) {
             Instant[] charge = chargingProcessDao.findById(id)
                     .filter(c -> Objects.equals(c.carId(), carId))
-                    .map(c -> closedRange(c.startDate(), c.endDate()))
+                    .map(c -> closedRange(c.startDate().toInstant(ZoneOffset.UTC), c.endDate().toInstant(ZoneOffset.UTC)))
                     .orElse(null);
             if (charge != null) {
                 return charge;
@@ -223,7 +218,7 @@ public class TripViewService {
         if (want == null || want == TimelineKind.DRIVE) {
             return driveDao.findById(id)
                     .filter(d -> Objects.equals(d.carId(), carId))
-                    .map(d -> closedRange(d.startDate(), d.endDate()))
+                    .map(d -> closedRange(d.startDate().toInstant(ZoneOffset.UTC), d.endDate().toInstant(ZoneOffset.UTC)))
                     .orElse(null);
         }
         return null;
@@ -354,7 +349,7 @@ public class TripViewService {
         List<ChargingProcessEntity> charges = loaded.second();
         Instant composeFrom = from;
         if (windowDrives.size() == DEFAULT_DRIVE_LIMIT && !windowDrives.isEmpty()) {
-            Instant first = windowDrives.getFirst().startDate();
+            Instant first = windowDrives.getFirst().startDate().toInstant(ZoneOffset.UTC);
             if (first != null && first.isAfter(from)) {
                 composeFrom = first;
                 log.info("trip drives capped at {} ; compose from {}", DEFAULT_DRIVE_LIMIT, first);
@@ -366,7 +361,7 @@ public class TripViewService {
         Long seedDrive = null;
         if (!neighborBefore.isEmpty()) {
             DriveEntity n = neighborBefore.getFirst();
-            if (n.endDate() != null && n.endDate().compareTo(composeFrom) <= 0) {
+            if (n.endDate() != null && n.endDate().toInstant(ZoneOffset.UTC).compareTo(composeFrom) <= 0) {
                 seedPos = n.endPositionId();
                 seedDrive = n.id();
             }
@@ -727,7 +722,7 @@ public class TripViewService {
                     ? 0
                     : Duration.between(windowFrom, p.date()).toMillis() / 60_000.0;
             points.add(new MapPointDto(
-                    p.date(),
+                    p.date().toInstant(ZoneOffset.UTC),
                     p.latitude().doubleValue(),
                     p.longitude().doubleValue(),
                     "drive",
@@ -917,7 +912,7 @@ public class TripViewService {
     }
 
     static boolean sealedDrive(DriveEntity d, Instant now, ZoneId zone) {
-        return d != null && d.endDate() != null && sealedWindow(d.endDate(), now, zone);
+        return d != null && d.endDate() != null && sealedWindow(d.endDate().toInstant(ZoneOffset.UTC), now, zone);
     }
 
     static boolean openEnded(Instant end, Instant now) {
